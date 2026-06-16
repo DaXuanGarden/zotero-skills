@@ -29,9 +29,9 @@ Use Zotero MCP tools to search the user's Zotero library intelligently. This ski
 
 | User says | Expanded structured query |
 |-----------|--------------------------|
-| "PCOS 久坐行为 炎症" | `q: "polycystic ovary syndrome sedentary behavior inflammation", semantic: true, tags: ["PCOS", "inflammation"], year: 2018-2026` |
-| "孟德尔随机化 药物靶点 心血管" | `q: "Mendelian randomization drug targets cardiovascular disease", semantic: true, tags: ["MR", "drug targets"], itemType: "journalArticle"` |
-| "脂肪肝 抑郁 共病机制" | `q: "NAFLD MAFLD depression comorbid mechanism", semantic: true, year: 2020-2026` |
+| "气候变化 心血管疾病 风险" | `q: "climate change cardiovascular disease risk", semantic: true, tags: ["cardiovascular"], year: 2020-2026` |
+| "孟德尔随机化 药物靶点 2型糖尿病" | `q: "Mendelian randomization drug targets type 2 diabetes", semantic: true, tags: ["MR", "drug targets"], itemType: "journalArticle"` |
+| "肠道菌群 抑郁症 机制" | `q: "gut microbiota depression mechanism", semantic: true, year: 2020-2026` |
 
 ---
 
@@ -119,29 +119,29 @@ When the user provides a manuscript paragraph:
 
 ### Search
 
-> "帮我搜一下 Zotero 里关于 NAFLD 和心脏代谢疾病的孟德尔随机化研究"
+> "帮我搜一下 Zotero 里关于肠道菌群与抑郁症的孟德尔随机化研究"
 
 The skill will:
-1. Expand to: `semantic_search("NAFLD MAFLD non-alcoholic fatty liver cardiometabolic Mendelian randomization")` + `search_library(q="NAFLD MR", tags=["Mendelian Randomization", "NAFLD"])`
+1. Expand to: `semantic_search("gut microbiota depression Mendelian randomization")` + `search_library(q="gut microbiota depression MR", tags=["Mendelian Randomization", "depression"])`
 2. Return combined results with similarity scores and Zotero links
 
 ### Evidence Chain
 
 > "以下是一段草稿，请帮我找证据链：
-> '久坐行为通过诱导慢性低度炎症促进胰岛素抵抗，进而增加 PCOS 风险。同时，久坐还与脂肪因子失衡有关，这可能独立于 BMI 影响代谢健康。'"
+> '慢性炎症通过激活 JAK-STAT 信号通路促进动脉粥样硬化斑块形成，而 IL-6 受体阻断剂可显著降低心血管事件风险。'"
 
 The skill will:
-1. Extract claims: (a) sedentary → chronic inflammation → insulin resistance → PCOS, (b) sedentary → adipokine imbalance → metabolic health (BMI-independent)
-2. Search: "sedentary behavior inflammation insulin resistance PCOS", "sedentary adipokine BMI-independent metabolic health"
+1. Extract claims: (a) chronic inflammation → JAK-STAT → atherosclerosis, (b) IL-6R blockade → reduced CVD risk
+2. Search: "chronic inflammation JAK-STAT atherosclerosis", "IL-6 receptor inhibitor cardiovascular risk"
 3. Match each claim to papers in library
 
 ### Writing Suggestions
 
 > "帮我润色这段讨论，并补充合适的引用：
-> '我们的研究发现 XX 基因与 PCOS 之间存在显著关联。这一结果与以往研究一致。'"
+> '我们的研究发现某基因与 2 型糖尿病之间存在显著关联。这一结果与以往研究一致。'"
 
 The skill will:
-1. Search for relevant PCOS genetic association studies in library
+1. Search for relevant genetic association studies in library
 2. Suggest specific citations for "以往研究"
 3. Suggest more precise wording based on library terminology patterns
 4. Recommend additional analyses from similar papers

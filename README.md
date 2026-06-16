@@ -51,13 +51,15 @@ cp -r zotero-skills/zotero-lit-search/ ~/.config/opencode/skills/zotero-lit-sear
   "mcp": {
     "zotero": {
       "type": "local",
-      "command": ["/Users/daxuan/.local/bin/zotero-mcp", "serve"],
+      "command": ["/path/to/zotero-mcp", "serve"],
       "environment": { "ZOTERO_LOCAL": "true" },
       "enabled": true
     }
   }
 }
 ```
+
+`/path/to/zotero-mcp` 替换为实际路径，可用 `which zotero-mcp` 查看。
 
 ### 构建语义索引
 
@@ -73,13 +75,13 @@ zotero-mcp update-db --fulltext  # 含全文（更准）
 在 OpenCode/Zcode 中直接对话：
 
 **搜索文献：**
-> 搜索我 Zotero 库中关于 PCOS 久坐行为的论文，列出前 5 篇
+> 搜索我 Zotero 库中关于 CRISPR 基因编辑的论文，列出前 5 篇
 
 **语义搜索：**
-> 帮我语义搜索与 "sedentary lifestyle metabolic inflammation" 概念相似的文献
+> 帮我语义搜索与 "climate change cardiovascular health" 概念相似的文献
 
 **证据链：**
-> 这段草稿帮我拆解证据链：「久坐行为通过诱导慢性低度炎症促进胰岛素抵抗……」
+> 这段草稿帮我拆解证据链：「慢性炎症通过激活 JAK-STAT 通路促进动脉粥样硬化……」
 
 **写作润色：**
 > 帮我润色这段讨论，并从 Zotero 库中补充合适的引用
