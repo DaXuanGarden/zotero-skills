@@ -33,13 +33,13 @@
 git clone https://github.com/DaXuanGarden/zotero-skills.git
 
 # 复制到项目目录
-cp -r zotero-skills/zotero-lit-search/ .opencode/skills/zotero-lit-search/
+cp -r zotero-skills/zotero-evidence-review/ .opencode/skills/zotero-evidence-review/
 ```
 
 或复制到全局目录（所有项目可用）：
 
 ```bash
-cp -r zotero-skills/zotero-lit-search/ ~/.config/opencode/skills/zotero-lit-search/
+cp -r zotero-skills/zotero-evidence-review/ ~/.config/opencode/skills/zotero-evidence-review/
 ```
 
 ### 配置 Zotero MCP
@@ -92,7 +92,7 @@ zotero-mcp update-db --fulltext  # 含全文（更准）
 
 ```
 zotero-skills/
-├── zotero-lit-search/
+├── zotero-evidence-review/
 │   ├── SKILL.md                   # 🎯 文献检索技能定义（核心文件）
 │   └── Zotero_MCP_OpenCode_Guide.md
 ├── README.md
