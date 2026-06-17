@@ -1,0 +1,23 @@
+.DS_Store
+**/.DS_Store
+
+# Python caches
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Local editor/project files
+.vscode/
+.idea/
+
+# Local build/cache artifacts
+.cache/
+dist/
+build/
