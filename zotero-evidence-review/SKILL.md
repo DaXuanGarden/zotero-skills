@@ -6,14 +6,15 @@ compatibility: opencode,zcode
 metadata:
   workflow: academic-research
   requires: zotero-mcp
-  version: 2.1.0
+  optional: pubmed-mcp
+  version: 2.1.1
 ---
 
 # Zotero Evidence Review Skill
 
 ## Overview
 
-Use Zotero MCP tools to search the user's Zotero library intelligently. This skill combines **semantic search** (concept matching via embeddings) with **keyword/structured search**, performs **paragraph evidence and citation analysis** from draft text, verifies **citations against full text**, and can generate a two-file **Evidence Package** for writing workflows: a Markdown evidence report plus an EndNote-compatible RIS reference file.
+Use Zotero MCP tools to search the user's Zotero library intelligently, and use PubMed MCP tools as a biomedical expansion and metadata-standardization layer whenever they are visible in the active Agent IDE session. This skill combines **semantic search** (concept matching via embeddings) with **keyword/structured search**, performs **paragraph evidence and citation analysis** from draft text, verifies **citations against full text**, and can generate a two-file **Evidence Package** for writing workflows: a Markdown evidence report plus an EndNote-compatible RIS reference file.
 
 For paragraph citation-support requests, the default is one complete **Paragraph Citation Package Workflow** rather than two separate workflows: paragraph → claim extraction → one Zotero local search pass → evidence matrix → citation placement → revised/diff paragraph → Zotero metadata + PDF links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown evidence report → EndNote RIS. Chat-only paragraph analysis is an explicit opt-out mode.
 
@@ -61,10 +62,70 @@ intent routing → optional read-only library readiness check → Module 1 searc
 Operational checkpoints:
 
 1. **Before searching**: identify scope, language, explicit opt-out, and whether the request is chat-only or the full **Paragraph Citation Package Workflow (Module 2 + Module 2.5)**.
-2. **During Zotero work**: search Zotero first, deduplicate candidate evidence, and retrieve inspected metadata before using an item in a report or RIS record.
-3. **Before PubMed claims**: only mark PubMed as `Completed` if a PubMed-capable tool is configured and visible and the search actually ran. Otherwise report the query with `⚠️ Tool unavailable; search not executed` or failure status.
-4. **Before writing files**: run metadata quality checks for missing fields, possible Zotero/PubMed mismatch, duplicate warning, and RIS inclusion/exclusion action.
-5. **Before final response**: confirm the Markdown report follows `EVIDENCE_REVIEW_REPORT`, the RIS is plain RIS records only, and the chat response lists only generated paths plus critical warnings.
+2. **Before MCP-dependent work**: apply **0.25 MCP Readiness and Runtime Availability**. Zotero MCP is required for local evidence work; PubMed MCP is optional and can only be used when a PubMed/NCBI-capable callable tool is visible in the active session.
+3. **During Zotero work**: search Zotero first, deduplicate candidate evidence, and retrieve inspected metadata before using an item in a report or RIS record.
+4. **During PubMed work**: when PubMed tools are visible, use `pubmed_search` for expansion, `pubmed_get_details` or `pubmed_extract_info` for selected PMIDs, `pubmed_find_related` for key-paper expansion, and `pubmed_detect_fulltext` / `pubmed_download_fulltext` only for OA full text when enabled and useful.
+5. **Before PubMed claims**: only mark PubMed as `Completed` if a PubMed-capable tool is configured and visible, the PubMed search actually ran, and selected PMID metadata was inspected. Otherwise report the query with `⚠️ Tool unavailable; search not executed`, `Failed; query reported`, or `Not executed` with reason.
+6. **Before PubMed-only RIS**: include PubMed-only records only when PubMed status is `Completed` and metadata has been inspected with `pubmed_get_details`, `pubmed_extract_info`, or an equivalent visible PubMed metadata tool.
+7. **Before writing files**: run metadata quality checks for missing fields, possible Zotero/PubMed mismatch, duplicate warning, and RIS inclusion/exclusion action.
+8. **Before final response**: confirm the Markdown report follows `EVIDENCE_REVIEW_REPORT`, the RIS is plain RIS records only, and the chat response lists only generated paths plus critical warnings.
+
+---
+
+## 0. Durable Output Language Policy
+
+Use a Chinese-first durable report by default whenever the user writes in Chinese or does not explicitly request an English-only report. This policy applies to saved Markdown evidence reports and final chat summaries; it does not localize official bibliographic metadata or RIS syntax.
+
+| Output component | Default language / format |
+|------------------|---------------------------|
+| User-facing report headings, explanations, synthesis, warnings, gap analysis, reviewer-risk notes, metadata QC explanations | Chinese |
+| English manuscript paragraphs or manuscript fragments supplied by the user | Preserve English; polish in English unless translation is explicitly requested |
+| Chinese manuscript paragraphs | Preserve Chinese; revise in Chinese unless translation is explicitly requested |
+| Article titles, journal names, author names, DOI, PMID, Zotero item keys, database names, URLs, and official metadata | Keep official/original form, usually English |
+| PubMed execution status values | Keep machine-recognizable values such as `Completed`, `⚠️ Tool unavailable; search not executed`, and `Failed; query reported`, with Chinese explanation nearby when useful |
+| EndNote RIS file | Plain standard RIS only; RIS field tags and bibliographic metadata must not be translated or wrapped in Markdown |
+
+Rules:
+
+- The saved `EVIDENCE_REVIEW_REPORT` should be readable as a Chinese research workflow report: Chinese section titles, Chinese analytical prose, Chinese caveats, and Chinese QC notes.
+- Do not force English manuscript polishing into Chinese. If the draft paragraph is English, the recommended manuscript text and diff paragraph may remain English while the evidence explanation around it is Chinese.
+- Do not translate official paper titles, journal names, author names, DOI, PMID, or RIS fields unless the user explicitly asks for a separate human-readable translation outside the RIS file.
+- Never localize RIS tags (`TY`, `AU`, `TI`, `JO`, `DO`, `ER`, etc.) and never add Chinese explanations, Markdown headings, comments, or code fences to the `.ris` file.
+- In short: 该用中文报告的部分用中文；该保留英文/官方格式的稿件、文献元数据与 RIS 字段保持英文或原始格式。
+
+---
+
+## 0.25 MCP Readiness and Runtime Availability
+
+Use this readiness gate before any workflow that depends on Zotero or PubMed. The static validator can only inspect this Markdown specification; it does not connect to Zotero, does not execute PubMed, and does not prove that runtime MCP tools are available in the active Agent IDE session.
+
+### Dependency model
+
+| Layer | Requirement | Runtime availability rule |
+|-------|-------------|---------------------------|
+| Zotero MCP | Required (`metadata.requires: zotero-mcp`) | The active session must expose callable Zotero tools before local library search, metadata inspection, PDF/notes access, or RIS generation from Zotero records. |
+| PubMed MCP | Optional (`metadata.optional: pubmed-mcp`) | The active session must expose callable PubMed / NCBI-capable tools before PubMed expansion can be executed or reported as completed. |
+| Static validation | Repository-side guardrail only | `scripts/validate-skill.py` checks structure, dependency metadata, templates, and safety text; it does not run a live MCP smoke test. |
+
+### Runtime readiness checklist
+
+1. **Zotero readiness**: confirm Zotero MCP tools are visible before claiming local-library search, semantic search, metadata retrieval, PDF links, annotations, or notes were inspected.
+2. **PubMed readiness**: confirm the active session exposes a PubMed-capable callable tool before PubMed expansion. For PancrePal-style servers, expected tools include `pubmed_search`, `pubmed_get_details`, `pubmed_extract_info`, `pubmed_find_related`, `pubmed_detect_fulltext`, `pubmed_download_fulltext`, `pubmed_system_status`, and `pubmed_manage_cache`.
+3. **Zotero is not PubMed**: do not treat Zotero MCP as a PubMed search client. Zotero records may contain DOI/PMID links, but live PubMed expansion requires a separate visible PubMed/NCBI-capable tool.
+4. **No silent fallback**: if a required tool is unavailable, report the limitation and provide a copyable query or next step. Do not imply that unavailable tools were executed.
+
+### PubMed status decision tree
+
+Use these status values consistently in reports and final warnings:
+
+| Condition | Required report status | RIS consequence |
+|-----------|------------------------|-----------------|
+| No PubMed-capable tool is visible in the active session | `⚠️ Tool unavailable; search not executed` | Do not create PubMed-only RIS records. Include the planned PubMed query for manual use. |
+| PubMed tool is visible, but workflow is explicit chat-only or non-biomedical and PubMed was intentionally skipped | `Not executed` with reason | Do not create PubMed-only RIS records. |
+| PubMed tool is visible, but the search call failed | `Failed; query reported` | Do not create PubMed-only RIS records. Report query/error briefly. |
+| PubMed search actually ran and selected PMID metadata was inspected with `pubmed_get_details` or `pubmed_extract_info` | `Completed` | PubMed-only RIS records are allowed only for selected records with sufficient inspected metadata. |
+
+Only actual PubMed execution plus inspected metadata can justify `Completed` or PubMed-only RIS inclusion. Tool visibility alone is not enough.
 
 ---
 
@@ -129,6 +190,17 @@ Choose the right Zotero MCP tool for each task:
 - **Semantic database status** → `zotero_get_search_database_status`.
 - **Semantic database update** → `zotero_update_search_database`. Only when needed; prefer incremental `update-db`.
 - **RIS output** → generate from inspected Zotero metadata and verified PubMed metadata only; never infer missing bibliographic fields from memory.
+
+When PubMed MCP tools are visible, use them as a separate biomedical evidence layer rather than a replacement for Zotero:
+
+- **Broad PubMed expansion** → `pubmed_search` with Boolean terms, MeSH terms, filters, `sort_by`, and `format`; use `format="compact"` for scanning and `format="detailed"` for selected evidence.
+- **Canonical PMID metadata** → `pubmed_get_details` for selected PMIDs before citing, deduplicating, or writing RIS records.
+- **Targeted metadata extraction** → `pubmed_extract_info` for `basic_info`, `authors`, `abstract_summary`, `keywords`, or `doi_link` when a full record is unnecessary.
+- **Citation-chaining / key-paper expansion** → `pubmed_find_related` with `type="similar"` or `type="reviews"` after identifying a key PMID.
+- **OA full-text triage** → `pubmed_detect_fulltext` when `FULLTEXT_MODE=enabled` and the workflow needs full text beyond abstracts.
+- **OA PDF download** → `pubmed_download_fulltext` only for OA articles, after checking availability; downloaded PDFs are external cache artifacts, not Zotero attachments unless the user later confirms import/attachment actions.
+- **PubMed diagnostics** → `pubmed_system_status` and `pubmed_manage_cache` for troubleshooting; do not clear caches without explicit confirmation.
+- **EndNote-compatible export** → if a PubMed tool/server directly offers RIS, NBIB, EndNote, BibTeX, or citation export in the active tool list, prefer that exporter for PubMed-only records; otherwise generate RIS from inspected `pubmed_get_details` metadata using the local RIS rules below.
 
 ## Safety Rules
 
@@ -418,8 +490,13 @@ Do not route to this module when the user explicitly opts out with `只在聊天
    - Use Zotero metadata as the authority for Zotero items. Do not fill missing authors, titles, journals, pages, DOI, PMID, or years from memory.
 3. **Run automatic PubMed expansion as a second evidence source when available**
    - After Zotero local search, construct a PubMed query from the topic, extracted claims, and core biomedical concepts.
-   - Execute PubMed search automatically in the full package workflow only if a PubMed-capable tool is configured and visible.
+   - Execute PubMed search automatically in the full package workflow only if a PubMed-capable tool is configured and visible in the current MCP tool list.
+   - Treat a PubMed-capable tool as visible only when the active session exposes a callable tool whose name or description clearly indicates PubMed / NCBI E-utilities search, such as `pubmed`, `simple-pubmed`, `pubmed-data-server`, `ncbi`, `esearch`, `efetch`, `search-pubmed`, `get_paper_fulltext`, or equivalent biomedical database search capability.
+   - Do not assume Zotero MCP itself can search PubMed. Zotero MCP may contain Zotero records with PMID links, but PubMed expansion requires a separate visible PubMed/NCBI-capable tool.
    - Treat Zotero and PubMed as two evidence-source steps: Zotero local evidence first, then PubMed expansion for additional or confirming evidence.
+   - For PancrePal PubMed MCP, use `pubmed_search` first, then call `pubmed_get_details` for PMIDs that may enter the report/RIS; use `pubmed_extract_info` for targeted DOI/authors/abstract extraction when token efficiency matters.
+   - For one or two highly relevant PMIDs, use `pubmed_find_related` with `type="reviews"` or `type="similar"` when the user asks for comprehensive coverage, review evidence, or adjacent mechanisms.
+   - If full-text support is needed and full-text tools are visible, use `pubmed_detect_fulltext` before any OA PDF download; do not treat downloaded PubMed PDFs as Zotero-local evidence unless the user explicitly imports or attaches them.
    - If no PubMed-capable tool is available, include the copyable PubMed query in the report and mark PubMed expansion as `⚠️ Tool unavailable; search not executed`.
    - If a PubMed-capable tool is visible but the search fails, mark PubMed expansion as `Failed; query reported`, report the attempted query/error briefly, and do not create PubMed-only RIS records.
 4. **Combine Zotero and PubMed evidence results**
@@ -501,19 +578,19 @@ If files already exist inside the selected folder, append `_v2`, `_v3`, etc. to 
 
 ### Markdown Report Requirements
 
-The report must include these sections in order, including PubMed status even when PubMed was unavailable or failed:
+The report must use Chinese-first user-facing headings and analytical prose by default, while preserving manuscript language and official bibliographic metadata according to **0. Durable Output Language Policy**. It must include these sections in order, including PubMed status even when PubMed was unavailable or failed:
 
-1. `Bottom Line`
-2. `Recommended Manuscript Text`
-3. `Claim–Evidence Matrix`
-4. `Citation Placement`
-5. `Reference Table`
-6. `Zotero Search Summary`
-7. `PubMed Expansion`
-8. `Integrated Writing Advice`
-9. `Gaps and Reviewer-risk Assessment`
-10. `Metadata Quality Control`
-11. `Export File`
+1. `核心结论`
+2. `推荐稿件文本`
+3. `主张—证据矩阵`
+4. `引文放置建议`
+5. `参考文献表`
+6. `Zotero 检索总结`
+7. `PubMed 扩展检索`
+8. `综合写作建议`
+9. `证据缺口与审稿风险`
+10. `元数据质量控制`
+11. `导出文件`
 
 Add source and export-standardization detail to the `Reference Table` and `Metadata Quality Control` so the reader can tell whether evidence came from Zotero, PubMed, or both, and whether the RIS was standardized from PMID/PubMed, DOI metadata, or inspected source metadata.
 
@@ -632,12 +709,13 @@ Use when the user asks to verify whether a specific claim, quote, statistic, or 
 
 Use for English or non-Chinese scholarly papers with full text available in Zotero.
 
-1. Extract complete PDF text to a temporary file or read pages with `zotero_read_pdf_pages`.
-2. Read every page sequentially in 250-300 line chunks.
-3. Record exact page/line locations for each claim, quote, and statistic.
-4. Cross-check numerical data (N=X, p<0.05, CI, effect size, sample size) against the original.
-5. Compare the user's claim against Zotero metadata, abstract, tables, figures, and author wording.
-6. Judge whether the citation fully supports, partially supports, contradicts, or does not address the claim.
+1. Prefer read-only MCP page/full-text access first: use `zotero_read_pdf_pages` page ranges or `zotero_get_item_fulltext` when available, and keep the source in Zotero rather than exporting files.
+2. If direct MCP page reading is unavailable and the environment permits temporary files, extract complete PDF text to a temporary file as a fallback; otherwise state which pages/sections could not be accessed.
+3. Read every available page sequentially in 250-300 line chunks.
+4. Record exact page/line locations for each claim, quote, and statistic.
+5. Cross-check numerical data (N=X, p<0.05, CI, effect size, sample size) against the original.
+6. Compare the user's claim against Zotero metadata, abstract, tables, figures, and author wording.
+7. Judge whether the citation fully supports, partially supports, contradicts, or does not address the claim.
 
 ### Path B: Chinese Reference Verification
 
@@ -875,44 +953,44 @@ Rules:
 ### EVIDENCE_REVIEW_REPORT
 
 ```markdown
-# Evidence Review: {topic}
+# 证据综述：{topic}
 
-Generated: {YYYY-MM-DD}
-Source: Zotero local library; PubMed: {Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported / Not executed only for explicit chat-only or non-PubMed workflows}
-Input: {user paragraph, claim, or search question}
+生成日期：{YYYY-MM-DD}
+来源：Zotero 本地库；PubMed: {Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported / Not executed only for explicit chat-only or non-PubMed workflows}
+输入：{user paragraph, claim, or search question}
 
-## 1. Bottom Line
-- {1-3 sentence evidence judgment}
+## 1. 核心结论（Bottom Line）
+- {1-3 句中文证据判断；如稿件原文为英文，可在中文判断后保留必要英文术语}
 
-## 2. Recommended Manuscript Text
-> {safe revised paragraph or concise writing recommendation}
+## 2. 推荐稿件文本（Recommended Manuscript Text）
+> {safe revised paragraph or concise writing recommendation; preserve the manuscript's original language unless translation is requested}
 
-## 3. Claim–Evidence Matrix
-| # | Claim | Zotero evidence | PubMed evidence | Evidence status | Confidence | Caveat | Recommended citation |
-|---|-------|-----------------|-----------------|-----------------|------------|--------|----------------------|
-| 1 | ... | Author Year | PubMed confirms / not searched / no direct evidence | Supported / Partial / Gap | High / Moderate / Low | ... | Author Year |
+## 3. 主张—证据矩阵（Claim–Evidence Matrix）
+| # | 主张 | Zotero 证据 | PubMed 证据 | 证据状态 | 置信度 | 限制/注意 | 推荐引文 |
+|---|------|-------------|-------------|----------|--------|-----------|----------|
+| 1 | ... | Author Year | PubMed confirms / not searched / no direct evidence | 支持 / 部分支持 / 缺口 | 高 / 中 / 低 | ... | Author Year |
 
-## 4. Citation Placement
-| Sentence / location | Recommended citation | Purpose | Wording note |
-|---------------------|----------------------|---------|--------------|
+## 4. 引文放置建议（Citation Placement）
+| 句子 / 位置 | 推荐引文 | 用途 | 措辞建议 |
+|-------------|----------|------|----------|
 | ... | Author Year | background / direct / method / caveat | ... |
 
-## 5. Reference Table
+## 5. 参考文献表（Reference Table）
 | # | Citation | Year | Study type | Main use | Evidence source | Zotero | PDF | DOI | PMID | Collection |
 |---|----------|------|------------|----------|-----------------|--------|-----|-----|------|------------|
 | 1 | Author et al., *Journal* | 2024 | Systematic review | ... | Zotero / PubMed / Zotero + PubMed | [Item](zotero://select/items/0_KEY) | [PDF](zotero://open-pdf/library/items/ATTACHMENT_KEY) | [DOI](https://doi.org/10.xxxx/xxxx) | [PMID](https://pubmed.ncbi.nlm.nih.gov/PMID/) | Collection name |
 
-## 6. Zotero Search Summary
-| Search route | Query | Hits | Included | Notes |
-|--------------|-------|-----:|---------:|-------|
+## 6. Zotero 检索总结（Zotero Search Summary）
+| 检索路径 | Query | Hits | Included | 备注 |
+|----------|-------|-----:|---------:|------|
 | Semantic search | ... | 0 | 0 | ... |
 
-## 7. PubMed Expansion
-Date: {YYYY-MM-DD}
-Database: PubMed
-Status: Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported
+## 7. PubMed 扩展检索（PubMed Expansion）
+日期：{YYYY-MM-DD}
+数据库：PubMed
+状态：Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported
 
-Query:
+检索式：
 ```text
 {copyable PubMed query}
 ```
@@ -921,33 +999,33 @@ Query:
 |---|----------|------|-----|------------|--------------|----------------|
 | 1 | Author et al., Year | [PMID](https://pubmed.ncbi.nlm.nih.gov/PMID/) | [DOI](https://doi.org/10.xxxx/xxxx) | Yes / No / Possible mismatch | ... | Use / Consider importing / Exclude |
 
-## 8. Integrated Writing Advice
-### Original claim
+## 8. 综合写作建议（Integrated Writing Advice）
+### 原始主张
 {original text}
 
-### Evidence from Zotero
+### Zotero 证据
 - ...
 
-### Evidence from PubMed
+### PubMed 证据
 - ...
 
-### Recommended revision
+### 推荐修改
 > ...
 
-### Why this wording is safer
+### 为什么这样表述更安全
 ...
 
-## 9. Gaps and Reviewer-risk Assessment
+## 9. 证据缺口与审稿风险（Gaps and Reviewer-risk Assessment）
 | Affected claim / sentence | Risk | Severity | Evidence basis | Suggested fix |
 |---------------------------|------|----------|----------------|---------------|
 | ... | ... | High / Moderate / Low | ... | ... |
 
-## 10. Metadata Quality Control
+## 10. 元数据质量控制（Metadata Quality Control）
 | Citation | Missing metadata | Metadata mismatch | Duplicate warning | Evidence source | RIS standardization source | RIS action |
 |----------|------------------|-------------------|-------------------|-----------------|----------------------------|------------|
 | Author Year | DOI / PMID / pages / none | Possible metadata mismatch: Zotero DOI ... vs PubMed DOI ... / none | Possible duplicate with Author Year / none | Zotero / PubMed / Zotero + PubMed | PMID/PubMed / DOI / Zotero metadata / PubMed metadata | Include / exclude / needs manual check |
 
-## 11. Export File
+## 11. 导出文件（Export File）
 - Markdown report: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_evidence_review.md`
 - EndNote RIS: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris`
 - Evidence source: Zotero local library and PubMed expansion are separate evidence steps; combined results are deduplicated by DOI/PMID/title when available.

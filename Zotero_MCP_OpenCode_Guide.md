@@ -1,5 +1,7 @@
 # Zotero MCP + OpenCode 完整使用指南
 
+> 本文主要保留为 **OpenCode-oriented** 的 Zotero MCP 使用指南。若你使用 ZCode v2、ZCode CLI 旧配置、Claude Desktop、Cherry Studio 或其他 Agent IDE，请优先参考通用配置说明：[`README.md`](./README.md) 的 Agent IDE MCP 配置原则，以及 [`docs/PANCREPAL_PUBMED_MCP_GUIDE.md`](./docs/PANCREPAL_PUBMED_MCP_GUIDE.md) 的客户端配置矩阵。不同客户端的配置路径与 JSON 形态不同，不能把 OpenCode 示例原样复制到所有 Agent IDE。
+
 ## 目录
 
 - [1. 概述](#1-概述)
@@ -296,6 +298,159 @@ zotero-mcp update-db --force-rebuild
 查询文献时请优先使用 Zotero 语义搜索，并在证据不足时清楚标注 gap。
 ```
 
+### 6.3 PubMed 专用搜索工具配置
+
+`zotero-mcp` 负责 Zotero 本地库，不等于 PubMed 搜索工具。`zotero-evidence-review` 在完整 Evidence Package 工作流中会自动尝试 PubMed expansion，但前提是当前 OpenCode / ZCode 会话里还配置并可见一个 PubMed-capable MCP server。
+
+所以集成方式是：**先在客户端配置 PubMed MCP server，再由 skill 自动调用。** Skill 本身不能把 GitHub 上的 PubMed server “打包内置”进来，因为 MCP server 是独立进程，需要 Node.js/Python 环境、依赖、API key/email 和客户端配置共同启动。
+
+如果报告出现：
+
+```text
+PubMed: ⚠️ Tool unavailable; search not executed
+```
+
+含义是：Zotero 检索已执行，但当前会话没有可调用的 PubMed/NCBI MCP 工具；报告中的 PubMed query 只是可复制检索式，不能当作已完成 PubMed 检索。
+
+#### 6.3.1 匿名模式与 NCBI API key
+
+PubMed MCP 可以匿名访问 PubMed，匿名模式通常约 3 次/秒；配置 NCBI API key 后通常约 10 次/秒，更适合批量检索、详情抓取和全文/OA 检测。建议先用匿名模式跑通 MCP，再按需要配置 API key。
+
+匿名模式只需要在 MCP `environment` 中保留：
+
+```text
+ABSTRACT_MODE=deep
+FULLTEXT_MODE=enabled
+MCP_TRANSPORT=stdio
+```
+
+如需 API key：
+
+1. 打开 `https://account.ncbi.nlm.nih.gov/settings/`。
+2. 登录或注册 NCBI 账户。
+3. 找到 `API Key Management`，点击 `Create an API Key`。
+4. 复制生成的 key，并准备一个真实可联系邮箱作为 `PUBMED_EMAIL`。
+5. 将 `PUBMED_API_KEY` 和 `PUBMED_EMAIL` 写入 PubMed MCP 项目的 `.env`，或写入当前 Agent IDE 对应 MCP server 的 `environment` 字段。
+6. 不要把真实 key 提交到 Git 仓库；如果 key 泄露，在 NCBI 设置页删除或重新生成。
+
+#### 6.3.2 推荐方案 A：PancrePal PubMed MCP（Node.js）
+
+适合需要 PubMed 搜索、PMID 详情、定向信息抽取、related/review discovery、OA 全文检测/下载、缓存管理和条件性 EndNote/RIS 标准化的场景。当前常见工具包括 `pubmed_search`、`pubmed_get_details`、`pubmed_extract_info`、`pubmed_find_related`、`pubmed_detect_fulltext`、`pubmed_download_fulltext`、`pubmed_system_status`、`pubmed_manage_cache`。
+
+```bash
+git clone https://github.com/PancrePal-xiaoyibao/mcp-pubmed-server-pancrpal.git ~/mcp-pubmed-server-pancrpal
+cd ~/mcp-pubmed-server-pancrpal
+npm install
+npm run build
+ABSTRACT_MODE=deep FULLTEXT_MODE=enabled MCP_TRANSPORT=stdio node dist/index.js
+```
+
+上面的命令适合在终端中做一次本地 smoke test。ZCode / OpenCode GUI 可能不继承 shell `PATH`，因此长期 MCP 配置建议使用绝对路径 launcher：
+
+```bash
+mkdir -p /Users/daxuan/.local/bin
+cat > /Users/daxuan/.local/bin/pubmed-mcp <<'EOF'
+#!/usr/bin/env bash
+export ABSTRACT_MODE="${ABSTRACT_MODE:-deep}"
+export FULLTEXT_MODE="${FULLTEXT_MODE:-enabled}"
+export MCP_TRANSPORT="${MCP_TRANSPORT:-stdio}"
+exec /opt/homebrew/bin/node /Users/daxuan/mcp-pubmed-server-pancrpal/dist/index.js
+EOF
+chmod +x /Users/daxuan/.local/bin/pubmed-mcp
+```
+
+请把 Node.js 和 `dist/index.js` 路径替换为本机真实路径。
+
+测试成功后，把 server 加入当前 Agent IDE 的 MCP 配置。OpenCode 与 ZCode v2 常见为顶层 `mcp`：
+
+```json
+{
+  "mcp": {
+    "zotero": {
+      "type": "local",
+      "command": ["/Users/daxuan/.local/bin/zotero-mcp", "serve"],
+      "environment": {
+        "ZOTERO_LOCAL": "true"
+      },
+      "enabled": true
+    },
+    "pubmed": {
+      "type": "local",
+      "command": ["/Users/daxuan/.local/bin/pubmed-mcp"],
+      "environment": {
+        "ABSTRACT_MODE": "deep",
+        "FULLTEXT_MODE": "enabled",
+        "MCP_TRANSPORT": "stdio"
+      },
+      "enabled": true
+    }
+  }
+}
+```
+
+如需 API key，把 `PUBMED_EMAIL` 和 `PUBMED_API_KEY` 加入 `pubmed.environment`。如果当前 PubMed MCP 版本直接暴露 RIS/NBIB/EndNote/BibTeX exporter，skill 会优先使用；否则使用 `pubmed_get_details` 检查后的 PMID 元数据生成 EndNote-compatible RIS。
+
+#### 6.3.3 轻量方案 B：mcp-simple-pubmed（Python）
+
+适合基础搜索、论文详情和全文获取。
+
+```bash
+conda create -n simple-pubmed python=3.10
+conda activate simple-pubmed
+pip install mcp-simple-pubmed
+python -m mcp_simple_pubmed
+```
+
+查看 Python 真实路径：
+
+```bash
+conda run -n simple-pubmed which python
+```
+
+配置示例：
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "zotero": {
+      "type": "local",
+      "command": ["/Users/daxuan/.local/bin/zotero-mcp", "serve"],
+      "environment": {
+        "ZOTERO_LOCAL": "true"
+      },
+      "enabled": true
+    },
+    "simple-pubmed": {
+      "type": "local",
+      "command": ["/opt/miniconda3/envs/simple-pubmed/bin/python", "-m", "mcp_simple_pubmed"],
+      "environment": {
+        "PUBMED_EMAIL": "你的邮箱地址",
+        "PUBMED_API_KEY": "你的NCBI API key"
+      },
+      "enabled": true
+    }
+  }
+}
+```
+
+#### 6.3.4 配置注意事项
+
+1. 不同 Agent IDE 的 MCP 配置形态不同：OpenCode 与 ZCode v2 常见为顶层 `mcp`；ZCode CLI 旧配置/兼容层可能是 `mcp.servers`；Claude、Cursor、Cherry Studio 等 GUI 客户端常见为 `mcpServers`，不能原样粘贴到 OpenCode 或 ZCode v2。
+2. `command` 和路径必须换成本机真实路径。
+3. PubMed 标准限速约 3 次/秒；配置 NCBI API key 后通常可到 10 次/秒。
+4. 建议二选一启用 PubMed MCP，避免多个相似工具让 agent 路由混乱。
+5. 保存配置后完全重启当前 Agent IDE 或开启新会话；ZCode v2 通常读取 `~/.zcode/v2/config.json`，OpenCode 通常读取 `~/.config/opencode/opencode.json`。
+6. OpenCode 可用 `opencode mcp list` 验证；ZCode v2 以重启后的当前会话工具清单为准，确认同时有 `zotero` 和 `pubmed` / `ncbi` 相关工具。
+
+使用时仍然只需调用同一个 skill：
+
+```text
+/zotero-evidence-review 帮我给下面这段草稿找证据并补引用，生成 Markdown evidence report 和 EndNote RIS。
+```
+
+若 PubMed 工具可见且检索成功，报告状态为 `Completed`，并可加入经 PubMed 元数据核验的 PubMed-only 记录；若不可见，报告会保留 `⚠️ Tool unavailable; search not executed`，并且不会生成 PubMed-only RIS records。
+
 ---
 
 ## 7. Zotero CLI 使用
@@ -416,8 +571,8 @@ zotero-cli duplicates find
 默认文件会写入类似下面的主题目录，避免散落在项目根目录：
 
 ```text
-outputs/2026-06-18_sedentary_behavior_pcos/2026-06-18_sedentary_behavior_pcos_evidence_review.md
-outputs/2026-06-18_sedentary_behavior_pcos/2026-06-18_sedentary_behavior_pcos_references.ris
+zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_evidence_review.md
+zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris
 ```
 
 如果只想看聊天结果，不生成文件：
@@ -461,9 +616,10 @@ pipx install "zotero-mcp-server[all]" --force
 
 ### Q: 数据库损坏或模型切换后出错？
 
+优先使用 zotero-mcp 自带的强制重建命令：
+
 ```bash
 zotero-mcp update-db --force-rebuild
-# 如果仍然有问题
-rm -rf ~/.config/zotero-mcp/chroma_db
-zotero-mcp update-db
 ```
+
+如果仍然有问题，先确认实际缓存路径、备份必要文件，并阅读 zotero-mcp 当前版本文档后再手动清理缓存。不要让 agent 在未确认路径和备份的情况下自动执行 `rm -rf`。

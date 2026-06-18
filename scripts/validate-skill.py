@@ -30,6 +30,8 @@ REQUIRED_TEMPLATES = (
 )
 REQUIRED_HEADINGS = [
     "## 0. Intent Detection",
+    "## 0. Durable Output Language Policy",
+    "## 0.25 MCP Readiness and Runtime Availability",
     "## 0.5 Library Health Check",
     "## Tool Selection",
     "## Safety Rules",
@@ -43,17 +45,17 @@ REQUIRED_HEADINGS = [
     "## Appendix: Output Templates",
 ]
 EVIDENCE_REPORT_SECTIONS = [
-    "## 1. Bottom Line",
-    "## 2. Recommended Manuscript Text",
-    "## 3. Claim–Evidence Matrix",
-    "## 4. Citation Placement",
-    "## 5. Reference Table",
-    "## 6. Zotero Search Summary",
-    "## 7. PubMed Expansion",
-    "## 8. Integrated Writing Advice",
-    "## 9. Gaps and Reviewer-risk Assessment",
-    "## 10. Metadata Quality Control",
-    "## 11. Export File",
+    "## 1. 核心结论（Bottom Line）",
+    "## 2. 推荐稿件文本（Recommended Manuscript Text）",
+    "## 3. 主张—证据矩阵（Claim–Evidence Matrix）",
+    "## 4. 引文放置建议（Citation Placement）",
+    "## 5. 参考文献表（Reference Table）",
+    "## 6. Zotero 检索总结（Zotero Search Summary）",
+    "## 7. PubMed 扩展检索（PubMed Expansion）",
+    "## 8. 综合写作建议（Integrated Writing Advice）",
+    "## 9. 证据缺口与审稿风险（Gaps and Reviewer-risk Assessment）",
+    "## 10. 元数据质量控制（Metadata Quality Control）",
+    "## 11. 导出文件（Export File）",
 ]
 EVIDENCE_PACKAGE_REQUIREMENTS = [
     "zotero-evidence-output/",
@@ -130,6 +132,33 @@ UNIFIED_WORKFLOW_REQUIREMENTS = [
     "automatic PubMed expansion",
     "after Zotero local search",
     "PubMed-capable tool is configured and visible",
+]
+MCP_READINESS_REQUIREMENTS = [
+    "MCP Readiness and Runtime Availability",
+    "metadata.requires: zotero-mcp",
+    "metadata.optional: pubmed-mcp",
+    "static validator can only inspect this Markdown specification",
+    "does not connect to Zotero",
+    "does not execute PubMed",
+    "Zotero is not PubMed",
+]
+PUBMED_TOOL_REQUIREMENTS = [
+    "pubmed_search",
+    "pubmed_get_details",
+    "pubmed_extract_info",
+    "pubmed_find_related",
+    "pubmed_detect_fulltext",
+    "pubmed_download_fulltext",
+    "pubmed_system_status",
+    "pubmed_manage_cache",
+]
+PUBMED_GUARDRAIL_REQUIREMENTS = [
+    "⚠️ Tool unavailable; search not executed",
+    "Failed; query reported",
+    "Not executed",
+    "Only actual PubMed execution plus inspected metadata can justify `Completed`",
+    "Tool visibility alone is not enough",
+    "PubMed-only records only when PubMed status is `Completed`",
 ]
 
 
@@ -221,6 +250,16 @@ def require_table_header(template: str, header_pattern: str, required_columns: l
         fail(f"missing {context} table column(s): " + ", ".join(missing))
 
 
+def normalize_dependency(value: object) -> set[str]:
+    if value is None:
+        return set()
+    if isinstance(value, str):
+        return {part.strip() for part in re.split(r"[,;]", value) if part.strip()}
+    if isinstance(value, (list, tuple, set)):
+        return {str(part).strip() for part in value if str(part).strip()}
+    return {str(value).strip()}
+
+
 def main() -> None:
     if not SKILL_PATH.exists():
         fail(f"Missing skill file: {SKILL_PATH}")
@@ -235,7 +274,13 @@ def main() -> None:
     metadata = frontmatter.get("metadata")
     if not isinstance(metadata, dict) or not metadata.get("version"):
         fail("frontmatter metadata.version is required")
-    ok(f"frontmatter parsed; version {metadata['version']}")
+    requires = normalize_dependency(metadata.get("requires"))
+    optional = normalize_dependency(metadata.get("optional"))
+    if "zotero-mcp" not in requires:
+        fail("frontmatter metadata.requires must include zotero-mcp")
+    if "pubmed-mcp" not in optional:
+        fail("frontmatter metadata.optional must include pubmed-mcp")
+    ok(f"frontmatter parsed; version {metadata['version']}; dependencies declared")
 
     fence_count = text.count("```")
     if fence_count % 2 != 0:
@@ -264,6 +309,11 @@ def main() -> None:
 
     require_all(text, UNIFIED_WORKFLOW_REQUIREMENTS, "unified paragraph citation workflow requirement")
     ok("unified paragraph citation workflow requirements present")
+
+    require_all(text, MCP_READINESS_REQUIREMENTS, "MCP readiness requirement")
+    require_all(text, PUBMED_TOOL_REQUIREMENTS, "PubMed tool requirement")
+    require_all(text, PUBMED_GUARDRAIL_REQUIREMENTS, "PubMed guardrail requirement")
+    ok("MCP readiness and PubMed guardrail requirements present")
 
     require_all(text, RIS_REQUIREMENTS, "RIS requirement")
     require_all(text, RIS_ITEM_TYPE_MAPPINGS, "RIS itemType mapping")
@@ -296,8 +346,13 @@ def main() -> None:
         ["Missing metadata", "Metadata mismatch", "Duplicate warning", "Evidence source", "RIS standardization source", "RIS action"],
         "Metadata Quality Control",
     )
-    if "Source: Zotero local library; PubMed:" not in evidence_report_template:
+    if (
+        "来源：Zotero 本地库；PubMed:" not in evidence_report_template
+        and "Source: Zotero local library; PubMed:" not in evidence_report_template
+    ):
         fail("Evidence Review report Source line must expose PubMed execution status")
+    if "该用中文报告的部分用中文" not in text:
+        fail("Durable output language policy must preserve Chinese-first reporting rules")
     if "Not executed" not in evidence_report_template:
         fail("Evidence Review report PubMed status must allow Not executed")
     ok("Evidence Review report table schemas are consistent")
