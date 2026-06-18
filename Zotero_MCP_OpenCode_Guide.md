@@ -204,16 +204,34 @@ zotero-mcp update-db --force-rebuild
 
 ---
 
-## 6. 在 OpenCode 中使用
+## 6. 在 OpenCode / ZCode 中使用
 
 ### 6.1 基本用法
 
-在 OpenCode 终端中**直接对话式提问**即可：
+在 OpenCode / ZCode 终端中**直接对话式提问**即可。推荐用 `/zotero-evidence-review` 开头，然后用一句话说明需求；skill 会自动识别检索、段落补引用、Evidence Package 导出、引用核实或健康检查工作流。
+
+#### 一句提示词示例
+
+```
+/zotero-evidence-review 搜 Zotero 库中关于 CRISPR 基因编辑的论文，列出前 5 篇。
+```
+
+```
+/zotero-evidence-review 帮我给下面这段草稿找证据并补引用。
+```
+
+```
+/zotero-evidence-review 帮我导出 Evidence Package：Markdown 报告 + EndNote RIS。
+```
+
+```
+/zotero-evidence-review 只在聊天输出，不要生成文件：帮我分析这段话的证据和推荐引用。
+```
 
 #### 搜索文献
 
 ```
-搜索我 Zotero 库中关于 CRISPR 基因编辑的论文，列出前 5 篇
+/zotero-evidence-review 搜 Zotero 库中关于 CRISPR 基因编辑的论文，列出前 5 篇
 ```
 
 ```
@@ -265,15 +283,17 @@ zotero-mcp update-db --force-rebuild
 这篇论文在 Zotero 中属于哪些分类？
 ```
 
-### 6.2 让 OpenCode 主动使用 Zotero
+### 6.2 让 OpenCode / ZCode 主动使用 Zotero Evidence Review
 
 在项目根目录的 `AGENTS.md` 中添加：
 
 ```markdown
 ## 文献引用
 
-当你需要搜索、引用或分析学术文献时，请使用 Zotero MCP 工具。
-查询文献时请优先使用语义搜索（semantic_search）以获得更准确的概念匹配结果。
+当用户需要搜索、引用或分析学术文献时，请优先调用 `/zotero-evidence-review`。
+用户只需要简单说明需求；如果是段落找证据、补引用、推荐 citation placement 或导出报告，默认执行完整 Paragraph Citation Package Workflow，并生成 Markdown evidence report + EndNote RIS。
+如果用户明确说“不要生成文件”“只在聊天输出”“不导出”或“chat only”，才停在聊天输出。
+查询文献时请优先使用 Zotero 语义搜索，并在证据不足时清楚标注 gap。
 ```
 
 ---
@@ -387,11 +407,15 @@ zotero-cli duplicates find
 
 > *"这篇文章属于哪些分类？给出完整的分类路径"*
 
-### 8.4 在 OpenCode 中一键完成工作流示例
+### 8.4 在 OpenCode / ZCode 中一键完成工作流示例
 
 示例提示词：
 
-> *"在 Zotero 中用语义搜索找到与 'climate change cardiovascular disease' 最相关的 5 篇论文，列出每篇的标题、作者、期刊、年份和相似度分数，然后生成 APA 引用。"*
+> *"/zotero-evidence-review 帮我给下面这段草稿找证据并补引用，生成 Markdown evidence report 和 EndNote RIS：久坐行为可能与 PCOS 发生风险相关，但既往队列研究证据仍不一致……"*
+
+如果只想看聊天结果，不生成文件：
+
+> *"/zotero-evidence-review 只在聊天输出，不要生成文件：帮我分析这段草稿的证据和推荐引用。"*
 
 ---
 

@@ -27,18 +27,19 @@ Route the user's request before choosing tools. Use the input shape and explicit
 |--------|---------------------|----------|
 | `search` | Keywords, concepts, natural-language questions, broad topic discovery, or requests such as "search", "find papers", "what literature do I have about…" | **Module 1: Semantic + Structured Search** |
 | `paragraph` | A pasted manuscript paragraph, draft section, or multi-sentence passage that asks for chat-only evidence analysis, with no citation/export/full-workflow trigger | **Module 2: Paragraph Evidence & Citation Analysis** |
-| `package` | Requests for saved files, EndNote/RIS export, evidence package, "使用技能", "完整工作流", "找引文", "补引用", "推荐引用", "citation", "refs", "参考文献", "文献引用", "生成报告", "保存结果", "导出参考文献", or a paragraph/search request that asks for citation placement or file outputs | **Paragraph Citation Package Workflow (Module 2 + Module 2.5): analysis stage, then export stage with automatic PubMed expansion after Zotero local search when available** |
+| `package` | Requests using `/zotero-evidence-review`, saved files, EndNote/RIS export, evidence package, "使用技能", "完整工作流", "找引文", "补引用", "推荐引用", "citation", "refs", "参考文献", "文献引用", "生成报告", "保存结果", "导出参考文献", or a paragraph/search request that asks for citation placement or file outputs | **Paragraph Citation Package Workflow (Module 2 + Module 2.5): analysis stage, then export stage with automatic PubMed expansion after Zotero local search when available** |
 | `verify` | Words such as "verify", "核实", "check", "confirm" plus a specific citation/paper and a concrete claim, quote, statistic, or citation-supported statement | **Module 3: Citation Verification Protocol** |
 | `health` | "library status", "库状态", "health check", "健康检查", "preflight", "index status", or questions about Zotero database readiness | **Module 0.5: Library Health Check** |
 
 ### Routing Rules
 
-1. **Paragraph-first, package by default for citation work**: if the user provides a paragraph, run Module 2 first. If the same request includes `使用技能`, `完整工作流`, "find/add/recommend citations", `找引文`, `补引用`, `推荐引用`, `citation`, `refs`, `参考文献`, or `文献引用`, continue automatically to the Paragraph Citation Package Workflow / Module 2.5 and write the Markdown report plus RIS file.
-2. **Chat-only opt-out**: if the user explicitly says `只在聊天输出`, `不要生成文件`, `不导出`, `chat only`, or equivalent, stop after the relevant chat workflow and do not write package files.
-3. **Verification requires specificity**: only route to `verify` when both a cited source (or item key/DOI/title) and a claim/quote/statistic are present. Otherwise, route to `search` or ask a clarification.
-4. **Health check is read-only by default**: route health/status requests to Module 0.5 and do not run repair actions unless the user explicitly confirms them.
-5. **Evidence package request**: if the user asks for saved reports, EndNote/RIS, an evidence package, or the default citation-support workflow above, run the underlying search/paragraph workflow first, then route to the Paragraph Citation Package Workflow / Module 2.5 for file generation.
-6. **Ambiguous intent**: if the request cannot be confidently routed, output this numbered menu and ask the user to choose:
+1. **Slash command and simple-request entry**: `/zotero-evidence-review` is the recommended user-facing entry point. Treat it as a request to run this skill and auto-route from the user's short request; do not require the user to name modules or repeat the full workflow.
+2. **Paragraph-first, package by default for citation work**: if the user provides a paragraph, run Module 2 first. If the same request includes `/zotero-evidence-review`, `使用技能`, `完整工作流`, "find/add/recommend citations", `找引文`, `补引用`, `推荐引用`, `citation`, `refs`, `参考文献`, or `文献引用`, continue automatically to the Paragraph Citation Package Workflow / Module 2.5 and write the Markdown report plus RIS file.
+3. **Chat-only opt-out**: if the user explicitly says `只在聊天输出`, `不要生成文件`, `不导出`, `chat only`, or equivalent, stop after the relevant chat workflow and do not write package files.
+4. **Verification requires specificity**: only route to `verify` when both a cited source (or item key/DOI/title) and a claim/quote/statistic are present. Otherwise, route to `search` or ask a clarification.
+5. **Health check is read-only by default**: route health/status requests to Module 0.5 and do not run repair actions unless the user explicitly confirms them.
+6. **Evidence package request**: if the user asks for saved reports, EndNote/RIS, an evidence package, or the default citation-support workflow above, run the underlying search/paragraph workflow first, then route to the Paragraph Citation Package Workflow / Module 2.5 for file generation.
+7. **Ambiguous intent**: if the request cannot be confidently routed, output this numbered menu and ask the user to choose:
 
 ```markdown
 我可以按以下哪种方式处理？
@@ -395,6 +396,7 @@ Do not create extra JSON, BibTeX, EndNote XML, or log files unless the user expl
 
 Route to this module when the user asks for any of the following:
 
+- `/zotero-evidence-review` plus a short request to find evidence, add citations, export a report, or create reusable writing outputs.
 - `Evidence Package`, `Markdown report`, `EndNote`, `RIS`, `保存报告`, `导出参考文献`, `生成文件`, or `输出文件`.
 - Default citation-support workflow triggers: `使用技能`, `完整工作流`, `找引文`, `补引用`, `推荐引用`, `citation`, `refs`, `reference`, `参考文献`, or `文献引用` when attached to a paragraph, manuscript passage, or literature-search request.
 - A paragraph evidence review plus a request to save or export results.
@@ -406,7 +408,7 @@ Do not route to this module when the user explicitly opts out with `只在聊天
 
 1. **Run or reuse the evidence workflow**
    - For paragraph input, run **Module 2** first as the analysis stage of the **Paragraph Citation Package Workflow (Module 2 + Module 2.5)**.
-   - For paragraph citation-support requests such as `使用技能`, `找引文`, `补引用`, `推荐引用`, `citation`, `refs`, `参考文献`, or `文献引用`, default to the full workflow and write both `YYYY-MM-DD_{topic_slug}_evidence_review.md` and `YYYY-MM-DD_{topic_slug}_references.ris` unless the user explicitly opts out of file generation.
+   - For paragraph citation-support requests such as `/zotero-evidence-review`, `使用技能`, `找引文`, `补引用`, `推荐引用`, `citation`, `refs`, `参考文献`, or `文献引用`, default to the full workflow and write both `YYYY-MM-DD_{topic_slug}_evidence_review.md` and `YYYY-MM-DD_{topic_slug}_references.ris` unless the user explicitly opts out of file generation.
    - For topic/search input, run **Module 1** first and convert the final included papers into a reference table.
    - For biomedical paragraph/search requests, the package workflow attempts automatic PubMed expansion after Zotero local search when a PubMed-capable tool is configured and visible.
    - Other external source fallback beyond this built-in PubMed expansion still follows **Module 5: External Source Fallback** and requires availability checks and user confirmation where specified.
@@ -418,7 +420,7 @@ Do not route to this module when the user explicitly opts out with `只在聊天
    - After Zotero local search, construct a PubMed query from the topic, extracted claims, and core concepts.
    - Execute PubMed search automatically in the full package workflow only if a PubMed-capable tool is configured and visible.
    - If no PubMed-capable tool is available, include the copyable PubMed query in the report and mark PubMed expansion as `⚠️ Tool unavailable; search not executed`.
-   - If a PubMed-capable tool is visible but the search fails, mark PubMed expansion as failed, report the attempted query/error briefly, and do not create PubMed-only RIS records.
+   - If a PubMed-capable tool is visible but the search fails, mark PubMed expansion as `Failed; query reported`, report the attempted query/error briefly, and do not create PubMed-only RIS records.
 4. **Match Zotero and PubMed records**
    - Match by DOI first, then PMID, normalized title, then fuzzy author + year + journal.
    - If DOI/PMID/title conflicts, mark `Possible metadata mismatch` in the Markdown report and default to Zotero metadata for Zotero items.
@@ -481,7 +483,8 @@ Before writing RIS records, build a quality-control table for every candidate re
 | Missing metadata | DOI, PMID, authors, year, journal, volume, issue, pages | Add `Missing metadata` warning with exact missing fields | Omit unknown fields; do not infer |
 | Metadata mismatch | Zotero vs PubMed DOI, PMID, normalized title, year, journal | Add `Possible metadata mismatch` with conflicting values | Exclude until resolved unless the user explicitly accepts Zotero metadata |
 | Duplicate warning | Same DOI/PMID/title or fuzzy author + year + journal | Add `Possible duplicate` and list candidate citations | Include only the selected canonical record |
-| PubMed not executed | PubMed-capable tool unavailable or search failed | Mark `⚠️ Tool unavailable; search not executed` | Do not create PubMed-only RIS records |
+| PubMed not executed | PubMed-capable tool unavailable | Mark `⚠️ Tool unavailable; search not executed` | Do not create PubMed-only RIS records |
+| PubMed search failed | PubMed-capable tool was visible but returned an error | Mark `Failed; query reported` and include the attempted query/error briefly | Do not create PubMed-only RIS records |
 
 ### RIS Metadata Rules
 
@@ -681,9 +684,11 @@ Potential free MCP servers that may be useful when installed:
 
 ## Usage Examples
 
+Use short prompts. `/zotero-evidence-review` is the easiest way to call this skill; the workflow is chosen automatically from the request.
+
 ### Search
 
-> "帮我搜一下 Zotero 里关于肠道菌群与抑郁症的孟德尔随机化研究"
+> "/zotero-evidence-review 搜 Zotero 里关于肠道菌群和抑郁症的文献"
 
 The skill will:
 1. Expand to: `semantic_search("gut microbiota depression Mendelian randomization")` + `search_library(q="gut microbiota depression MR", tags=["Mendelian Randomization", "depression"])`
@@ -691,7 +696,7 @@ The skill will:
 
 ### Paragraph Evidence & Citation Analysis
 
-> "以下是一段草稿，请帮我找证据链并补引用：
+> "/zotero-evidence-review 帮我给下面这段草稿找证据并补引用：
 > '慢性炎症通过激活 JAK-STAT 信号通路促进动脉粥样硬化斑块形成，而 IL-6 受体阻断剂可显著降低心血管事件风险。'"
 
 The skill will treat this as citation-support work unless the user explicitly says `不要生成文件`, `只在聊天输出`, `不导出`, or `chat only`:
@@ -714,7 +719,7 @@ The skill will:
 
 ### Paragraph Citation Insertion
 
-> "帮我润色这段讨论，并补充合适的引用：
+> "/zotero-evidence-review 帮我润色这段讨论，并补充合适的引用：
 > '我们的研究发现某基因与 2 型糖尿病之间存在显著关联。这一结果与以往研究一致。'"
 
 The skill will:
@@ -722,6 +727,11 @@ The skill will:
 2. Search once for relevant genetic association studies in the library
 3. Recommend sentence-level citations and explain the citation rationale
 4. Suggest more precise wording using diff format when the evidence requires hedging
+5. Continue to Module 2.5 and generate the Markdown evidence report plus EndNote RIS unless the prompt says `不要生成文件`, `只在聊天输出`, `不导出`, or `chat only`
+
+Chat-only example:
+
+> "/zotero-evidence-review 只在聊天输出，不要生成文件：帮我给这段草稿找证据并补引用。"
 
 ---
 

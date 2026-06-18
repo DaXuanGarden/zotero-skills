@@ -64,6 +64,7 @@ EVIDENCE_PACKAGE_REQUIREMENTS = [
     "https://doi.org/",
     "https://pubmed.ncbi.nlm.nih.gov/",
     "⚠️ Tool unavailable; search not executed",
+    "Failed; query reported",
     "Possible metadata mismatch",
     "Missing metadata",
     "duplicate warning",
@@ -91,6 +92,8 @@ RIS_ITEM_TYPE_MAPPINGS = [
     "patent` -> `PAT",
 ]
 DEFAULT_EXPORT_REQUIREMENTS = [
+    "Slash command and simple-request entry",
+    "/zotero-evidence-review",
     "Paragraph-first, package by default for citation work",
     "使用技能",
     "完整工作流",
