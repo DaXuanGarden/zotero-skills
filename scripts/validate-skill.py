@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Validate the zotero-evidence-review skill markdown."""
+"""Statically validate the zotero-evidence-review skill markdown.
+
+This script checks SKILL.md structure, required workflow text, templates,
+and safety guards. It does not connect to Zotero or execute PubMed/external
+search workflows.
+"""
 
 from __future__ import annotations
 
@@ -84,6 +89,31 @@ RIS_ITEM_TYPE_MAPPINGS = [
     "bookSection` -> `CHAP",
     "dataset` -> `DATA",
     "patent` -> `PAT",
+]
+DEFAULT_EXPORT_REQUIREMENTS = [
+    "Paragraph-first, package by default for citation work",
+    "使用技能",
+    "完整工作流",
+    "找引文",
+    "补引用",
+    "推荐引用",
+    "citation",
+    "refs",
+    "参考文献",
+    "文献引用",
+    "Chat-only opt-out",
+    "只在聊天输出",
+    "不要生成文件",
+    "不导出",
+    "chat only",
+    "Module 2 → Module 2.5",
+]
+UNIFIED_WORKFLOW_REQUIREMENTS = [
+    "Paragraph Citation Package Workflow",
+    "Module 2 + Module 2.5",
+    "automatic PubMed expansion",
+    "after Zotero local search",
+    "PubMed-capable tool is configured and visible",
 ]
 
 
@@ -213,6 +243,12 @@ def main() -> None:
     require_all(text, EVIDENCE_PACKAGE_REQUIREMENTS, "evidence package requirement")
     ok("evidence package export requirements present")
 
+    require_all(text, DEFAULT_EXPORT_REQUIREMENTS, "default export routing requirement")
+    ok("default citation-support export routing requirements present")
+
+    require_all(text, UNIFIED_WORKFLOW_REQUIREMENTS, "unified paragraph citation workflow requirement")
+    ok("unified paragraph citation workflow requirements present")
+
     require_all(text, RIS_REQUIREMENTS, "RIS requirement")
     require_all(text, RIS_ITEM_TYPE_MAPPINGS, "RIS itemType mapping")
     ok("RIS export requirements present")
@@ -273,6 +309,7 @@ def main() -> None:
     ok("external-tool availability guards present")
 
     print("\nAll validations passed.")
+    print("Static validation only: Zotero/PubMed workflows were not executed.")
 
 
 if __name__ == "__main__":

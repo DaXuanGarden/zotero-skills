@@ -15,6 +15,8 @@ metadata:
 
 Use Zotero MCP tools to search the user's Zotero library intelligently. This skill combines **semantic search** (concept matching via embeddings) with **keyword/structured search**, performs **paragraph evidence and citation analysis** from draft text, verifies **citations against full text**, and can generate a two-file **Evidence Package** for writing workflows: a Markdown evidence report plus an EndNote-compatible RIS reference file.
 
+For paragraph citation-support requests, the default is one complete **Paragraph Citation Package Workflow** rather than two separate workflows: paragraph → claim extraction → one Zotero local search pass → evidence matrix → citation placement → revised/diff paragraph → Zotero metadata + PDF links → automatic PubMed expansion when available → Zotero/PubMed matching → metadata QC → Markdown evidence report → EndNote RIS. Chat-only paragraph analysis is an explicit opt-out mode.
+
 ---
 
 ## 0. Intent Detection
@@ -24,18 +26,19 @@ Route the user's request before choosing tools. Use the input shape and explicit
 | Intent | User input features | Route to |
 |--------|---------------------|----------|
 | `search` | Keywords, concepts, natural-language questions, broad topic discovery, or requests such as "search", "find papers", "what literature do I have about…" | **Module 1: Semantic + Structured Search** |
-| `paragraph` | A pasted manuscript paragraph, draft section, or multi-sentence passage — regardless of whether the user says "find evidence", "build evidence chain", "add citations", "补引用", or "润色并补文献" | **Module 2: Paragraph Evidence & Citation Analysis** |
-| `package` | Requests for saved files, EndNote/RIS export, evidence package, "生成报告", "保存结果", "导出参考文献", or a paragraph/search request that explicitly asks for file outputs | **Module 2.5: Evidence Package Export** |
+| `paragraph` | A pasted manuscript paragraph, draft section, or multi-sentence passage that asks for chat-only evidence analysis, with no citation/export/full-workflow trigger | **Module 2: Paragraph Evidence & Citation Analysis** |
+| `package` | Requests for saved files, EndNote/RIS export, evidence package, "使用技能", "完整工作流", "找引文", "补引用", "推荐引用", "citation", "refs", "参考文献", "文献引用", "生成报告", "保存结果", "导出参考文献", or a paragraph/search request that asks for citation placement or file outputs | **Paragraph Citation Package Workflow (Module 2 + Module 2.5): analysis stage, then export stage with automatic PubMed expansion after Zotero local search when available** |
 | `verify` | Words such as "verify", "核实", "check", "confirm" plus a specific citation/paper and a concrete claim, quote, statistic, or citation-supported statement | **Module 3: Citation Verification Protocol** |
 | `health` | "library status", "库状态", "health check", "健康检查", "preflight", "index status", or questions about Zotero database readiness | **Module 0.5: Library Health Check** |
 
 ### Routing Rules
 
-1. **Pasted paragraph always wins**: if the user provides a paragraph, route to `paragraph` / Module 2. Do not split it into separate "evidence chain" versus "writing suggestions" modes.
-2. **Verification requires specificity**: only route to `verify` when both a cited source (or item key/DOI/title) and a claim/quote/statistic are present. Otherwise, route to `search` or ask a clarification.
-3. **Health check is read-only by default**: route health/status requests to Module 0.5 and do not run repair actions unless the user explicitly confirms them.
-4. **Evidence package request**: if the user asks for saved reports, EndNote/RIS, or an evidence package, run the underlying search/paragraph workflow first, then route to `package` / Module 2.5 for file generation.
-5. **Ambiguous intent**: if the request cannot be confidently routed, output this numbered menu and ask the user to choose:
+1. **Paragraph-first, package by default for citation work**: if the user provides a paragraph, run Module 2 first. If the same request includes `使用技能`, `完整工作流`, "find/add/recommend citations", `找引文`, `补引用`, `推荐引用`, `citation`, `refs`, `参考文献`, or `文献引用`, continue automatically to the Paragraph Citation Package Workflow / Module 2.5 and write the Markdown report plus RIS file.
+2. **Chat-only opt-out**: if the user explicitly says `只在聊天输出`, `不要生成文件`, `不导出`, `chat only`, or equivalent, stop after the relevant chat workflow and do not write package files.
+3. **Verification requires specificity**: only route to `verify` when both a cited source (or item key/DOI/title) and a claim/quote/statistic are present. Otherwise, route to `search` or ask a clarification.
+4. **Health check is read-only by default**: route health/status requests to Module 0.5 and do not run repair actions unless the user explicitly confirms them.
+5. **Evidence package request**: if the user asks for saved reports, EndNote/RIS, an evidence package, or the default citation-support workflow above, run the underlying search/paragraph workflow first, then route to the Paragraph Citation Package Workflow / Module 2.5 for file generation.
+6. **Ambiguous intent**: if the request cannot be confidently routed, output this numbered menu and ask the user to choose:
 
 ```markdown
 我可以按以下哪种方式处理？
@@ -45,6 +48,22 @@ Route the user's request before choosing tools. Use the input shape and explicit
 4. 精确核实（具体引用 + 具体主张/数据/引文）
 5. 库健康度检查（库状态、索引、PDF覆盖率）
 ```
+
+### End-to-End Workflow Map
+
+Use this map as the default execution path so the workflow remains continuous and auditable:
+
+```text
+intent routing → optional read-only library readiness check → Module 1 search or Module 2 paragraph analysis → Zotero canonical metadata + PDF links → automatic PubMed expansion after Zotero local search when available → Zotero/PubMed matching → metadata QC → Markdown evidence report + EndNote RIS → final path-only summary
+```
+
+Operational checkpoints:
+
+1. **Before searching**: identify scope, language, explicit opt-out, and whether the request is chat-only or the full **Paragraph Citation Package Workflow (Module 2 + Module 2.5)**.
+2. **During Zotero work**: search Zotero first, deduplicate candidate evidence, and retrieve inspected metadata before using an item in a report or RIS record.
+3. **Before PubMed claims**: only mark PubMed as `Completed` if a PubMed-capable tool is configured and visible and the search actually ran. Otherwise report the query with `⚠️ Tool unavailable; search not executed` or failure status.
+4. **Before writing files**: run metadata quality checks for missing fields, possible Zotero/PubMed mismatch, duplicate warning, and RIS inclusion/exclusion action.
+5. **Before final response**: confirm the Markdown report follows `EVIDENCE_REVIEW_REPORT`, the RIS is plain RIS records only, and the chat response lists only generated paths plus critical warnings.
 
 ---
 
@@ -217,6 +236,8 @@ Run **one Zotero search pass** for the paragraph, then produce **two output laye
 
 Do not repeatedly search Zotero for each output layer. Do not ask the user to choose between "find evidence" and "add citations" modes.
 
+When the request is a citation-support or export request, this module is the analysis stage of the **Paragraph Citation Package Workflow (Module 2 + Module 2.5)**. In that full workflow, the agent must continue to Module 2.5 after the Zotero local search and paragraph analysis; PubMed expansion is attempted automatically after Zotero local search when a PubMed-capable tool is configured and visible. Chat-only use of Module 2 requires an explicit opt-out such as `不要生成文件` or `只在聊天输出`.
+
 ### Process
 
 1. **Sentence splitting + claim extraction**
@@ -236,10 +257,11 @@ Do not repeatedly search Zotero for each output layer. Do not ask the user to ch
    - Mark deletions with `~~strikethrough~~` and additions with `**bold**`.
    - Keep unchanged text unmarked so the user can see exactly what changed.
    - End with a change summary in this format: `改动：+N词/-M词，修改原因：[简短说明]`.
-5. **Gap summary + external search handoff**
+5. **Gap summary + package/external handoff**
    - Summarize claims with no adequate Zotero evidence.
-   - For each gap, propose an external search query.
-   - Ask whether to start external search using the workflow in **External Source Fallback**.
+   - For chat-only Module 2 output, propose external search queries for each gap and ask whether to start external search using **External Source Fallback**.
+   - For the full **Paragraph Citation Package Workflow**, do not stop at the gap prompt: continue to Module 2.5, where automatic PubMed expansion is attempted after Zotero local search when a PubMed-capable tool is configured and visible.
+   - If no PubMed-capable tool is available in package mode, include the copyable PubMed query and status `⚠️ Tool unavailable; search not executed` in the Markdown report instead of implying PubMed was searched.
 
 ### Evidence and Rationale Labels
 
@@ -285,7 +307,12 @@ Use this structure:
 
 ### Gap Handling
 
-When any row in the Layer A claim-evidence matrix has `Gap? = ⚠️ 是`, automatically enter the gap-handling flow after presenting the paragraph analysis.
+When any row in the Layer A claim-evidence matrix has `Gap? = ⚠️ 是`, handle the gap according to workflow mode.
+
+- **Full Paragraph Citation Package Workflow**: continue to Module 2.5 automatically. PubMed expansion is the built-in biomedical expansion step after Zotero local search when a PubMed-capable tool is configured and visible; if unavailable, report the query and `⚠️ Tool unavailable; search not executed`.
+- **Chat-only Module 2**: enter the interactive gap-handling flow below after presenting the paragraph analysis. Do not run external searches unless the user confirms.
+
+Interactive chat-only flow:
 
 1. **Count gap claims**
    - Report the number of unsupported or insufficiently supported claims.
@@ -341,13 +368,21 @@ Use this output shape:
 - Prefer 3-7 high-value citations over exhaustive citation stuffing.
 - If evidence is indirect, mixed, observational, or mechanistic only, recommend hedging language rather than causal wording.
 - Use the same Zotero result pool for both Layer A and Layer B; only search again if the user explicitly requests deeper follow-up.
-- Do not fabricate missing support. Mark gaps clearly and hand off to external search only after asking.
+- Do not fabricate missing support. Mark gaps clearly. In chat-only mode, hand off to external search only after asking; in the full Paragraph Citation Package Workflow, continue to Module 2.5 and report PubMed expansion status honestly.
 
 ---
 
 ## 2.5 Evidence Package Export
 
-Use when the user asks to save results, generate an evidence package, export EndNote references, or produce durable files after a search or paragraph evidence review. The default deliverable is exactly two files:
+Use when the user asks to save results, generate an evidence package, export EndNote references, or produce durable files after a search or paragraph evidence review. For paragraph citation-support requests, this module is the export stage of the unified **Paragraph Citation Package Workflow (Module 2 + Module 2.5)**: **Module 2 → Module 2.5** means analysis first, then export.
+
+Visible default pipeline for paragraph citation/export work:
+
+```text
+paragraph → claim extraction → one Zotero local search pass → evidence matrix → citation placement → revised/diff paragraph → Zotero metadata + PDF links → automatic PubMed expansion when available → Zotero/PubMed matching → metadata QC → Markdown evidence report → EndNote RIS
+```
+
+The default deliverable is exactly two files:
 
 ```text
 {topic_slug}_evidence_review.md
@@ -361,23 +396,29 @@ Do not create extra JSON, BibTeX, EndNote XML, or log files unless the user expl
 Route to this module when the user asks for any of the following:
 
 - `Evidence Package`, `Markdown report`, `EndNote`, `RIS`, `保存报告`, `导出参考文献`, `生成文件`, or `输出文件`.
+- Default citation-support workflow triggers: `使用技能`, `完整工作流`, `找引文`, `补引用`, `推荐引用`, `citation`, `refs`, `reference`, `参考文献`, or `文献引用` when attached to a paragraph, manuscript passage, or literature-search request.
 - A paragraph evidence review plus a request to save or export results.
 - A literature search where the user wants a reusable report rather than chat-only results.
+
+Do not route to this module when the user explicitly opts out with `只在聊天输出`, `不要生成文件`, `不导出`, `chat only`, or equivalent.
 
 ### Workflow
 
 1. **Run or reuse the evidence workflow**
-   - For paragraph input, run **Module 2** first.
+   - For paragraph input, run **Module 2** first as the analysis stage of the **Paragraph Citation Package Workflow (Module 2 + Module 2.5)**.
+   - For paragraph citation-support requests such as `使用技能`, `找引文`, `补引用`, `推荐引用`, `citation`, `refs`, `参考文献`, or `文献引用`, default to the full workflow and write both `YYYY-MM-DD_{topic_slug}_evidence_review.md` and `YYYY-MM-DD_{topic_slug}_references.ris` unless the user explicitly opts out of file generation.
    - For topic/search input, run **Module 1** first and convert the final included papers into a reference table.
-   - If Zotero evidence is insufficient, use **Module 5: External Source Fallback** or PubMed-capable tools only when available.
+   - For biomedical paragraph/search requests, the package workflow attempts automatic PubMed expansion after Zotero local search when a PubMed-capable tool is configured and visible.
+   - Other external source fallback beyond this built-in PubMed expansion still follows **Module 5: External Source Fallback** and requires availability checks and user confirmation where specified.
 2. **Collect canonical metadata**
    - For every Zotero item considered for the final report or RIS, retrieve metadata with `zotero_get_item_metadata`.
    - Retrieve child attachments with `zotero_get_item_children` or `zotero_get_items_children` when PDF links are needed.
    - Use Zotero metadata as the authority for Zotero items. Do not fill missing authors, titles, journals, pages, DOI, PMID, or years from memory.
-3. **Run PubMed expansion when available**
-   - Construct a PubMed query from the topic, claims, and core concepts.
-   - Execute PubMed search only if a PubMed-capable tool is configured and visible.
+3. **Run automatic PubMed expansion when available**
+   - After Zotero local search, construct a PubMed query from the topic, extracted claims, and core concepts.
+   - Execute PubMed search automatically in the full package workflow only if a PubMed-capable tool is configured and visible.
    - If no PubMed-capable tool is available, include the copyable PubMed query in the report and mark PubMed expansion as `⚠️ Tool unavailable; search not executed`.
+   - If a PubMed-capable tool is visible but the search fails, mark PubMed expansion as failed, report the attempted query/error briefly, and do not create PubMed-only RIS records.
 4. **Match Zotero and PubMed records**
    - Match by DOI first, then PMID, normalized title, then fuzzy author + year + journal.
    - If DOI/PMID/title conflicts, mark `Possible metadata mismatch` in the Markdown report and default to Zotero metadata for Zotero items.
@@ -409,7 +450,7 @@ If files already exist, append `_v2`, `_v3`, etc. Do not overwrite an existing e
 
 ### Markdown Report Requirements
 
-The report must include these sections in order:
+The report must include these sections in order, including PubMed status even when PubMed was unavailable or failed:
 
 1. `Bottom Line`
 2. `Recommended Manuscript Text`
@@ -478,7 +519,7 @@ Zotero-to-RIS mapping:
 
 Before reporting success, check:
 
-- Markdown report exists and includes Zotero search summary, PubMed expansion status, claim–evidence matrix, integrated writing advice, reviewer-risk assessment, metadata quality-control section, and export file section.
+- Markdown report exists and includes Zotero search summary, a PubMed Expansion section with query and execution status, claim–evidence matrix, integrated writing advice, reviewer-risk assessment, metadata quality-control section, and export file section.
 - RIS file is plain RIS only, with no Markdown headings, explanations, comments, or code fences.
 - Every RIS record starts with `TY  -` and ends with `ER  -`.
 - Recommended Zotero citations use metadata consistent with Zotero.
@@ -653,12 +694,12 @@ The skill will:
 > "以下是一段草稿，请帮我找证据链并补引用：
 > '慢性炎症通过激活 JAK-STAT 信号通路促进动脉粥样硬化斑块形成，而 IL-6 受体阻断剂可显著降低心血管事件风险。'"
 
-The skill will:
-1. Split sentences and extract claims: (a) chronic inflammation → JAK-STAT → atherosclerosis, (b) IL-6R blockade → reduced CVD risk
-2. Build one batch query set and run semantic search plus one keyword fallback if needed
-3. Reuse the same result pool for Layer A (claim-evidence matrix) and Layer B (sentence-level citation recommendations)
-4. Return a diff paragraph with new citation locations and any necessary hedging
-5. Summarize gaps and ask whether to start external search
+The skill will treat this as citation-support work unless the user explicitly says `不要生成文件`, `只在聊天输出`, `不导出`, or `chat only`:
+1. Route the paragraph to Module 2 and extract claims: (a) chronic inflammation → JAK-STAT → atherosclerosis, (b) IL-6R blockade → reduced CVD risk.
+2. Build one batch query set and run Zotero semantic search plus one keyword fallback if needed.
+3. Reuse the same result pool for Layer A (claim-evidence matrix), Layer B (sentence-level citation recommendations), and the diff paragraph.
+4. Continue to Module 2.5 in the full **Paragraph Citation Package Workflow (Module 2 + Module 2.5)**: collect Zotero metadata/PDF links, attempt automatic PubMed expansion after Zotero local search when a PubMed-capable tool is configured and visible, run matching/QC, and write the Markdown report plus EndNote RIS.
+5. If the user opted out of files, stop after the chat-only Module 2 output and ask whether to start external search for remaining gaps.
 
 ### Strict Verification
 
@@ -765,7 +806,7 @@ Rules:
 # Evidence Review: {topic}
 
 Generated: {YYYY-MM-DD}
-Source: Zotero local library; PubMed: {Completed / ⚠️ Tool unavailable; search not executed / Not executed}
+Source: Zotero local library; PubMed: {Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported / Not executed only for explicit chat-only or non-PubMed workflows}
 Input: {user paragraph, claim, or search question}
 
 ## 1. Bottom Line
@@ -797,7 +838,7 @@ Input: {user paragraph, claim, or search question}
 ## 7. PubMed Expansion
 Date: {YYYY-MM-DD}
 Database: PubMed
-Status: Completed / ⚠️ Tool unavailable; search not executed
+Status: Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported
 
 Query:
 ```text
@@ -844,7 +885,7 @@ Rules:
 - Keep Zotero item keys hidden in links or notes, not as primary citation labels.
 - If a PDF attachment is unavailable, use `—` in the PDF column.
 - If collection membership is unknown, use `Not available`.
-- If PubMed was not actually searched, clearly mark the status and include only the planned query, not invented results.
+- If PubMed was not actually searched, clearly mark the status and include only the planned or attempted query, not invented results.
 - Always include the metadata quality-control table; use `none` when there are no missing metadata, metadata mismatch, or duplicate warning cases.
 
 ### RIS_REFERENCE_FILE
