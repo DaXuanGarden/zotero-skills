@@ -1,19 +1,19 @@
 ---
 name: zotero-evidence-review
-description: Search, analyze, and verify citations in your Zotero library using semantic search, evidence-chain extraction, full-text citation verification, and writing suggestions grounded in your collection. Requires Zotero MCP to be configured.
+description: Search, analyze, verify, and export Zotero-grounded evidence packages with Markdown evidence reports and EndNote-compatible RIS references. Requires Zotero MCP to be configured.
 license: MIT
 compatibility: opencode,zcode
 metadata:
   workflow: academic-research
   requires: zotero-mcp
-  version: 2.0.1
+  version: 2.1.0
 ---
 
 # Zotero Evidence Review Skill
 
 ## Overview
 
-Use Zotero MCP tools to search the user's Zotero library intelligently. This skill combines **semantic search** (concept matching via embeddings) with **keyword/structured search**, performs **paragraph evidence and citation analysis** from draft text, and verifies **citations against full text**.
+Use Zotero MCP tools to search the user's Zotero library intelligently. This skill combines **semantic search** (concept matching via embeddings) with **keyword/structured search**, performs **paragraph evidence and citation analysis** from draft text, verifies **citations against full text**, and can generate a two-file **Evidence Package** for writing workflows: a Markdown evidence report plus an EndNote-compatible RIS reference file.
 
 ---
 
@@ -25,6 +25,7 @@ Route the user's request before choosing tools. Use the input shape and explicit
 |--------|---------------------|----------|
 | `search` | Keywords, concepts, natural-language questions, broad topic discovery, or requests such as "search", "find papers", "what literature do I have about…" | **Module 1: Semantic + Structured Search** |
 | `paragraph` | A pasted manuscript paragraph, draft section, or multi-sentence passage — regardless of whether the user says "find evidence", "build evidence chain", "add citations", "补引用", or "润色并补文献" | **Module 2: Paragraph Evidence & Citation Analysis** |
+| `package` | Requests for saved files, EndNote/RIS export, evidence package, "生成报告", "保存结果", "导出参考文献", or a paragraph/search request that explicitly asks for file outputs | **Module 2.5: Evidence Package Export** |
 | `verify` | Words such as "verify", "核实", "check", "confirm" plus a specific citation/paper and a concrete claim, quote, statistic, or citation-supported statement | **Module 3: Citation Verification Protocol** |
 | `health` | "library status", "库状态", "health check", "健康检查", "preflight", "index status", or questions about Zotero database readiness | **Module 0.5: Library Health Check** |
 
@@ -33,14 +34,16 @@ Route the user's request before choosing tools. Use the input shape and explicit
 1. **Pasted paragraph always wins**: if the user provides a paragraph, route to `paragraph` / Module 2. Do not split it into separate "evidence chain" versus "writing suggestions" modes.
 2. **Verification requires specificity**: only route to `verify` when both a cited source (or item key/DOI/title) and a claim/quote/statistic are present. Otherwise, route to `search` or ask a clarification.
 3. **Health check is read-only by default**: route health/status requests to Module 0.5 and do not run repair actions unless the user explicitly confirms them.
-4. **Ambiguous intent**: if the request cannot be confidently routed, output this numbered menu and ask the user to choose:
+4. **Evidence package request**: if the user asks for saved reports, EndNote/RIS, or an evidence package, run the underlying search/paragraph workflow first, then route to `package` / Module 2.5 for file generation.
+5. **Ambiguous intent**: if the request cannot be confidently routed, output this numbered menu and ask the user to choose:
 
 ```markdown
 我可以按以下哪种方式处理？
 1. 语义+结构搜索（关键词/概念/问句）
 2. 段落证据与引文分析（粘贴段落、找证据、补引用）
-3. 精确核实（具体引用 + 具体主张/数据/引文）
-4. 库健康度检查（库状态、索引、PDF覆盖率）
+3. Evidence Package 导出（Markdown 报告 + EndNote RIS）
+4. 精确核实（具体引用 + 具体主张/数据/引文）
+5. 库健康度检查（库状态、索引、PDF覆盖率）
 ```
 
 ---
@@ -98,12 +101,14 @@ Choose the right Zotero MCP tool for each task:
 - **Conceptual literature discovery** → `zotero_semantic_search` first.
 - **Exact title, DOI, PMID, author, keyword** → `zotero_search_items` or `zotero_advanced_search`.
 - **Citation-key lookup** → `zotero_search_by_citation_key`.
-- **Metadata, abstracts, BibTeX/JSON export** → `zotero_get_item_metadata`.
+- **Metadata, abstracts, BibTeX/JSON export** → `zotero_get_item_metadata`; required before writing RIS records for Zotero items.
+- **Attachments / PDF links** → `zotero_get_item_children` or `zotero_get_items_children` to find attachment keys for `zotero://open-pdf/library/items/{attachment_key}` links.
 - **Full text** → `zotero_get_item_fulltext` or `zotero_read_pdf_pages`.
 - **Annotations and reading notes** → `zotero_get_annotations` and `zotero_get_notes`.
 - **Collection-level search** → `zotero_get_collections`, `zotero_search_collections`, `zotero_get_collection_items`.
 - **Semantic database status** → `zotero_get_search_database_status`.
 - **Semantic database update** → `zotero_update_search_database`. Only when needed; prefer incremental `update-db`.
+- **RIS output** → generate from inspected Zotero metadata and verified PubMed metadata only; never infer missing bibliographic fields from memory.
 
 ## Safety Rules
 
@@ -117,7 +122,7 @@ Always ask for explicit confirmation before:
 - adding many items at once;
 - overwriting notes or annotation comments.
 
-Never fabricate citations, titles, authors, years, journal names, DOI, PMID, or Zotero item keys.
+Never fabricate citations, titles, authors, years, journal names, DOI, PMID, Zotero item keys, or RIS records.
 If no relevant source is found in Zotero, say so clearly and suggest an external search query instead.
 
 ---
@@ -340,6 +345,161 @@ Use this output shape:
 
 ---
 
+## 2.5 Evidence Package Export
+
+Use when the user asks to save results, generate an evidence package, export EndNote references, or produce durable files after a search or paragraph evidence review. The default deliverable is exactly two files:
+
+```text
+{topic_slug}_evidence_review.md
+{topic_slug}_references.ris
+```
+
+Do not create extra JSON, BibTeX, EndNote XML, or log files unless the user explicitly requests them. The Markdown report is the human-readable evidence workspace; the RIS file is the EndNote import file.
+
+### Trigger Conditions
+
+Route to this module when the user asks for any of the following:
+
+- `Evidence Package`, `Markdown report`, `EndNote`, `RIS`, `保存报告`, `导出参考文献`, `生成文件`, or `输出文件`.
+- A paragraph evidence review plus a request to save or export results.
+- A literature search where the user wants a reusable report rather than chat-only results.
+
+### Workflow
+
+1. **Run or reuse the evidence workflow**
+   - For paragraph input, run **Module 2** first.
+   - For topic/search input, run **Module 1** first and convert the final included papers into a reference table.
+   - If Zotero evidence is insufficient, use **Module 5: External Source Fallback** or PubMed-capable tools only when available.
+2. **Collect canonical metadata**
+   - For every Zotero item considered for the final report or RIS, retrieve metadata with `zotero_get_item_metadata`.
+   - Retrieve child attachments with `zotero_get_item_children` or `zotero_get_items_children` when PDF links are needed.
+   - Use Zotero metadata as the authority for Zotero items. Do not fill missing authors, titles, journals, pages, DOI, PMID, or years from memory.
+3. **Run PubMed expansion when available**
+   - Construct a PubMed query from the topic, claims, and core concepts.
+   - Execute PubMed search only if a PubMed-capable tool is configured and visible.
+   - If no PubMed-capable tool is available, include the copyable PubMed query in the report and mark PubMed expansion as `⚠️ Tool unavailable; search not executed`.
+4. **Match Zotero and PubMed records**
+   - Match by DOI first, then PMID, normalized title, then fuzzy author + year + journal.
+   - If DOI/PMID/title conflicts, mark `Possible metadata mismatch` in the Markdown report and default to Zotero metadata for Zotero items.
+5. **Run metadata quality control**
+   - Check missing metadata before RIS export: DOI, PMID, journal / publication title, year, volume, issue, pages, and authors.
+   - Check Zotero-vs-PubMed conflicts for DOI, PMID, normalized title, publication year, and journal.
+   - Check possible duplicate records by DOI, PMID, normalized title, and fuzzy author + year + journal.
+   - Report missing metadata, metadata mismatch, and duplicate warning rows in the Markdown report.
+   - Exclude unresolved metadata conflicts from RIS by default; do not silently write questionable records.
+6. **Select RIS references**
+   - Include final recommended Zotero citations.
+   - Include PubMed-only papers only when they are marked `recommend citing` or `consider importing`, and only when PubMed metadata is sufficient and comes from an actually completed PubMed search.
+   - Exclude low-relevance hits, duplicate records, and unresolved metadata conflicts by default.
+7. **Write the two files**
+   - Save the Markdown report with the `EVIDENCE_REVIEW_REPORT` template.
+   - Save the RIS file with the `RIS_REFERENCE_FILE` template and rules.
+   - Final chat output should list only the two generated file paths plus any critical warnings.
+
+### Default Naming
+
+Use the current date and a short normalized topic slug:
+
+```text
+YYYY-MM-DD_{topic_slug}_evidence_review.md
+YYYY-MM-DD_{topic_slug}_references.ris
+```
+
+If files already exist, append `_v2`, `_v3`, etc. Do not overwrite an existing evidence package unless the user explicitly confirms replacement.
+
+### Markdown Report Requirements
+
+The report must include these sections in order:
+
+1. `Bottom Line`
+2. `Recommended Manuscript Text`
+3. `Claim–Evidence Matrix`
+4. `Citation Placement`
+5. `Reference Table`
+6. `Zotero Search Summary`
+7. `PubMed Expansion`
+8. `Integrated Writing Advice`
+9. `Gaps and Reviewer-risk Assessment`
+10. `Metadata Quality Control`
+11. `Export File`
+
+Reference table rules:
+
+- Do not expose Zotero item keys as the primary reading object.
+- Hide item keys inside `[Item](zotero://select/items/0_{item_key})` links.
+- Use `[PDF](zotero://open-pdf/library/items/{attachment_key})` when a PDF attachment key is available; otherwise use `—`.
+- Use `[DOI](https://doi.org/{doi})` and `[PMID](https://pubmed.ncbi.nlm.nih.gov/{pmid}/)` links when identifiers are available.
+- Use `Not available` for unknown collection membership.
+
+### Metadata Quality Control
+
+Before writing RIS records, build a quality-control table for every candidate reference:
+
+| Check | What to inspect | Markdown action | RIS action |
+|-------|-----------------|-----------------|------------|
+| Missing metadata | DOI, PMID, authors, year, journal, volume, issue, pages | Add `Missing metadata` warning with exact missing fields | Omit unknown fields; do not infer |
+| Metadata mismatch | Zotero vs PubMed DOI, PMID, normalized title, year, journal | Add `Possible metadata mismatch` with conflicting values | Exclude until resolved unless the user explicitly accepts Zotero metadata |
+| Duplicate warning | Same DOI/PMID/title or fuzzy author + year + journal | Add `Possible duplicate` and list candidate citations | Include only the selected canonical record |
+| PubMed not executed | PubMed-capable tool unavailable or search failed | Mark `⚠️ Tool unavailable; search not executed` | Do not create PubMed-only RIS records |
+
+### RIS Metadata Rules
+
+RIS records must be generated from inspected metadata only.
+
+| Source | Allowed metadata |
+|--------|------------------|
+| Zotero item | `zotero_get_item_metadata` output; DOI/PMID/ISBN from Zotero metadata |
+| PubMed-only item | PubMed returned metadata from a completed search |
+| Missing field | Leave blank or omit; do not infer |
+| Metadata conflict | Mark in Markdown report; exclude from RIS unless the conflict is resolved |
+
+Zotero-to-RIS mapping:
+
+| Zotero field | RIS field |
+|--------------|-----------|
+| `itemType` | `TY` (`journalArticle` -> `JOUR`; `book` -> `BOOK`; `conferencePaper` -> `CONF`; `preprint` -> `UNPB` or `JOUR` when already journal-indexed; `report` -> `RPRT`; `thesis` -> `THES`; `webpage` -> `ELEC`; `bookSection` -> `CHAP`; `dataset` -> `DATA`; `patent` -> `PAT`) |
+| `creators` | `AU`, one line per author |
+| `date` | `PY` and optionally `Y1` |
+| `title` | `TI` |
+| `publicationTitle` | `JO` / `T2` |
+| `journalAbbreviation` | `J2` |
+| `volume` | `VL` |
+| `issue` | `IS` |
+| `pages` | `SP` / `EP` when separable |
+| `DOI` | `DO` |
+| `PMID` | `AN` or `N1` |
+| `url` | `UR` |
+| `abstractNote` | `AB` when needed |
+| `language` | `LA` |
+| `tags` | `KW`, one line per tag |
+| item key | `N1  - Zotero key: XXXXXXXX` only; do not show as citation text |
+
+### Quality Gates
+
+Before reporting success, check:
+
+- Markdown report exists and includes Zotero search summary, PubMed expansion status, claim–evidence matrix, integrated writing advice, reviewer-risk assessment, metadata quality-control section, and export file section.
+- RIS file is plain RIS only, with no Markdown headings, explanations, comments, or code fences.
+- Every RIS record starts with `TY  -` and ends with `ER  -`.
+- Recommended Zotero citations use metadata consistent with Zotero.
+- PubMed-only recommended citations use metadata consistent with completed PubMed search results; if PubMed was not executed, no PubMed-only RIS records are created.
+- Missing metadata, metadata mismatch, and duplicate warning cases are disclosed in the Markdown report and not silently written into RIS.
+
+### Output Format
+
+In chat, after files are written, output only:
+
+```markdown
+Generated Evidence Package:
+- Markdown report: `<path/to/topic_evidence_review.md>`
+- EndNote RIS: `<path/to/topic_references.ris>`
+
+Warnings:
+- `<critical metadata/tool warning if any; otherwise omit this section>`
+```
+
+---
+
 ## 3. Citation Verification Protocol
 
 Use when the user asks to verify whether a specific claim, quote, statistic, or citation is actually supported by a cited paper or reference. The protocol automatically detects the reference language and chooses the appropriate verification path.
@@ -537,7 +697,7 @@ The skill will:
 
 ## Appendix: Output Templates
 
-Use these named templates whenever a module references an appendix template. Keep full bibliographic metadata in `REFS_BLOCK` only; elsewhere cite papers as `Author Year (KEY)`.
+Use these named templates whenever a module references an appendix template. For chat-only outputs, keep full bibliographic metadata in `REFS_BLOCK` only; elsewhere cite papers as `Author Year (KEY)`. For evidence packages, use `EVIDENCE_REVIEW_REPORT` plus `RIS_REFERENCE_FILE`.
 
 ### REFS_BLOCK
 
@@ -598,6 +758,126 @@ Rules:
 - Use `~~删除~~` only for text that should be removed or weakened.
 - Use `**新增**` for inserted citations, hedges, qualifiers, or terminology changes.
 - Leave unchanged text unmarked.
+
+### EVIDENCE_REVIEW_REPORT
+
+```markdown
+# Evidence Review: {topic}
+
+Generated: {YYYY-MM-DD}
+Source: Zotero local library; PubMed: {Completed / ⚠️ Tool unavailable; search not executed / Not executed}
+Input: {user paragraph, claim, or search question}
+
+## 1. Bottom Line
+- {1-3 sentence evidence judgment}
+
+## 2. Recommended Manuscript Text
+> {safe revised paragraph or concise writing recommendation}
+
+## 3. Claim–Evidence Matrix
+| # | Claim | Zotero evidence | PubMed evidence | Evidence status | Confidence | Caveat | Recommended citation |
+|---|-------|-----------------|-----------------|-----------------|------------|--------|----------------------|
+| 1 | ... | Author Year | PubMed confirms / not searched / no direct evidence | Supported / Partial / Gap | High / Moderate / Low | ... | Author Year |
+
+## 4. Citation Placement
+| Sentence / location | Recommended citation | Purpose | Wording note |
+|---------------------|----------------------|---------|--------------|
+| ... | Author Year | background / direct / method / caveat | ... |
+
+## 5. Reference Table
+| # | Citation | Year | Study type | Main use | Zotero | PDF | DOI | PMID | Collection |
+|---|----------|------|------------|----------|--------|-----|-----|------|------------|
+| 1 | Author et al., *Journal* | 2024 | Systematic review | ... | [Item](zotero://select/items/0_KEY) | [PDF](zotero://open-pdf/library/items/ATTACHMENT_KEY) | [DOI](https://doi.org/10.xxxx/xxxx) | [PMID](https://pubmed.ncbi.nlm.nih.gov/PMID/) | Collection name |
+
+## 6. Zotero Search Summary
+| Search route | Query | Hits | Included | Notes |
+|--------------|-------|-----:|---------:|-------|
+| Semantic search | ... | 0 | 0 | ... |
+
+## 7. PubMed Expansion
+Date: {YYYY-MM-DD}
+Database: PubMed
+Status: Completed / ⚠️ Tool unavailable; search not executed
+
+Query:
+```text
+{copyable PubMed query}
+```
+
+| # | Citation | PMID | DOI | In Zotero? | Evidence use | Recommendation |
+|---|----------|------|-----|------------|--------------|----------------|
+| 1 | Author et al., Year | [PMID](https://pubmed.ncbi.nlm.nih.gov/PMID/) | [DOI](https://doi.org/10.xxxx/xxxx) | Yes / No / Possible mismatch | ... | Use / Consider importing / Exclude |
+
+## 8. Integrated Writing Advice
+### Original claim
+{original text}
+
+### Evidence from Zotero
+- ...
+
+### Evidence from PubMed
+- ...
+
+### Recommended revision
+> ...
+
+### Why this wording is safer
+...
+
+## 9. Gaps and Reviewer-risk Assessment
+| Affected claim / sentence | Risk | Severity | Evidence basis | Suggested fix |
+|---------------------------|------|----------|----------------|---------------|
+| ... | ... | High / Moderate / Low | ... | ... |
+
+## 10. Metadata Quality Control
+| Citation | Missing metadata | Metadata mismatch | Duplicate warning | RIS action |
+|----------|------------------|-------------------|-------------------|------------|
+| Author Year | DOI / PMID / pages / none | Possible metadata mismatch: Zotero DOI ... vs PubMed DOI ... / none | Possible duplicate with Author Year / none | Include / exclude / needs manual check |
+
+## 11. Export File
+- EndNote RIS: `{topic_slug}_references.ris`
+- RIS inclusion rule: final recommended citations only; low-relevance hits excluded.
+- Metadata warnings: {missing fields, mismatches, duplicate warnings, or none}
+```
+
+Rules:
+- Keep Zotero item keys hidden in links or notes, not as primary citation labels.
+- If a PDF attachment is unavailable, use `—` in the PDF column.
+- If collection membership is unknown, use `Not available`.
+- If PubMed was not actually searched, clearly mark the status and include only the planned query, not invented results.
+- Always include the metadata quality-control table; use `none` when there are no missing metadata, metadata mismatch, or duplicate warning cases.
+
+### RIS_REFERENCE_FILE
+
+```ris
+TY  - JOUR
+AU  - Last, First
+PY  - 2024
+Y1  - 2024/01/01
+TI  - Article title
+JO  - Journal name
+J2  - Journal abbreviation
+VL  - 12
+IS  - 3
+SP  - 100
+EP  - 110
+DO  - 10.xxxx/xxxx
+AN  - PMID
+UR  - https://doi.org/10.xxxx/xxxx
+KW  - Zotero tag
+N1  - Zotero key: XXXXXXXX
+ER  -
+```
+
+Rules:
+- The RIS file must contain RIS records only; no Markdown headings, prose, code fences, or comments.
+- Every record starts with `TY  -` and ends with `ER  -`.
+- Use one `AU  -` line per author and one `KW  -` line per keyword/tag.
+- Split page ranges into `SP` and `EP` when possible; if not possible, write the original page string to `SP` and omit `EP`.
+- Omit unknown fields rather than guessing.
+- Add `N1  - Zotero key: XXXXXXXX` for Zotero items only.
+- PubMed-only records require metadata from an actually completed PubMed search; when PubMed is unavailable, do not create PubMed-only RIS records.
+- Exclude unresolved metadata mismatch and unresolved duplicate warning records unless the user explicitly selects the canonical record.
 
 ### VERIFICATION_REPORT
 

@@ -14,13 +14,15 @@ except ImportError:  # pragma: no cover - fallback for minimal environments
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SKILL_PATH = REPO_ROOT / "zotero-evidence-review" / "SKILL.md"
-REQUIRED_TEMPLATES = {
+REQUIRED_TEMPLATES = (
     "REFS_BLOCK",
     "CLAIM_EVIDENCE_MATRIX",
     "WRITING_SUGGESTIONS_TABLE",
     "DIFF_REVISED_PARAGRAPH",
+    "EVIDENCE_REVIEW_REPORT",
+    "RIS_REFERENCE_FILE",
     "VERIFICATION_REPORT",
-}
+)
 REQUIRED_HEADINGS = [
     "## 0. Intent Detection",
     "## 0.5 Library Health Check",
@@ -29,10 +31,59 @@ REQUIRED_HEADINGS = [
     "## 1. Semantic + Structured Search",
     "## 1.5 Collection and Tag Search",
     "## 2. Paragraph Evidence & Citation Analysis",
+    "## 2.5 Evidence Package Export",
     "## 3. Citation Verification Protocol",
     "## 4. Chinese Academic Writing Rules",
     "## 5. External Source Fallback",
     "## Appendix: Output Templates",
+]
+EVIDENCE_REPORT_SECTIONS = [
+    "## 1. Bottom Line",
+    "## 2. Recommended Manuscript Text",
+    "## 3. Claim–Evidence Matrix",
+    "## 4. Citation Placement",
+    "## 5. Reference Table",
+    "## 6. Zotero Search Summary",
+    "## 7. PubMed Expansion",
+    "## 8. Integrated Writing Advice",
+    "## 9. Gaps and Reviewer-risk Assessment",
+    "## 10. Metadata Quality Control",
+    "## 11. Export File",
+]
+EVIDENCE_PACKAGE_REQUIREMENTS = [
+    "{topic_slug}_evidence_review.md",
+    "{topic_slug}_references.ris",
+    "Generated Evidence Package:",
+    "zotero://select/items/0_",
+    "zotero://open-pdf/library/items/",
+    "https://doi.org/",
+    "https://pubmed.ncbi.nlm.nih.gov/",
+    "⚠️ Tool unavailable; search not executed",
+    "Possible metadata mismatch",
+    "Missing metadata",
+    "duplicate warning",
+    "metadata quality-control section",
+]
+RIS_REQUIREMENTS = [
+    "TY  - JOUR",
+    "TY  -",
+    "ER  -",
+    "AU  -",
+    "N1  - Zotero key:",
+    "RIS records only; no Markdown headings, prose, code fences, or comments",
+    "PubMed-only records require metadata from an actually completed PubMed search",
+]
+RIS_ITEM_TYPE_MAPPINGS = [
+    "journalArticle` -> `JOUR",
+    "book` -> `BOOK",
+    "conferencePaper` -> `CONF",
+    "preprint` -> `UNPB",
+    "report` -> `RPRT",
+    "thesis` -> `THES",
+    "webpage` -> `ELEC",
+    "bookSection` -> `CHAP",
+    "dataset` -> `DATA",
+    "patent` -> `PAT",
 ]
 
 
@@ -83,6 +134,47 @@ def strip_code_fences(text: str) -> str:
     return re.sub(r"```.*?```", "", text, flags=re.DOTALL)
 
 
+def extract_template(text: str, template: str) -> str:
+    template_names = "|".join(re.escape(name) for name in REQUIRED_TEMPLATES if name != template)
+    pattern = rf"^### {re.escape(template)}\n(?P<body>.*?)(?=^### (?:{template_names})\n|\Z)"
+    match = re.search(pattern, text, flags=re.MULTILINE | re.DOTALL)
+    if not match:
+        fail(f"missing appendix template definition: {template}")
+    return match.group("body")
+
+
+def extract_first_code_fence(template_body: str, template: str) -> str:
+    match = re.search(r"```\w*\n(?P<body>.*?)(?:\n```)", template_body, flags=re.DOTALL)
+    if not match:
+        fail(f"{template} must contain a fenced template body")
+    return match.group("body")
+
+
+def require_all(haystack: str, needles: list[str], context: str) -> None:
+    missing = [needle for needle in needles if needle not in haystack]
+    if missing:
+        fail(f"missing {context}: " + ", ".join(missing))
+
+
+def require_ordered(haystack: str, needles: list[str], context: str) -> None:
+    position = -1
+    for needle in needles:
+        next_position = haystack.find(needle, position + 1)
+        if next_position == -1:
+            fail(f"missing or out-of-order {context}: {needle}")
+        position = next_position
+
+
+def require_table_header(template: str, header_pattern: str, required_columns: list[str], context: str) -> None:
+    match = re.search(header_pattern, template)
+    if not match:
+        fail(f"missing {context} table header")
+    header = match.group(0)
+    missing = [column for column in required_columns if column not in header]
+    if missing:
+        fail(f"missing {context} table column(s): " + ", ".join(missing))
+
+
 def main() -> None:
     if not SKILL_PATH.exists():
         fail(f"Missing skill file: {SKILL_PATH}")
@@ -116,10 +208,59 @@ def main() -> None:
         fail("old section numbering still present: ## 5. Chinese Academic Writing Rules")
     ok("section numbering is consistent")
 
+    if "## 2.5 Evidence Package Export" not in no_code:
+        fail("missing evidence package export module")
+    require_all(text, EVIDENCE_PACKAGE_REQUIREMENTS, "evidence package requirement")
+    ok("evidence package export requirements present")
+
+    require_all(text, RIS_REQUIREMENTS, "RIS requirement")
+    require_all(text, RIS_ITEM_TYPE_MAPPINGS, "RIS itemType mapping")
+    ok("RIS export requirements present")
+
     for template in REQUIRED_TEMPLATES:
         if f"### {template}" not in no_code:
             fail(f"missing appendix template definition: {template}")
     ok("appendix template definitions present")
+
+    evidence_report_template = extract_template(text, "EVIDENCE_REVIEW_REPORT")
+    require_ordered(evidence_report_template, EVIDENCE_REPORT_SECTIONS, "Evidence Review report section")
+    ok("Evidence Review report template sections present and ordered")
+
+    require_table_header(
+        evidence_report_template,
+        r"\| # \| Citation \| Year \| Study type \| Main use \| Zotero \| PDF \| DOI \|.*",
+        ["DOI", "PMID", "Collection"],
+        "Reference Table",
+    )
+    require_table_header(
+        evidence_report_template,
+        r"\| Affected claim / sentence \| Risk \| Severity \| Evidence basis \| Suggested fix \|",
+        ["Affected claim / sentence", "Risk", "Severity", "Evidence basis", "Suggested fix"],
+        "Reviewer-risk",
+    )
+    require_table_header(
+        evidence_report_template,
+        r"\| Citation \| Missing metadata \| Metadata mismatch \| Duplicate warning \| RIS action \|",
+        ["Missing metadata", "Metadata mismatch", "Duplicate warning", "RIS action"],
+        "Metadata Quality Control",
+    )
+    if "Source: Zotero local library; PubMed:" not in evidence_report_template:
+        fail("Evidence Review report Source line must expose PubMed execution status")
+    if "Not executed" not in evidence_report_template:
+        fail("Evidence Review report PubMed status must allow Not executed")
+    ok("Evidence Review report table schemas are consistent")
+
+    ris_template = extract_template(text, "RIS_REFERENCE_FILE")
+    ris_body = extract_first_code_fence(ris_template, "RIS_REFERENCE_FILE")
+    if re.search(r"^#{1,6}\s", ris_body, flags=re.MULTILINE):
+        fail("RIS_REFERENCE_FILE fenced body must not contain Markdown headings")
+    if "```" in ris_body:
+        fail("RIS_REFERENCE_FILE fenced body must not contain nested code fences")
+    if not ris_body.lstrip().startswith("TY  -"):
+        fail("RIS_REFERENCE_FILE fenced body must start with a RIS TY field")
+    if not ris_body.rstrip().endswith("ER  -"):
+        fail("RIS_REFERENCE_FILE fenced body must end with ER  -")
+    ok("RIS_REFERENCE_FILE template is plain RIS")
 
     risky_phrases = [
         "recommend these free MCP Servers",

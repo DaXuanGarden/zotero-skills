@@ -1,167 +1,562 @@
-# 📚 Zotero Skills — OpenCode & ZCode 文献证据审查技能
+# 📚 Zotero Skills
 
-> 让 AI 助手直接检索、分析并核实你的 Zotero 文献库。
+> 面向 OpenCode / ZCode 的 Zotero 文献证据审查技能：让 AI 助手在你的 Zotero 文献库中检索、分析、核实引用，并给出可追溯的写作建议。
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![OpenCode](https://img.shields.io/badge/OpenCode-MCP-0175C2)](https://opencode.ai)
-[![Zotero MCP](https://img.shields.io/badge/Zotero-MCP-CC2936)](https://github.com/54yyyu/zotero-mcp)
+![OpenCode](https://img.shields.io/badge/OpenCode-MCP-0175C2)
+![ZCode](https://img.shields.io/badge/ZCode-Skill-6f42c1)
+![Zotero MCP](https://img.shields.io/badge/Zotero-MCP-CC2936)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ---
 
-## ✨ 功能概览
+## 1. 项目概览
+
+本仓库提供一个核心 skill：`zotero-evidence-review`。它通过 Zotero MCP 连接本地 Zotero 文献库，支持从“找文献”到“段落补引用”再到“逐条核实引用是否真的支持主张”的完整证据审查工作流。
+
+| 项目 | 当前状态 |
+|---|---|
+| Skill | `zotero-evidence-review` |
+| 当前版本 | `2.1.0` |
+| 兼容性 | OpenCode / ZCode |
+| 主要依赖 | Zotero 7+、zotero-mcp、Python 3.10+ |
+| 安装目标 | ZCode 全局、OpenCode 全局、项目级 `.opencode/skills` |
+| 默认安全策略 | 健康检查只读；删除、批量修改、合并重复项等操作必须先确认 |
+
+---
+
+## 2. 核心能力
 
 | 能力 | 说明 |
-|------|------|
-| 🔍 **语义 + 结构化搜索** | 自然语言扩写为检索式，优先语义匹配，必要时兜底关键词、标签、分类检索。 |
-| 🧾 **段落证据与引文分析** | 输入草稿段落 → 拆解主张 → 一次性检索证据池 → 输出主张-证据矩阵、逐句引文建议和 diff 版段落。 |
-| ✅ **严格引用核实** | 针对具体主张/数据/引文读取 Zotero 元数据与全文，判断 fully supported / partially supported / contradicted / not addressed。 |
-| 🩺 **库健康度检查** | 只读检查语义索引、PDF 覆盖、重复条目、缺失摘要，并明确标记不可用或未配置的检查。 |
-| 🔄 **安装/同步脚本** | 使用脚本把仓库内新版 skill 同步到 ZCode、OpenCode 或项目目录，支持覆盖前备份。 |
+|---|---|
+| **Intent Detection** | 根据用户输入自动判断是文献检索、段落证据分析、引用核实，还是库健康检查。 |
+| **Library Health Check** | 只读检查语义索引、PDF 覆盖、重复条目、缺失摘要等状态；不可用项目明确标记为 `⚠️`。 |
+| **Semantic + Structured Search** | 优先语义搜索概念相近文献，并结合标题、作者、关键词、DOI、PMID、年份等结构化检索兜底。 |
+| **Collection and Tag Search** | 支持按 Zotero collection、tag、分类范围缩小检索。 |
+| **Paragraph Evidence & Citation Analysis** | 对草稿段落拆解主张、检索证据池、输出主张-证据矩阵、补引用建议和 diff 版段落。 |
+| **Citation Verification Protocol** | 针对具体文献和具体主张读取元数据与全文，判断 fully supported / partially supported / contradicted / not addressed。 |
+| **Chinese Academic Writing Rules** | 面向中文学术写作，保留原意、避免虚构引用，输出可追踪的润色与补引建议。 |
+| **External Source Fallback** | Zotero 库证据不足时，可在外部 MCP 工具已配置的前提下辅助扩展；未配置时只给出可复制检索式。 |
+| **Evidence Package Export** | 检索或段落分析后生成两个可复用文件：Markdown 证据报告与可导入 EndNote 的 RIS 参考文献文件。 |
 
 ---
 
-## 🚀 快速开始
+## 3. 5 分钟快速安装
 
-### 前置条件
+### 3.1 前置条件
 
-- ✅ Zotero 7+ 运行中，并在 Zotero 设置中开启「允许其他应用程序访问」。
-- ✅ [zotero-mcp](https://github.com/54yyyu/zotero-mcp) 已安装，例如：`pipx install "zotero-mcp-server[all]"`。
-- ✅ OpenCode 或 ZCode 已安装。
+请先确认：
 
-### 安装或更新 Skill
+- 已安装并打开 **Zotero 7+**。
+- Zotero 中已启用本地访问：Zotero 设置 → 高级 → 允许其他应用程序访问 Zotero。
+- 已安装 **Python 3.10+**。
+- 已安装 OpenCode 或 ZCode。
+- 已安装并配置 `zotero-mcp`（见 [第 5 节](#5-配置-zotero-mcp)）。
+
+### 3.2 克隆仓库并安装到 ZCode（推荐）
 
 ```bash
-# 克隆仓库
 git clone https://github.com/DaXuanGarden/zotero-skills.git
 cd zotero-skills
 
-# 安装/更新到 ZCode 全局 skill 目录（推荐）
+# 安装/更新到 ZCode 全局 skill 目录，并在覆盖前备份旧版本
 scripts/install-skill.sh --target zcode --backup
-```
 
-可选目标：
-
-```bash
-# 安装到 OpenCode 全局目录
-scripts/install-skill.sh --target opencode --backup
-
-# 安装到当前仓库的项目级 .opencode/skills 目录
-scripts/install-skill.sh --target project --backup
-
-# 同步到 ZCode + OpenCode + 项目目录
-scripts/install-skill.sh --target all --backup
-```
-
-`--backup` 会在覆盖旧版本前创建形如 `zotero-evidence-review.backup-YYYYmmdd-HHMMSS` 的备份目录，避免仓库版本和全局安装版本漂移。
-
-### 验证 Skill 文件
-
-```bash
+# 验证 skill 文件结构
 scripts/validate-skill.py
 ```
 
-该脚本会检查：YAML frontmatter、Markdown code fence、关键工作流标题、章节编号、Appendix 模板、外部 MCP 可用性防护说明。
+如果验证成功，会看到类似：
 
-### 配置 Zotero MCP
+```text
+✅ frontmatter parsed; version 2.1.0
+✅ markdown code fences balanced
+✅ required workflow headings present
+✅ section numbering is consistent
+✅ evidence package export requirements present
+✅ RIS export requirements present
+✅ appendix template definitions present
+✅ Evidence Review report template sections present
+✅ external-tool availability guards present
 
-在 OpenCode 或 ZCode 对应 MCP 配置中添加 Zotero MCP。OpenCode 示例：
+All validations passed.
+```
+
+---
+
+## 4. 安装目标与同步方式
+
+`scripts/install-skill.sh` 用于把仓库中的最新版 `zotero-evidence-review` 同步到不同 skill 目录，避免“仓库版本已更新，但全局安装版本仍是旧版”的漂移问题。
+
+### 4.1 安装到不同目标
+
+```bash
+# ZCode 全局目录（推荐给 ZCode 用户）
+scripts/install-skill.sh --target zcode --backup
+
+# OpenCode 全局目录（推荐给 OpenCode 用户）
+scripts/install-skill.sh --target opencode --backup
+
+# 当前仓库项目级 OpenCode skill 目录
+scripts/install-skill.sh --target project --backup
+
+# 同时同步到 ZCode + OpenCode + 项目级目录
+scripts/install-skill.sh --target all --backup
+```
+
+### 4.2 目标路径
+
+| `--target` | 安装路径 |
+|---|---|
+| `zcode` | `~/.zcode/skills/zotero-evidence-review` |
+| `opencode` | `~/.config/opencode/skills/zotero-evidence-review` |
+| `project` | 当前仓库的 `.opencode/skills/zotero-evidence-review` |
+| `all` | 同步到以上三个位置 |
+
+### 4.3 备份规则
+
+加上 `--backup` 后，如果目标目录已存在，脚本会先创建备份：
+
+```text
+zotero-evidence-review.backup-YYYYmmdd-HHMMSS
+```
+
+然后再覆盖安装。建议每次更新都使用 `--backup`。
+
+---
+
+## 5. 配置 Zotero MCP
+
+`zotero-evidence-review` 需要通过 Zotero MCP 访问 Zotero 本地库。
+
+### 5.1 安装 zotero-mcp
+
+推荐使用 `pipx`：
+
+```bash
+pipx install "zotero-mcp-server[all]"
+```
+
+也可以使用 `uv`：
+
+```bash
+uv tool install "zotero-mcp-server[all]"
+```
+
+安装后检查：
+
+```bash
+which zotero-mcp
+zotero-mcp version
+```
+
+如果命令找不到，请确认 `pipx` / `uv` 的 bin 目录已经加入 `PATH`。
+
+### 5.2 OpenCode MCP 配置示例
+
+OpenCode 配置文件通常位于：
+
+```text
+~/.config/opencode/opencode.json
+```
+
+示例配置：
 
 ```json
 {
+  "$schema": "https://opencode.ai/config.json",
   "mcp": {
     "zotero": {
       "type": "local",
       "command": ["/path/to/zotero-mcp", "serve"],
-      "environment": { "ZOTERO_LOCAL": "true" },
+      "environment": {
+        "ZOTERO_LOCAL": "true"
+      },
       "enabled": true
     }
   }
 }
 ```
 
-`/path/to/zotero-mcp` 替换为实际路径，可用 `which zotero-mcp` 查看。
-
-### 构建语义索引
+把 `/path/to/zotero-mcp` 替换为：
 
 ```bash
-zotero-mcp update-db             # 快速索引（元数据）
-zotero-mcp update-db --fulltext  # 含全文索引（更适合证据核实）
-zotero-mcp db-status             # 查看索引状态
+which zotero-mcp
+```
+
+输出的真实路径。
+
+### 5.3 ZCode MCP 配置方式
+
+ZCode 中可通过界面添加 MCP Server：
+
+1. 打开 ZCode。
+2. 进入 **Settings / 设置** → **MCP Servers**。
+3. 使用 **Import** 或手动添加 Zotero MCP。
+4. Command 设置为 `zotero-mcp serve` 或实际二进制路径加 `serve`。
+5. 环境变量设置：`ZOTERO_LOCAL=true`。
+6. 确认 Zotero 已打开，然后重启/刷新 ZCode 会话。
+
+更多配置细节见：[Zotero_MCP_OpenCode_Guide.md](./Zotero_MCP_OpenCode_Guide.md)。
+
+---
+
+## 6. 构建与更新语义索引
+
+语义搜索依赖 zotero-mcp 的本地索引。首次使用前建议构建一次。
+
+```bash
+# 快速索引：主要处理元数据，适合首次测试
+zotero-mcp update-db
+
+# 全文索引：更适合证据核实和段落补引用，但耗时更长
+zotero-mcp update-db --fulltext
+
+# 查看索引状态
+zotero-mcp db-status
+```
+
+高级排障时才建议使用强制重建：
+
+```bash
+zotero-mcp update-db --force-rebuild
+```
+
+> 注意：在 skill 工作流中，健康检查默认只读，不会自动重建索引。只有用户明确确认后，才应执行索引更新或强制重建等维护操作。
+
+---
+
+## 7. 使用教程与提示词示例
+
+安装并配置完成后，在 OpenCode / ZCode 中直接对话即可。建议明确说明你想要的输出格式、检索范围和证据标准。
+
+### 7.1 文献检索
+
+```text
+搜索我 Zotero 库中关于 CRISPR base editing off-target effects 的论文，列出最相关的 10 篇，包含标题、作者、年份、期刊、DOI 和 Zotero key。
+```
+
+```text
+帮我查找 Zotero 中关于 climate change and cardiovascular health 的文献，优先语义搜索，再用关键词兜底，并说明每篇为什么相关。
+```
+
+### 7.2 Collection / Tag 范围检索
+
+```text
+只在我的 “AI in Medicine” collection 中搜索 large language models for clinical decision support 的文献，按相关性排序。
+```
+
+```text
+查找带有 systematic-review 或 meta-analysis 标签、主题与 inflammation and atherosclerosis 相关的条目。
+```
+
+### 7.3 段落证据与补引用
+
+```text
+请对下面这段论文草稿做证据链分析：
+1. 拆解每个核心主张；
+2. 在 Zotero 中检索支持证据；
+3. 输出主张-证据矩阵；
+4. 给出推荐引用；
+5. 最后给出带引用的 diff 版段落。
+
+「慢性炎症通过激活 JAK-STAT 通路促进动脉粥样硬化进展，并可能增加心血管事件风险……」
+```
+
+### 7.4 Evidence Package 导出
+
+Evidence Package 由 OpenCode / ZCode agent 按 `zotero-evidence-review` workflow 执行：agent 负责检索、质控、写入 Markdown 与 RIS；仓库脚本目前负责安装同步和静态校验，并不是独立的 RIS 生成 CLI。
+
+```text
+请围绕下面这段讨论生成 Evidence Package：
+1. 自动检索 Zotero 证据；
+2. 如果当前环境配置了 PubMed-capable MCP 工具，请进行 PubMed 扩展检索；如果不可用，只输出可复制 PubMed query，并标注 `⚠️ Tool unavailable; search not executed`；
+3. 保存 Markdown 证据报告；
+4. 生成可导入 EndNote 的 RIS 文件。
+
+「久坐行为可能与 PCOS 发生风险相关，但既往队列研究证据仍不一致……」
+```
+
+默认只生成两个文件：
+
+```text
+YYYY-MM-DD_{topic_slug}_evidence_review.md
+YYYY-MM-DD_{topic_slug}_references.ris
+```
+
+如果当前环境未配置 PubMed-capable MCP 工具，skill 只会输出可复制 PubMed query，不会声称已完成 PubMed 检索，也不会生成 PubMed-only RIS records.
+
+### 7.5 引用核实
+
+```text
+请核实这篇文献是否真的支持以下主张：
+主张：IL-6 receptor blockade reduces cardiovascular event risk in patients with chronic inflammation.
+文献：给定 DOI / Zotero key / 标题
+请读取元数据和全文，判断 fully supported、partially supported、contradicted 或 not addressed，并引用原文证据。
+```
+
+### 7.6 Zotero 库健康检查
+
+```text
+帮我做一次 Zotero library health check：检查语义索引、PDF 覆盖率、重复条目和缺失摘要。只读检查，不要修改任何条目。
+```
+
+### 7.7 Zotero 证据不足时的外部兜底
+
+```text
+如果 Zotero 库里证据不足，请说明缺口，并在外部工具可用时给出 Crossref / OpenAlex / PubMed 检索建议；如果工具不可用，只输出可复制的检索式，不要声称已经完成外部检索。
 ```
 
 ---
 
-## 📖 使用方法
+## 8. 推荐输出格式
 
-在 OpenCode/ZCode 中直接对话：
+Skill 内置了多个输出模板。普通对话可使用 Refs block、claim-evidence matrix 和 diff paragraph；当用户要求保存、导出 EndNote 或生成 Evidence Package 时，推荐使用两文件输出。
 
-**搜索文献：**
-> 搜索我 Zotero 库中关于 CRISPR 基因编辑的论文，列出前 5 篇。
+### 8.1 Evidence Package report
 
-**语义搜索：**
-> 帮我语义搜索与 "climate change cardiovascular health" 概念相似的文献。
+Markdown 报告是主要阅读界面，顶部必须明确 PubMed 是否实际执行：
 
-**段落证据与引文分析：**
-> 这段草稿帮我拆解证据链并补引用：「慢性炎症通过激活 JAK-STAT 通路促进动脉粥样硬化……」
+```markdown
+# Evidence Review: {topic}
 
-**引用核实：**
-> 请验证某篇文献是否真的支持“IL-6 受体阻断剂可降低心血管事件风险”这句话。
+Generated: {YYYY-MM-DD}
+Source: Zotero local library; PubMed: {Completed / ⚠️ Tool unavailable; search not executed / Not executed}
+Input: {user paragraph, claim, or search question}
 
-**健康检查：**
-> 帮我检查 Zotero 库状态、语义索引和 PDF 覆盖率。
+## 1. Bottom Line
+## 2. Recommended Manuscript Text
+## 3. Claim–Evidence Matrix
+## 4. Citation Placement
+## 5. Reference Table
+## 6. Zotero Search Summary
+## 7. PubMed Expansion
+## 8. Integrated Writing Advice
+## 9. Gaps and Reviewer-risk Assessment
+## 10. Metadata Quality Control
+## 11. Export File
+```
+
+### 8.2 Reference Table
+
+Zotero item key 不作为主要阅读对象展示，只隐藏在可点击链接中；DOI 和 PMID 尽量用链接呈现。
+
+```markdown
+| # | Citation | Year | Study type | Main use | Zotero | PDF | DOI | PMID | Collection |
+|---|----------|------|------------|----------|--------|-----|-----|------|------------|
+| 1 | Author et al., *Journal* | 2024 | Systematic review | ... | [Item](zotero://select/items/0_KEY) | [PDF](zotero://open-pdf/library/items/ATTACHMENT_KEY) | [DOI](https://doi.org/10.xxxx/xxxx) | [PMID](https://pubmed.ncbi.nlm.nih.gov/PMID/) | Collection name |
+```
+
+### 8.3 PubMed Expansion
+
+PubMed 是条件能力：只有当前环境确实配置了 PubMed-capable MCP 工具时，才能声称已完成 PubMed 检索。
+
+```markdown
+## 7. PubMed Expansion
+Date: {YYYY-MM-DD}
+Database: PubMed
+Status: Completed / ⚠️ Tool unavailable; search not executed
+
+Query:
+~~~text
+{copyable PubMed query}
+~~~
+```
+
+当 PubMed 工具不可用时，只输出 query 与状态，不生成 PubMed-only RIS records。
+
+### 8.4 Reviewer-risk 与 Metadata QC
+
+Reviewer-risk 应指向具体主张或句子，方便回到原文修改；Metadata QC 应在导出信息前独立显示。
+
+```markdown
+## 9. Gaps and Reviewer-risk Assessment
+| Affected claim / sentence | Risk | Severity | Evidence basis | Suggested fix |
+|---------------------------|------|----------|----------------|---------------|
+| ... | Overstating causal evidence | High | Observational evidence only | Replace causal wording with association wording |
+
+## 10. Metadata Quality Control
+| Citation | Missing metadata | Metadata mismatch | Duplicate warning | RIS action |
+|----------|------------------|-------------------|-------------------|------------|
+| Author Year | DOI / PMID / pages / none | Possible metadata mismatch / none | Possible duplicate / none | Include / exclude / needs manual check |
+```
+
+### 8.5 RIS export snippet
+
+RIS 文件必须是 plain RIS records，不要混入 Markdown 标题、说明文字、代码围栏或注释。
+
+```ris
+TY  - JOUR
+AU  - Last, First
+PY  - 2024
+TI  - Article title
+JO  - Journal name
+DO  - 10.xxxx/xxxx
+AN  - PMID
+N1  - Zotero key: XXXXXXXX
+ER  -
+```
+
+### 8.6 Chat-only templates
+
+不需要保存文件时，可继续使用简短对话模板：`REFS_BLOCK`、`CLAIM_EVIDENCE_MATRIX`、`WRITING_SUGGESTIONS_TABLE`、`DIFF_REVISED_PARAGRAPH` 和 `VERIFICATION_REPORT`。完整规范以 `zotero-evidence-review/SKILL.md` 的 Appendix 为准。
+
+## 9. 安全与可用性规则
+
+本 skill 的设计重点是“可追溯”和“不过度声称”。
+
+- **不伪造引用**：不得虚构 citation、DOI、PMID、Zotero key、标题、作者、期刊或年份。
+- **健康检查只读**：默认只检查状态，不重建索引、不合并重复项、不改标签、不删除条目。
+- **破坏性或批量操作需确认**：删除条目、批量改标签、合并重复项、移动 collection、覆盖 notes/annotations 前必须获得明确确认。
+- **外部 MCP 工具需可用才使用**：Crossref、OpenAlex、Semantic Scholar、PubMed、CNKI/CDP、WebSearch 等外部工具只有在当前环境已配置时才能声称执行；否则只能提供可复制检索式。
+- **PubMed 是条件能力**：当前环境未配置 PubMed-capable MCP 工具时，skill 只输出可复制 PubMed query，不声称已完成 PubMed 检索，也不生成 PubMed-only RIS records。
+- **不可用检查必须标注**：工具不可用、Zotero 未连接、查询不支持时，输出 `⚠️` 并解释限制，不估算、不编造数量。
+- **全文证据优先**：核实具体主张时优先读取 PDF/全文；只有元数据不足以证明具体实验结论或统计结果。
 
 ---
 
-## 🏗️ 仓库结构
+## 10. 仓库结构
 
 ```text
 zotero-skills/
+├── README.md
+├── Zotero_MCP_OpenCode_Guide.md
 ├── zotero-evidence-review/
-│   └── SKILL.md                   # 🎯 文献证据审查 skill 定义
+│   └── SKILL.md
 ├── scripts/
-│   ├── install-skill.sh            # 安装/同步到 ZCode、OpenCode 或项目目录
-│   └── validate-skill.py           # Skill Markdown/YAML/模板验证
-├── docs/                           # 规划与设计文档（如有）
-├── Zotero_MCP_OpenCode_Guide.md     # Zotero MCP 配置与使用指南
-└── README.md
+│   ├── install-skill.sh
+│   └── validate-skill.py
+└── docs/
+    ├── DEVELOPMENT_PLAN.md
+    ├── DEVELOPMENT_PLAN00.md
+    └── ZOTERO_EVIDENCE_REVIEW_OUTPUT_PLAN.md
+```
+
+| 路径 | 说明 |
+|---|---|
+| `zotero-evidence-review/SKILL.md` | 核心 skill 定义文件。 |
+| `scripts/install-skill.sh` | 安装/同步 skill 到 ZCode、OpenCode 或项目目录。 |
+| `scripts/validate-skill.py` | 验证 SKILL.md 的元数据、章节、模板和安全防护说明。 |
+| `Zotero_MCP_OpenCode_Guide.md` | 更详细的 Zotero MCP 与 OpenCode 配置指南。 |
+| `docs/` | 开发计划和设计文档。 |
+
+---
+
+## 11. 常见问题排查
+
+### 11.1 ZCode / OpenCode 看不到 skill
+
+请重新同步到对应目录：
+
+```bash
+# ZCode
+scripts/install-skill.sh --target zcode --backup
+
+# OpenCode
+scripts/install-skill.sh --target opencode --backup
+```
+
+然后重启或刷新 ZCode / OpenCode 会话。确认目录存在：
+
+```text
+~/.zcode/skills/zotero-evidence-review
+~/.config/opencode/skills/zotero-evidence-review
+```
+
+### 11.2 Zotero MCP 报 connection refused
+
+常见原因：Zotero 没打开，或本地访问未启用。
+
+检查：
+
+1. 打开 Zotero。
+2. 在 Zotero 设置中启用“允许其他应用程序访问 Zotero”。
+3. 确认 MCP command 指向真实的 `zotero-mcp` 路径。
+4. 重启 OpenCode / ZCode 会话。
+
+### 11.3 语义搜索没有结果
+
+先查看索引状态：
+
+```bash
+zotero-mcp db-status
+```
+
+如果没有索引或索引过旧：
+
+```bash
+zotero-mcp update-db
+zotero-mcp update-db --fulltext
+```
+
+如果刚更换嵌入模型或索引损坏，再考虑：
+
+```bash
+zotero-mcp update-db --force-rebuild
+```
+
+### 11.4 重复条目检查提示库太大
+
+如果 Zotero 库很大，重复项扫描可能提示需要缩小范围。此时按 collection 检查：
+
+```text
+请只在某个 collection_key 下查找重复条目。
+```
+
+或先让助手列出 collections，再选择一个 collection 范围进行检查。
+
+### 11.5 GitHub Desktop 要求登录 `gh-proxy.com`
+
+这通常是 Git 全局 URL rewrite 或 remote 地址被代理改写导致的。检查：
+
+```bash
+git remote -v
+git config --global --get-regexp 'url\..*insteadOf'
+```
+
+如果看到类似：
+
+```text
+https://gh-proxy.com/https://github.com/
+```
+
+可以恢复官方 GitHub 地址：
+
+```bash
+git config --global --unset url.https://gh-proxy.com/https://github.com/.insteadOf
+git remote set-url origin https://github.com/DaXuanGarden/zotero-skills.git
+```
+
+然后重新打开 GitHub Desktop 或重试 push。
+
+---
+
+## 12. 进阶文档
+
+- [Zotero_MCP_OpenCode_Guide.md](./Zotero_MCP_OpenCode_Guide.md)：Zotero MCP 安装、OpenCode 配置、语义索引、CLI 使用和常见问题。
+- [`docs/DEVELOPMENT_PLAN.md`](./docs/DEVELOPMENT_PLAN.md)：skill 设计与开发计划。
+- [`docs/DEVELOPMENT_PLAN00.md`](./docs/DEVELOPMENT_PLAN00.md)：早期规划记录。
+- [`docs/ZOTERO_EVIDENCE_REVIEW_OUTPUT_PLAN.md`](./docs/ZOTERO_EVIDENCE_REVIEW_OUTPUT_PLAN.md)：Evidence Package 输出改进计划。
+
+---
+
+## 13. 贡献
+
+欢迎通过 Issue 或 PR 改进：
+
+- 新的 Zotero MCP 工作流；
+- 更严格的引用核实模板；
+- 中文学术写作场景；
+- OpenCode / ZCode 安装体验；
+- 自动同步、验证与测试脚本。
+
+提交前建议运行：
+
+```bash
+scripts/validate-skill.py
 ```
 
 ---
 
-## 🔧 ZCode 用户
+## 14. License
 
-ZCode 可通过 MCP Servers 设置导入或配置 Zotero MCP：
-
-1. 打开 ZCode → **设置** → **MCP Servers**。
-2. 点击右上角 **Import** 或手动添加 Zotero MCP。
-3. 确认 Zotero 正在运行，并且 Zotero MCP 工具可用。
-4. 使用 `scripts/install-skill.sh --target zcode --backup` 同步最新版 skill。
-
----
-
-## 🛡️ 安全与可用性约定
-
-- 健康检查默认只读，不会自动重建索引、合并重复项、改标签或删除条目。
-- 外部检索工具只有在当前环境已配置时才会使用；未配置时只输出可复制的检索式。
-- 不伪造 citation、DOI、PMID、Zotero key、标题、作者或期刊信息。
-- 添加文献、批量改动、合并重复项、删除条目前必须获得明确确认。
-
----
-
-## 📦 依赖
-
-- [54yyyu/zotero-mcp](https://github.com/54yyyu/zotero-mcp) — Zotero MCP 服务。
-- [OpenCode](https://opencode.ai) 或 [ZCode](https://zcode-ai.com) — AI 编程助手。
-- Python 3.10+、Zotero 7+。
-
----
-
-## 🤝 贡献
-
-欢迎提交 Issue 或 PR 来改进这个技能。
-
----
-
-## 📄 License
-
-MIT
+License: MIT
