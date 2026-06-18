@@ -291,7 +291,7 @@ zotero-mcp update-db --force-rebuild
 ## 文献引用
 
 当用户需要搜索、引用或分析学术文献时，请优先调用 `/zotero-evidence-review`。
-用户只需要简单说明需求；如果是段落找证据、补引用、推荐 citation placement 或导出报告，默认执行完整 Paragraph Citation Package Workflow，并生成 Markdown evidence report + EndNote RIS。
+用户只需要简单说明需求；如果是段落找证据、补引用、推荐 citation placement、请求可复用写作输出或导出报告，默认执行完整 Paragraph Citation Package Workflow：先做 Zotero 本地检索，再把 PubMed 作为第二证据来源扩展检索，综合去重后在导出 RIS 时用 PMID/DOI 标准化参考文献元数据，最后在 `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/` 下生成 Markdown evidence report + EndNote RIS。`brief_topic_slug` 由 agent/LLM 根据主题自动简短概括。
 如果用户明确说“不要生成文件”“只在聊天输出”“不导出”或“chat only”，才停在聊天输出。
 查询文献时请优先使用 Zotero 语义搜索，并在证据不足时清楚标注 gap。
 ```
@@ -413,6 +413,13 @@ zotero-cli duplicates find
 
 > *"/zotero-evidence-review 帮我给下面这段草稿找证据并补引用，生成 Markdown evidence report 和 EndNote RIS：久坐行为可能与 PCOS 发生风险相关，但既往队列研究证据仍不一致……"*
 
+默认文件会写入类似下面的主题目录，避免散落在项目根目录：
+
+```text
+outputs/2026-06-18_sedentary_behavior_pcos/2026-06-18_sedentary_behavior_pcos_evidence_review.md
+outputs/2026-06-18_sedentary_behavior_pcos/2026-06-18_sedentary_behavior_pcos_references.ris
+```
+
 如果只想看聊天结果，不生成文件：
 
 > *"/zotero-evidence-review 只在聊天输出，不要生成文件：帮我分析这段草稿的证据和推荐引用。"*
@@ -447,6 +454,10 @@ zotero-mcp update          # 自动更新（推荐）
 # 或
 pipx install "zotero-mcp-server[all]" --force
 ```
+
+### Q: EndNote 导入 RIS 时提示 Database error？
+
+优先检查 EndNote library 是否被占用、锁定或损坏：关闭 EndNote 并重启，或新建空白 library 测试导入同一个 RIS。若新库可导入，原 library 可能需要 EndNote 的 `Tools → Recover Library`。若新库也失败，再检查 RIS 是否混入 Markdown、说明文字、代码围栏、emoji 或个人流程标签。
 
 ### Q: 数据库损坏或模型切换后出错？
 

@@ -10,34 +10,39 @@
 2. Zotero item key（如 `KYX3784V`）直接暴露在正文中，对科研写作者价值有限。
 3. Zotero 链接未被包装为可读的超链接，跳转体验较差。
 4. 检索到的文献无法直接进入 EndNote / Word 写作工作流。
-5. 写作建议主要基于 Zotero 本地库，尚未系统整合 PubMed 扩展检索结果。
+5. Zotero 本地文献与 PubMed 在线检索尚未形成清晰的双来源证据整合与去重流程。
+6. 参考文献导出时尚未系统使用 PMID/DOI 对 EndNote RIS 元数据进行标准化。
 6. 报告更像“检索结果列表”，还没有形成“证据审查 + 引文决策 + 写作建议”的完整产品形态。
 
 因此，本功能的核心目标是：
 
-> 围绕用户输入的段落、论断或写作问题，自动完成 Zotero 本地检索与 PubMed 扩展检索，生成一个可追溯的 Markdown 证据报告，并同步生成一个可直接导入 EndNote 的参考文献文件，帮助用户完成论文写作中的证据判断、引文布置和引用管理。
+> 围绕用户输入的段落、论断或写作问题，先完成 Zotero 本地检索，再把 PubMed 作为第二证据来源进行扩展检索，综合两类结果并去重；在导出参考文献时，再用 PMID 或 DOI 重新标准化 EndNote RIS 元数据，生成一个可追溯的 Markdown 证据报告和一个可直接导入 EndNote 的参考文献文件。
 
 ---
 
 ## 2. 最终输出文件设计
 
-为保持工作流简洁，每次检索后默认只生成两个文件：
+为保持工作流简洁，每次检索后默认只生成两个文件，并放入一个能体现 skill 来源的固定输出根目录；每次运行再使用 LLM 简短主题概括 + 日期时间后缀创建专门目录：
 
 ```text
-YYYY-MM-DD_{topic_slug}_evidence_review.md
-YYYY-MM-DD_{topic_slug}_references.ris
+zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_evidence_review.md
+zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris
 ```
+
+其中 `brief_topic_slug` 由 agent/LLM 根据用户段落、claim 或检索问题自动概括，通常 2–6 个短词，ASCII lowercase，下划线连接；`YYYY-MM-DD_HHMMSS` 使用当前本地日期时间到秒。
 
 其中：
 
 | 文件 | 用途 | 要求 |
 |---|---|---|
-| `YYYY-MM-DD_{topic_slug}_evidence_review.md` | 人读的证据报告 | 包含 Zotero 检索、PubMed 扩展、主张-证据矩阵、写作改进建议、可点击链接 |
-| `YYYY-MM-DD_{topic_slug}_references.ris` | EndNote 导入文件 | 元数据必须与 Zotero 中检索到的文献保持一致，确保 Word / EndNote 引用准确 |
+| `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_evidence_review.md` | 人读的证据报告 | 包含 Zotero 检索、PubMed 扩展、主张-证据矩阵、写作改进建议、可点击链接 |
+| `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris` | EndNote 导入文件 | 元数据优先用 PMID/PubMed 或 DOI 重新标准化；无法标准化时使用已检查的 Zotero 或 PubMed 元数据，确保 Word / EndNote 引用准确 |
 
 ### 2.1 为什么优先使用 RIS 而不是 EndNote XML
 
-EndNote 可以稳定导入 RIS 文件，且 RIS 字段结构清晰，便于从 Zotero 元数据中直接生成。相比之下，EndNote XML 字段层级复杂，如果手写 XML，容易产生兼容性问题。
+EndNote 可以稳定导入规范的 RIS 文件，且 RIS 字段结构清晰，便于从 Zotero 元数据中直接生成。相比之下，EndNote XML 字段层级复杂，如果手写 XML，容易产生兼容性问题。
+
+RIS 导出时应过滤 Zotero 个人/流程标签（如 emoji、纯符号、`/reading` 等以 `/` 开头的标签），只保留 MeSH、疾病、方法、暴露、研究设计等学术关键词。若 EndNote 提示 `Database error`，应先用空白 EndNote library 测试导入，以区分 EndNote 库锁定/损坏和 RIS 文件格式问题。
 
 因此第一阶段建议采用：
 
@@ -60,18 +65,19 @@ references.endnote.xml 作为可选增强格式
 
 ---
 
-## 3. 元数据一致性要求
+## 3. 证据来源与导出元数据标准化要求
 
-EndNote 文件中的参考文献元数据必须优先来自 Zotero，而不是由模型根据记忆或摘要自行生成。
+Zotero 和 PubMed 是两个证据来源 / 检索步骤：Zotero 提供本地已管理文献、附件、collection 和阅读语境；PubMed 提供外部扩展、确认与缺口检测。最终 RIS 导出时，再根据 PMID 或 DOI 尽量重新获取标准化参考文献元数据，而不是把 PMID/DOI 匹配本身视为证据来源。
 
-### 3.1 元数据来源优先级
+### 3.1 RIS 标准化来源优先级
 
 生成 RIS 时，字段来源按以下优先级：
 
-1. Zotero item metadata。
-2. Zotero DOI / PMID / ISBN 等唯一标识符。
-3. PubMed 返回的标准元数据，仅用于 Zotero 中不存在或缺失字段的外部扩展文献。
-4. 模型不得凭空补全作者、期刊、卷期页码、DOI。
+1. PMID / PubMed 标准元数据（可获得并确认匹配时）。
+2. DOI 标准元数据（无 PMID 或 PubMed 获取失败，但 DOI 查验成功时）。
+3. 已检查的 Zotero 元数据（本地来源文献，且未发现关键冲突时）。
+4. 已检查的 PubMed 元数据（PubMed 扩展文献且无 DOI 标准化结果时）。
+5. 模型不得凭空补全作者、期刊、卷期页码、DOI。
 
 ### 3.2 Zotero 文献的字段映射
 
@@ -116,8 +122,8 @@ ER  -
 注意：
 
 - 作者不得由模型猜测。
-- DOI 必须与 Zotero 元数据一致。
-- 如果 Zotero 与 PubMed 元数据冲突，应在 Markdown 报告中提示“metadata mismatch”，默认以 Zotero 为准。
+- DOI 必须与 RIS 标准化来源或已检查的来源元数据一致。
+- 如果 Zotero 与 PubMed 元数据冲突，应在 Markdown 报告中提示“metadata mismatch”，并在导出前明确采用的 RIS standardization source。
 - 如果 Zotero 元数据不完整，应在报告中列出缺失字段，避免生成错误引用。
 
 ---
@@ -157,9 +163,9 @@ Input: {user paragraph or claim}
 推荐表格：
 
 ```markdown
-| # | Citation | Year | Study type | Main use | Zotero | PDF | DOI | PMID | Collection |
-|---|---|---|---|---|---|---|---|---|---|
-| 1 | Kazemi et al., *Human Reproduction Update* | 2022 | Systematic review / meta-analysis | Supports heterogeneity of lifestyle evidence in PCOS | [Item](zotero://select/items/0_KYX3784V) | [PDF](zotero://open-pdf/library/items/{attachment_key}) | [DOI](https://doi.org/10.1093/humupd/dmac023) | [PMID](https://pubmed.ncbi.nlm.nih.gov/{pmid}/) | PCOS / Lifestyle |
+| # | Citation | Year | Study type | Main use | Evidence source | Zotero | PDF | DOI | PMID | Collection |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Kazemi et al., *Human Reproduction Update* | 2022 | Systematic review / meta-analysis | Supports heterogeneity of lifestyle evidence in PCOS | Zotero + PubMed | [Item](zotero://select/items/0_KYX3784V) | [PDF](zotero://open-pdf/library/items/{attachment_key}) | [DOI](https://doi.org/10.1093/humupd/dmac023) | [PMID](https://pubmed.ncbi.nlm.nih.gov/{pmid}/) | PCOS / Lifestyle |
 ```
 
 ### 5.1 链接规则
@@ -349,16 +355,16 @@ Possible metadata mismatch: check DOI/title before citing.
 ```markdown
 ## Metadata Quality Control
 
-| Citation | Missing metadata | Metadata mismatch | Duplicate warning | RIS action |
-|---|---|---|---|---|
-| Author Year | DOI / PMID / pages / none | Possible metadata mismatch / none | Possible duplicate / none | Include / exclude / needs manual check |
+| Citation | Missing metadata | Metadata mismatch | Duplicate warning | Evidence source | RIS standardization source | RIS action |
+|---|---|---|---|---|---|---|
+| Author Year | DOI / PMID / pages / none | Possible metadata mismatch / none | Possible duplicate / none | Zotero / PubMed / Zotero + PubMed | PMID/PubMed / DOI / Zotero metadata / PubMed metadata | Include / exclude / needs manual check |
 ```
 
 ---
 
 ## 11. EndNote 导入文件内容要求
 
-`{topic_slug}_references.ris` 应包含：
+`{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris` 应包含：
 
 1. 报告中最终推荐引用的 Zotero 文献。
 2. PubMed 扩展检索中被标记为“建议引用”或“建议导入”的文献。
@@ -416,15 +422,15 @@ Zotero 语义检索 + 关键词检索
         ↓
 PubMed 自动扩展检索
         ↓
-DOI / PMID / 标题匹配 Zotero 与 PubMed
+DOI / PMID / 标题对 Zotero 与 PubMed 结果去重，保留证据来源标签
         ↓
 构建主张-证据矩阵
         ↓
-生成综合写作建议
+生成综合写作建议和参考文献导出标准化来源决策
         ↓
 输出两个文件：
-  1. evidence_review.md
-  2. references.ris
+  1. zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_evidence_review.md
+  2. zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris
 ```
 
 ---
@@ -492,15 +498,15 @@ DOI / PMID / 标题匹配 Zotero 与 PubMed
 根据主题和日期自动生成：
 
 ```text
-2026-06-18_sedentary-behavior_pcos_evidence_review.md
-2026-06-18_sedentary-behavior_pcos_references.ris
+zotero-evidence-output/sedentary_behavior_pcos_2026-06-18_143512/sedentary_behavior_pcos_2026-06-18_143512_evidence_review.md
+zotero-evidence-output/sedentary_behavior_pcos_2026-06-18_143512/sedentary_behavior_pcos_2026-06-18_143512_references.ris
 ```
 
-如果同一主题重复运行，可追加序号：
+如果同一主题在同一秒内重复运行或目录已存在，可追加目录序号：
 
 ```text
-2026-06-18_sedentary-behavior_pcos_evidence_review_v2.md
-2026-06-18_sedentary-behavior_pcos_references_v2.ris
+zotero-evidence-output/sedentary_behavior_pcos_2026-06-18_143512_v2/sedentary_behavior_pcos_2026-06-18_143512_evidence_review.md
+zotero-evidence-output/sedentary_behavior_pcos_2026-06-18_143512_v2/sedentary_behavior_pcos_2026-06-18_143512_references.ris
 ```
 
 ---
@@ -514,11 +520,11 @@ DOI / PMID / 标题匹配 Zotero 与 PubMed
 3. Markdown 报告提供证据判断、写作建议和可追溯记录。
 4. RIS 文件打通 EndNote / Word 引文工作流。
 
-最终用户只需要两个文件：
+最终用户只需要一个主题目录中的两个文件：
 
 ```text
-1. evidence_review.md       # 看证据、改写作、查链接
-2. references.ris           # 导入 EndNote，进入 Word 引文流程
+1. zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_evidence_review.md       # 看证据、改写作、查链接
+2. zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris           # 导入 EndNote，进入 Word 引文流程
 ```
 
 这将使 Zotero evidence review 从“检索辅助”升级为“论文写作证据引擎”。

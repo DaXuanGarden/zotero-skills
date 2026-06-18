@@ -56,8 +56,21 @@ EVIDENCE_REPORT_SECTIONS = [
     "## 11. Export File",
 ]
 EVIDENCE_PACKAGE_REQUIREMENTS = [
-    "{topic_slug}_evidence_review.md",
-    "{topic_slug}_references.ris",
+    "zotero-evidence-output/",
+    "{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}",
+    "{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_evidence_review.md",
+    "{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris",
+    "skill-named, topic-specific output folder",
+    "LLM-generated brief topic slug",
+    "simple-request entry defaults to the complete workflow",
+    "generic literals",
+    "emoji-only tags",
+    "Evidence source",
+    "Zotero + PubMed",
+    "RIS standardization source",
+    "PMID/PubMed",
+    "reference export standardization by PMID/DOI",
+    "Zotero local library and PubMed expansion are separate evidence steps",
     "Generated Evidence Package:",
     "zotero://select/items/0_",
     "zotero://open-pdf/library/items/",
@@ -267,7 +280,7 @@ def main() -> None:
 
     require_table_header(
         evidence_report_template,
-        r"\| # \| Citation \| Year \| Study type \| Main use \| Zotero \| PDF \| DOI \|.*",
+        r"\| # \| Citation \| Year \| Study type \| Main use \| Evidence source \| Zotero \| PDF \| DOI \|.*",
         ["DOI", "PMID", "Collection"],
         "Reference Table",
     )
@@ -279,8 +292,8 @@ def main() -> None:
     )
     require_table_header(
         evidence_report_template,
-        r"\| Citation \| Missing metadata \| Metadata mismatch \| Duplicate warning \| RIS action \|",
-        ["Missing metadata", "Metadata mismatch", "Duplicate warning", "RIS action"],
+        r"\| Citation \| Missing metadata \| Metadata mismatch \| Duplicate warning \| Evidence source \| RIS standardization source \| RIS action \|",
+        ["Missing metadata", "Metadata mismatch", "Duplicate warning", "Evidence source", "RIS standardization source", "RIS action"],
         "Metadata Quality Control",
     )
     if "Source: Zotero local library; PubMed:" not in evidence_report_template:
