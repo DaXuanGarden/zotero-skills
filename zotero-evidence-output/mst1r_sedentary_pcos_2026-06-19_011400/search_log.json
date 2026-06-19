@@ -1,0 +1,46 @@
+{
+  "package": "mst1r_sedentary_pcos_2026-06-19_011400",
+  "date": "2026-06-19",
+  "zotero_searches": [
+    {
+      "mode": "semantic",
+      "query": "MST1R RON receptor tyrosine kinase inflammation lipid metabolism tissue repair ovarian function cardiometabolic traits PCOS sedentary behavior GWAS 3p21.31",
+      "hits": 10,
+      "included": 5,
+      "notes": "Returned mainly PCOS genetics, PCOS cardiometabolic risk, and movement-behavior papers; MST1R-specific evidence was weak or absent in local Zotero."
+    },
+    {
+      "mode": "keyword",
+      "query": "MST1R RON PCOS ovarian cardiometabolic inflammation lipid metabolism",
+      "hits": 10,
+      "included": 0,
+      "notes": "Original exact search returned no results; fallback to MST1R found mostly unrelated notes and one MASLD pleiotropy paper."
+    }
+  ],
+  "pubmed_searches": [
+    {
+      "query": "(MST1R OR RON receptor tyrosine kinase OR macrophage-stimulating protein receptor) AND (inflammation OR lipid metabolism OR tissue repair OR ovary OR polycystic ovary syndrome OR cardiometabolic)",
+      "max_results": null,
+      "sort": "relevance",
+      "status": "completed",
+      "error": "",
+      "included_pmids": ["12472665", "33117355", "25466635", "24266348", "37142846"]
+    }
+  ],
+  "inclusion_criteria": [
+    "MST1R/RON receptor identity",
+    "Inflammation or innate immune regulation",
+    "Tissue repair or downstream signaling",
+    "Metabolic syndrome or lipid/glucose metabolism",
+    "PCOS genetic, cardiometabolic, or movement-behavior context"
+  ],
+  "exclusion_criteria": [
+    "Optional background records not needed in final RIS",
+    "Records that do not support MST1R/RON or PCOS context claims"
+  ],
+  "full_text_inspected": "partial",
+  "unresolved_gaps": [
+    "No direct MST1R-PCOS or MST1R-ovarian-function evidence found",
+    "rs7615206 and MAGMA/TWAS-JTI/SMR prioritization must be cited as current-study findings"
+  ]
+}

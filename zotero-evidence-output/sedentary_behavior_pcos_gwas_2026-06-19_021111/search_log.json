@@ -1,0 +1,38 @@
+{
+  "package": "sedentary_behavior_pcos_gwas_2026-06-19_021111",
+  "date": "2026-06-19",
+  "zotero_searches": [
+    {
+      "mode": "semantic",
+      "query": "sedentary behavior LST GWAS PCOS genetic architecture obesity insulin resistance gonadotropin loci",
+      "hits": null,
+      "included": 6,
+      "notes": "Report records final evidence set rather than raw hit counts. Included Wang 2022, Hayes 2015, Liu 2022, Stamou 2024, Dapas and Dunaif 2022, Zhao 2025."
+    }
+  ],
+  "pubmed_searches": [
+    {
+      "query": "(\"polycystic ovary syndrome\"[Title/Abstract] OR PCOS[Title/Abstract]) (\"genome-wide association\"[Title/Abstract] OR GWAS[Title/Abstract]) loci",
+      "max_results": null,
+      "sort": "relevance",
+      "status": "completed",
+      "error": "",
+      "included_pmids": ["36071172", "26284813", "35144605", "35026001", "41188533"]
+    }
+  ],
+  "inclusion_criteria": [
+    "Sedentary behavior or LST GWAS evidence",
+    "PCOS GWAS or genomic architecture evidence",
+    "PCOS adiposity, obesity, insulin-resistance, or metabolic pathway evidence"
+  ],
+  "exclusion_criteria": [
+    "Duplicate Zotero record 75BUECD8 for Zhao et al. 2025",
+    "Claims not directly supported by inspected metadata or abstracts"
+  ],
+  "full_text_inspected": "partial",
+  "unresolved_gaps": [
+    "Direct sedentary behavior-PCOS horizontal pleiotropy not established",
+    "Brain enrichment for LST loci not confirmed",
+    "Exact 88 LST-specific loci statement not verified"
+  ]
+}

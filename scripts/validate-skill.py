@@ -45,17 +45,23 @@ REQUIRED_HEADINGS = [
     "## Appendix: Output Templates",
 ]
 EVIDENCE_REPORT_SECTIONS = [
-    "## 1. 核心结论（Bottom Line）",
-    "## 2. 推荐稿件文本（Recommended Manuscript Text）",
-    "## 3. 主张—证据矩阵（Claim–Evidence Matrix）",
-    "## 4. 引文放置建议（Citation Placement）",
-    "## 5. 参考文献表（Reference Table）",
-    "## 6. Zotero 检索总结（Zotero Search Summary）",
-    "## 7. PubMed 扩展检索（PubMed Expansion）",
-    "## 8. 综合写作建议（Integrated Writing Advice）",
-    "## 9. 证据缺口与审稿风险（Gaps and Reviewer-risk Assessment）",
-    "## 10. 元数据质量控制（Metadata Quality Control）",
-    "## 11. 导出文件（Export File）",
+    "## 1. Metadata and Use Status",
+    "## 2. Critical Warnings",
+    "## 3. 核心结论（Bottom Line）",
+    "## 4. 可直接使用的稿件文本（Copy-ready Manuscript Text）",
+    "## 5. 注释版推荐文本（Annotated Recommended Text）",
+    "## 6. 主张—证据矩阵（Claim–Evidence Matrix）",
+    "## 7. 引文放置建议（Citation Placement）",
+    "## 8. Evidence Logic Chain",
+    "## 9. 参考文献表（Reference Table）",
+    "## 10. Search Reproducibility",
+    "## 11. Zotero 检索总结（Zotero Search Summary）",
+    "## 12. PubMed 扩展检索（PubMed Expansion）",
+    "## 13. 综合写作建议（Integrated Writing Advice）",
+    "## 14. Claims to Revise or Remove",
+    "## 15. 证据缺口与审稿风险（Gaps and Reviewer-risk Assessment）",
+    "## 16. 元数据质量控制（Metadata Quality Control）",
+    "## 17. 导出文件（Export File）",
 ]
 EVIDENCE_PACKAGE_REQUIREMENTS = [
     "zotero-evidence-output/",
@@ -159,6 +165,48 @@ PUBMED_GUARDRAIL_REQUIREMENTS = [
     "Only actual PubMed execution plus inspected metadata can justify `Completed`",
     "Tool visibility alone is not enough",
     "PubMed-only records only when PubMed status is `Completed`",
+]
+PHASE10_REQUIREMENTS = [
+    "### Evidence Package Status",
+    "Ready",
+    "Caution",
+    "Partial",
+    "Superseded",
+    "Unknown",
+    "Generated Evidence Package:",
+    "- Status:",
+    "- Markdown report:",
+    "- EndNote RIS:",
+    "Critical Warnings:",
+    "Evidence Logic Chain",
+    "Claims to Revise or Remove",
+    "Recommended action",
+    "Recommended citation",
+]
+CLAIM_EVIDENCE_MATRIX_HEADER = (
+    "| # | Claim | Source layer | Evidence level | Zotero evidence | PubMed evidence | "
+    "Evidence status | Confidence | Risk | Recommended action | Recommended citation |"
+)
+QA_SELF_CHECK_REQUIREMENTS = [
+    "Evidence Package QA Self-Check Prompt",
+    "Run pre-write QA self-check, then write the two files",
+    "Pre-write QA gate checklist",
+    "Post-write QA gate",
+    "Report 是否包含 Status、Critical Warnings、Copy-ready Manuscript Text",
+    "Claim–Evidence Matrix 是否包含 Evidence level 和 Source layer",
+    "current-study finding 错写成 external evidence",
+    "direct causality、BMI independence、horizontal pleiotropy",
+    "PubMed status 是否真实反映工具执行情况",
+    "PubMed-only RIS 是否只来自 completed PubMed search",
+    "unresolved metadata mismatch 是否被排除出 RIS",
+    "RIS 是否无 Markdown heading/code fence",
+    "所有路径是否为相对路径",
+    "最终 chat 只显示 status、paths 和 critical warnings",
+    "Final response hygiene",
+    "final chat exposes only status, relative paths, and critical warnings",
+    "PubMed status truthfully reflects tool execution",
+    "PubMed-only RIS records are included only when the PubMed search completed",
+    "All generated-file paths shown in the report and final chat are relative paths",
 ]
 
 
@@ -315,6 +363,16 @@ def main() -> None:
     require_all(text, PUBMED_GUARDRAIL_REQUIREMENTS, "PubMed guardrail requirement")
     ok("MCP readiness and PubMed guardrail requirements present")
 
+    require_all(text, PHASE10_REQUIREMENTS, "Phase 10 evidence package format requirement")
+    ok("Phase 10 evidence package status, section, matrix, and final-chat requirements present")
+
+    require_all(text, QA_SELF_CHECK_REQUIREMENTS, "Phase 9 QA self-check requirement")
+    prompt_pos = text.find("### Evidence Package QA Self-Check Prompt")
+    output_format_pos = text.find("### Output Format", prompt_pos)
+    if prompt_pos == -1 or output_format_pos == -1:
+        fail("Evidence Package QA Self-Check Prompt must appear before Module 2.5 Output Format")
+    ok("Phase 9 pre-write/post-write QA self-check requirements present")
+
     require_all(text, RIS_REQUIREMENTS, "RIS requirement")
     require_all(text, RIS_ITEM_TYPE_MAPPINGS, "RIS itemType mapping")
     ok("RIS export requirements present")
@@ -330,9 +388,39 @@ def main() -> None:
 
     require_table_header(
         evidence_report_template,
+        re.escape(CLAIM_EVIDENCE_MATRIX_HEADER),
+        [
+            "#",
+            "Claim",
+            "Source layer",
+            "Evidence level",
+            "Zotero evidence",
+            "PubMed evidence",
+            "Evidence status",
+            "Confidence",
+            "Risk",
+            "Recommended action",
+            "Recommended citation",
+        ],
+        "Claim–Evidence Matrix",
+    )
+    require_table_header(
+        evidence_report_template,
+        r"\| Sentence / clause \| Recommended text \| Source layer \| Evidence level \| Citation rationale \| Caveat / reviewer risk \|",
+        ["Sentence / clause", "Recommended text", "Source layer", "Evidence level", "Citation rationale", "Caveat / reviewer risk"],
+        "Annotated Recommended Text",
+    )
+    require_table_header(
+        evidence_report_template,
         r"\| # \| Citation \| Year \| Study type \| Main use \| Evidence source \| Zotero \| PDF \| DOI \|.*",
         ["DOI", "PMID", "Collection"],
         "Reference Table",
+    )
+    require_table_header(
+        evidence_report_template,
+        r"\| Source \| Query \| Mode \| Max results \| Status \| Included \| Notes \|",
+        ["Source", "Query", "Mode", "Max results", "Status", "Included", "Notes"],
+        "Search Reproducibility",
     )
     require_table_header(
         evidence_report_template,
@@ -342,10 +430,113 @@ def main() -> None:
     )
     require_table_header(
         evidence_report_template,
+        r"\| Selected reference \| Canonical identifier \| DOI \| PMID \| Title check \| First author check \| Year check \| Canonical Zotero key \| Duplicate keys \| Duplicate check result \| Metadata source of truth \| RIS action \| Reason \|",
+        [
+            "Selected reference",
+            "Canonical identifier",
+            "DOI",
+            "PMID",
+            "Title check",
+            "First author check",
+            "Year check",
+            "Canonical Zotero key",
+            "Duplicate keys",
+            "Duplicate check result",
+            "Metadata source of truth",
+            "RIS action",
+            "Reason",
+        ],
+        "Reference Canonicalization Gate",
+    )
+    require_table_header(
+        evidence_report_template,
         r"\| Citation \| Missing metadata \| Metadata mismatch \| Duplicate warning \| Evidence source \| RIS standardization source \| RIS action \|",
         ["Missing metadata", "Metadata mismatch", "Duplicate warning", "Evidence source", "RIS standardization source", "RIS action"],
         "Metadata Quality Control",
     )
+    if "## 2. 推荐稿件文本（Recommended Manuscript Text）" in evidence_report_template:
+        fail("old Recommended Manuscript Text section remains in Evidence Review report template")
+    critical_warning_requirements = [
+        "No critical warnings",
+        "PubMed tool unavailable",
+        "PubMed query failed",
+        "central claim has no direct evidence",
+        "External evidence contradicts the draft claim",
+        "citation, concept, DOI/PMID",
+        "Metadata mismatch remains unresolved",
+        "Duplicate Zotero records affect selected references",
+        "current-study finding could be mistaken for external evidence support",
+        "Causal wording is not directly supported",
+        "BMI-independent wording is not directly supported",
+        "Horizontal pleiotropy wording is not directly supported",
+        "Critical warnings must not be hidden only in later reviewer-risk or metadata-QC sections",
+    ]
+    require_all(text, critical_warning_requirements, "critical warning requirement")
+    search_reproducibility_requirements = [
+        "Zotero semantic query",
+        "Zotero keyword query",
+        "PubMed query",
+        "PubMed max results",
+        "PubMed status",
+        "failed reason",
+        "included PMIDs",
+        "excluded records and reason",
+        "full_text_inspected",
+        "attempted or planned PubMed query",
+        "included_count",
+        "excluded_reason",
+        "max_results",
+    ]
+    require_all(text, search_reproducibility_requirements, "search reproducibility requirement")
+    reference_canonicalization_requirements = [
+        "Reference Canonicalization Gate",
+        "canonical identifier",
+        "DOI, PMID, title, first author, and year",
+        "canonical Zotero key",
+        "duplicate keys",
+        "Duplicate check result",
+        "metadata source of truth",
+        "RIS action",
+        "Include",
+        "Exclude",
+        "Verify",
+        "Optional",
+        "Possible metadata mismatch",
+        "Unresolved mismatch must not enter RIS",
+        "If DOI or PMID is the same across candidates, merge them into one canonical record",
+    ]
+    require_all(text, reference_canonicalization_requirements, "reference canonicalization requirement")
+    run_relationship_requirements = [
+        "Run Relationship and Superseded Mechanism",
+        "Related prior packages",
+        "Run relationship rationale",
+        "Potentially supersedes",
+        "Complementary to",
+        "Related; supersession unclear",
+        "Do not automatically modify old evidence package files",
+        "topic slug similarity",
+        "core keyword overlap",
+        "selected references overlap",
+        "DOI/PMID overlap",
+        "project-level summary only when the user asks",
+    ]
+    require_all(text, run_relationship_requirements, "run relationship requirement")
+    require_all(
+        evidence_report_template,
+        ["| Related prior packages |", "| Run relationship rationale |"],
+        "run relationship metadata row",
+    )
+    if "Critical Warnings:" not in text:
+        fail("final chat summary must include Critical Warnings")
+    metadata_pos = evidence_report_template.find("## 1. Metadata and Use Status")
+    critical_pos = evidence_report_template.find("## 2. Critical Warnings")
+    bottom_line_pos = evidence_report_template.find("## 3. 核心结论（Bottom Line）")
+    if not (metadata_pos != -1 and metadata_pos < critical_pos < bottom_line_pos):
+        fail("Critical Warnings must appear after metadata and before Bottom Line")
+    if "citation should be verified" not in text:
+        fail("Copy-ready rules must explicitly forbid citation-should-be-verified wording")
+    if "manuscript-ready text only" not in evidence_report_template:
+        fail("Copy-ready Manuscript Text template must be directly copyable and annotation-free")
     if (
         "来源：Zotero 本地库；PubMed:" not in evidence_report_template
         and "Source: Zotero local library; PubMed:" not in evidence_report_template

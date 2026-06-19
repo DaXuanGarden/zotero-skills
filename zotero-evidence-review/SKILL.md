@@ -7,7 +7,7 @@ metadata:
   workflow: academic-research
   requires: zotero-mcp
   optional: pubmed-mcp
-  version: 2.1.1
+  version: 2.8.0
 ---
 
 # Zotero Evidence Review Skill
@@ -304,8 +304,72 @@ Use when the user pastes a manuscript paragraph, draft passage, or multi-sentenc
 
 Run **one Zotero search pass** for the paragraph, then produce **two output layers** from the same result set:
 
-- **Layer A: evidence quality** — each extracted claim receives support strength and gap status.
+- **Layer A: evidence quality** — each extracted claim receives a standardized evidence level, support strength, source boundary, and gap status.
 - **Layer B: citation recommendation** — each sentence receives recommended citations and a concise citation rationale.
+
+### Source Layer: Current-study Finding vs External Evidence
+
+Assign every extracted claim exactly one `Source layer` before interpreting evidence. This boundary prevents the workflow from using external literature to incorrectly "prove" the user's current-study findings.
+
+| Source layer | Definition | Required wording pattern |
+|--------------|------------|--------------------------|
+| `Current study` | A result, observation, statistic, model output, table/figure result, or interpretation supplied by the user or produced in the current manuscript/analysis. | `In our analysis...`, `The present study identified...`, `Our findings suggest...`, `本研究发现...` |
+| `Zotero external evidence` | Evidence from inspected Zotero library records, including metadata, abstracts, notes, annotations, or full text. | `Previous studies show...`, `Published evidence supports...`, `Zotero-indexed literature reports...` |
+| `PubMed external evidence` | Evidence from PubMed expansion records after a completed PubMed search and inspected PMID metadata. | `PubMed-indexed studies report...`, `Published evidence from PubMed supports...` |
+| `Interpretive bridge` | A cautious inference connecting current-study findings to external evidence, mechanism, or plausibility. | `These findings are consistent with...`, `may suggest...`, `provide biological plausibility for...` |
+| `Unsupported gap` | A claim for which no adequate direct, indirect, mechanistic, or verified evidence was retrieved. | `requires validation`, `was not directly supported by retrieved evidence`, `needs verification` |
+
+Claims that must normally be marked `Current study` unless the user explicitly states they are from an external cited source:
+
+- SMR, MR, TWAS, GWAS, colocalization, fine-mapping, LDSC, MAGMA, PRS, genetic correlation, QTL or eQTL/pQTL integration;
+- pathway enrichment, gene-set enrichment, cell-type enrichment, cell enrichment, tissue enrichment, network analysis, module detection;
+- candidate gene prioritization, drug-target prioritization, target ranking, causal-gene nomination;
+- differential expression, single-cell analysis, spatial transcriptomics, omics integration, mediation analysis;
+- cohort, clinical, statistical-model, sensitivity-analysis, subgroup-analysis, or figure/table results supplied by the user;
+- manuscript wording such as `we found`, `our analysis identified`, `the present study shows`, `本研究发现`, `我们的结果提示`, or equivalent.
+
+External literature can support background, prior association, method, mechanism, or biological plausibility. It must not be described as proving, confirming, validating, or replicating a current-study finding unless the retrieved external source directly tests the same claim with a comparable design, exposure, outcome, population, and direction.
+
+Required interpretation rules:
+
+- If a claim is `Current study`, assign evidence level `D` unless an inspected comparable external replication supports the same finding.
+- If external evidence only provides mechanism or background for a current-study claim, use `Interpretive bridge` wording and evidence level `C` or `D`, not `A`.
+- If no direct or plausible evidence is found, mark `Source layer = Unsupported gap` and evidence level `E`.
+- The Claim–Evidence Matrix must include both `Source layer` and `Evidence level` so readers can see whether a statement is current-study output, external evidence, a bridge inference, or a gap.
+
+Recommended wording:
+
+- Current study: `In our analysis...`, `The present study identified...`, `Our findings suggest...`.
+- External evidence: `Previous studies show...`, `Published evidence supports...`, `Prior literature reports...`.
+- Interpretive bridge: `These findings are consistent with...`, `may suggest...`, `provide biological plausibility for...`.
+- Unsupported gap: `requires validation`, `was not directly supported by retrieved evidence`, `should be verified before use`.
+
+Forbidden wording unless directly supported by comparable external evidence:
+
+- `Previous studies confirmed our SMR/TWAS/MR result`.
+- `Published literature proves our candidate gene prioritization`.
+- `External evidence validates our enrichment result`.
+- `This citation demonstrates that our current-study association is causal`.
+- `The retrieved papers confirm the current study's BMI-independent or pleiotropy result`.
+
+### Unified Evidence Level
+
+Assign every extracted claim exactly one evidence level from `A` to `E`. Use the same level in chat output, Markdown evidence reports, reviewer-risk assessment, and manuscript wording recommendations so evidence strength does not drift across reports.
+
+| Level | Name | Definition | Judgment criteria | Recommended wording | Avoid |
+|-------|------|------------|-------------------|---------------------|-------|
+| `A` | Exact direct support | External literature directly supports the exact claim. | The retrieved source matches the claim's exposure/intervention, outcome, direction, population/context, and study-design implication closely enough to support the sentence as written. | `supported`, `directly supported`, `reported`, `shown to be associated with` when the source design supports that wording | Adding causal, population, subgroup, or independence claims not present in the source |
+| `B` | Close direct support | External literature directly supports a closely related claim, but not the exact manuscript claim. | At least one key element differs, such as phenotype, population, exposure definition, mechanism detail, time scale, or study design. | `consistent with`, `supports a related claim`, `aligns with evidence that...` | `proves`, `confirms`, or wording that treats the related source as exact support |
+| `C` | Plausibility support | Evidence is mechanistic, background, review-based, pathway-level, methodological, or otherwise indirect. | The source supports biological plausibility, context, mechanism, terminology, or method, but does not directly test the full claim. | `biologically plausible`, `may align with`, `may contribute to`, `provides mechanistic context` | Treating mechanism or background as direct empirical support |
+| `D` | Current-study only | The claim is primarily a finding from the user's current study; external literature can only provide context or plausibility unless direct replication is retrieved. | The claim comes from the user's data, analysis, tables, figures, or wording such as `our analysis`, `we found`, `本研究发现`, or `the present study identified`. | `in our analysis`, `our findings suggest`, `the present study identified`, `consistent with prior evidence` | `previous studies confirmed our finding` unless a comparable external replication was inspected |
+| `E` | Unsupported / contradicted / verify | The claim is unsupported, contradicted, unverifiable with available sources, or requires citation/metadata verification. | No adequate evidence was found; retrieved evidence conflicts with the claim; or a key citation, concept, DOI/PMID, title, or metadata field remains unverified. | `remove`, `verify`, `hedge strongly`, `requires validation`, `not directly supported by retrieved evidence` | Presenting the claim as established fact |
+
+Evidence-level rules:
+
+- `D` explicitly means `current-study only`. Do not use external mechanistic or background literature as direct proof of the user's own SMR, MR, TWAS, GWAS, enrichment, candidate-gene, cohort, or statistical finding.
+- `C` cannot be upgraded to `A` or `B` unless direct empirical evidence for the same claim is retrieved and inspected.
+- `E` claims must not appear in manuscript-ready text as confident factual statements; remove, verify, convert to a knowledge gap, or hedge strongly.
+- Recommended Manuscript Text must follow the level: A/B can use moderate confidence, C/D require cautious or bridge wording, and E requires removal, verification, or strong hedging.
 
 Do not repeatedly search Zotero for each output layer. Do not ask the user to choose between "find evidence" and "add citations" modes.
 
@@ -323,8 +387,9 @@ When the request is a citation-support or export request, this module is the ana
    - If coverage is insufficient, run one keyword/structured fallback with `zotero_search_items` or `zotero_advanced_search` using the same claim set.
    - Deduplicate results and build one reusable candidate evidence pool.
 3. **Two-layer analysis from the same evidence pool**
-   - **Layer A: Claim-evidence matrix** — map each claim to the best available citation(s), support strength, and gap status.
-   - **Layer B: Sentence-level citation recommendations** — map each sentence to the citation(s) that should be inserted and explain why.
+   - **Layer A: Claim-evidence matrix** — map each claim to the best available citation(s), assign exactly one source layer and one A-E evidence level, record support strength, and mark gap status.
+   - **Layer B: Sentence-level citation recommendations** — map each sentence to the citation(s) that should be inserted, carry forward the same source layer and A-E evidence level, and explain why.
+   - Do not use a different strength label or source boundary in Layer B than the level assigned in Layer A. If sentence-level wording combines multiple claims, use the most conservative evidence level and explicitly separate current-study wording from external-evidence wording.
 4. **Diff paragraph**
    - Provide a revised paragraph showing citation insertions and necessary wording changes.
    - Mark deletions with `~~strikethrough~~` and additions with `**bold**`.
@@ -338,7 +403,7 @@ When the request is a citation-support or export request, this module is the ana
 
 ### Evidence and Rationale Labels
 
-Use these labels inside the tables, especially in the "Strength" and "Citation rationale" columns:
+Use the unified evidence level above as the primary strength label for every claim. The labels below describe the evidence type or citation role and should be used alongside the A-E level inside the tables, especially in the "Strength", "Evidence level", and "Citation rationale" columns:
 
 - **Direct evidence**: directly supports the claim.
 - **Indirect evidence**: supports part of the mechanism, context, or related association.
@@ -439,7 +504,9 @@ Use this output shape:
 
 - Keep the paragraph's original language unless the user asks for translation.
 - Prefer 3-7 high-value citations over exhaustive citation stuffing.
-- If evidence is indirect, mixed, observational, or mechanistic only, recommend hedging language rather than causal wording.
+- If evidence is indirect, mixed, observational, or mechanistic only, assign evidence level C unless a more specific rule requires D or E, and recommend hedging language rather than causal wording.
+- Carry evidence levels into writing suggestions: A/B may support moderately confident citation placement, C/D require bridge or hedge wording, and E should be removed, verified, or reframed as a gap.
+- Separate current-study findings from external evidence in manuscript wording: write current results as `In our analysis...` or `The present study identified...`, then use external citations only as `Previous studies show...` or `These findings are consistent with...` bridge support.
 - Use the same Zotero result pool for both Layer A and Layer B; only search again if the user explicitly requests deeper follow-up.
 - Do not fabricate missing support. Mark gaps clearly. In chat-only mode, hand off to external search only after asking; in the full Paragraph Citation Package Workflow, continue to Module 2.5 and report PubMed expansion status honestly.
 
@@ -523,11 +590,24 @@ Do not route to this module when the user explicitly opts out with `只在聊天
    - Include final recommended Zotero citations.
    - Include PubMed-only papers only when they are marked `recommend citing` or `consider importing`, and only when PubMed metadata is sufficient and comes from an actually completed PubMed search.
    - Exclude low-relevance hits, duplicate records, and unresolved metadata conflicts by default.
-8. **Write the two files**
-   - Create or reuse the package output directory according to **Default Output Directory**.
+8. **Run pre-write QA self-check, then write the two files**
+   - Before writing Markdown or RIS content to disk, run the internal **Evidence Package QA Self-Check Prompt** against the complete draft report, planned RIS records, PubMed execution log, metadata QC table, and intended output paths.
+   - If the self-check finds missing status, missing critical warnings, missing copy-ready text, missing claim evidence level/source layer, current-study/external-evidence confusion, inaccurate PubMed status, invalid RIS content, absolute paths, unresolved metadata mismatch, or overconfident E-level wording, revise the draft report/RIS first and repeat the self-check.
+   - Create or reuse the package output directory according to **Default Output Directory** only after the draft passes the pre-write self-check.
    - Save the Markdown report with the `EVIDENCE_REVIEW_REPORT` template.
    - Save the RIS file with the `RIS_REFERENCE_FILE` template and rules.
-   - Final chat output should list only the two generated file paths plus any critical warnings.
+   - Run the post-write QA gate before announcing completion: confirm the written Markdown/RIS still match the same checks, and that final chat exposes only status, relative paths, and critical warnings.
+   - Final chat output must use this exact compact structure and include no internal checklist details:
+
+```markdown
+Generated Evidence Package:
+- Status: {Ready / Caution / Partial / Superseded / Unknown}
+- Markdown report: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_evidence_review.md`
+- EndNote RIS: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris`
+
+Critical Warnings:
+- {warning or No critical warnings}
+```
 
 ### Default Output Directory
 
@@ -576,23 +656,225 @@ zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}
 
 If files already exist inside the selected folder, append `_v2`, `_v3`, etc. to the run folder or filenames. Do not overwrite an existing evidence package unless the user explicitly confirms replacement.
 
+### Run Relationship and Superseded Mechanism
+
+Evidence package runs can be related when the user revisits the same topic, expands a previous search, or generates evidence for a different manuscript section using overlapping literature. The skill must record relationships in the new report without silently rewriting old reports.
+
+Run relationship rules:
+
+- Do not automatically modify old evidence package files. Only update, mark, or rewrite prior reports when the user explicitly asks to organize, summarize, consolidate, or supersede existing outputs.
+- When a new evidence package is highly similar to existing packages, the new report metadata may list `Related prior packages` with paths, dates, topic slugs, and short relationship notes.
+- Similarity judgment should use topic slug similarity, core keyword overlap, user-provided topic/paragraph overlap, selected references overlap, DOI/PMID overlap, and shared claim/manuscript-section context.
+- If the new report is broader, newer, more complete, or has stronger search reproducibility / metadata QC than a prior package on the same claim scope, write `Potentially supersedes` in the new report.
+- If the new report supports a different manuscript section, sub-claim, method/background/mechanism layer, or a narrower adjacent topic, write `Complementary to` rather than superseding.
+- If relationship is uncertain, write `Related; supersession unclear` and explain the missing comparison information.
+- `Superseded` package status must be assigned only when the report itself is explicitly being marked as replaced or when the user asks to manage prior outputs. A new report can say it `Potentially supersedes` an older report without changing the old report's status.
+- Generate a project-level summary only when the user asks to整理/总结已有输出, consolidate runs, compare packages, or create a project overview. Do not create project-level summary files during ordinary evidence package generation.
+
+Required metadata structure:
+
+```markdown
+| Related prior packages | {none / path + date + topic slug + relationship: Potentially supersedes / Complementary to / Related; supersession unclear} |
+| Run relationship rationale | {topic slug similarity; core keyword overlap; selected references overlap; DOI/PMID overlap; manuscript section relationship} |
+```
+
+### Evidence Package Status
+
+Every generated evidence package must receive exactly one status: `Ready`, `Caution`, `Partial`, `Superseded`, or `Unknown`. The status tells the user whether the package can be used for manuscript writing and what level of caution is required.
+
+| Status | Definition | Trigger conditions | User guidance |
+|--------|------------|-------------------|---------------|
+| `Ready` | Searches completed as planned, central claims have direct or close support, metadata QC has no unresolved high-risk issue, and selected RIS records passed inspection. | All required evidence was inspected; PubMed is `Completed` when required for a biomedical topic or explicitly not required; central claims are mostly A/B; no unresolved metadata mismatch; no key citation/concept is unverified. | Can be used for drafting with normal scholarly caution. |
+| `Caution` | The package is usable but has important caveats. | No direct evidence for a central claim; central evidence is mostly C/D; PubMed unavailable but not essential; duplicate records were detected and safely excluded or resolved; causal, BMI-independent, or pleiotropy wording requires hedge wording. | Use hedge wording and review warnings before manuscript use. |
+| `Partial` | A required evidence layer or citation/metadata check is incomplete. | PubMed query failed when PubMed evidence is required; a key citation, PMIDs/DOIs, PMOS, or concept remains unverified; unresolved metadata mismatch affects selected references; PubMed-only evidence was planned but cannot be inspected; RIS cannot safely include a key record. | Do not treat as final; complete verification before submission. |
+| `Superseded` | A later evidence package or updated run replaces this package. | The report explicitly identifies a newer package as replacing this one. Do not mark old files superseded automatically unless the user asks to manage prior outputs. | Keep for history only; use the newer package. |
+| `Unknown` | The available workflow state is insufficient to determine status. | Tool results, search execution, metadata QC, or claim-level evidence status are unclear or unavailable. | Manual review required. |
+
+Downgrade rules:
+
+- `PubMed query failed` → at least `Partial` when PubMed evidence is required for a central biomedical claim; otherwise at least `Caution`.
+- `PMOS`, key concept, citation, DOI/PMID, or title not verified → `Partial` for central claims, otherwise `Caution`.
+- `No direct evidence for central claim` → at least `Caution`.
+- `Metadata mismatch unresolved` → `Partial`, and the affected reference must be excluded from RIS.
+- `Duplicate unresolved but excluded safely` → `Caution`.
+- `All required evidence inspected and risks low` → `Ready`.
+- If multiple triggers apply, use the most conservative status.
+
+Status must appear in the Markdown report metadata, in the export-file section, and in the final chat summary after files are written.
+
+### Critical Warnings
+
+Critical warnings are the front-loaded reviewer-risk controls for problems that could mislead manuscript writing, citation use, or final submission. They must appear immediately after `Metadata and Use Status` and before `## 3. 核心结论（Bottom Line）` in every `EVIDENCE_REVIEW_REPORT`.
+
+A case must be added to `Critical Warnings` when any of the following conditions applies:
+
+- PubMed tool unavailable or PubMed query failed when PubMed is relevant to the biomedical evidence package.
+- A central claim has no direct evidence.
+- External evidence contradicts the draft claim.
+- A central citation, concept, DOI/PMID, terminology, abbreviation, or claim remains unverified.
+- Metadata mismatch remains unresolved for any candidate or selected reference.
+- Duplicate Zotero records affect selected references or could change the canonical citation/RIS record.
+- A current-study finding could be mistaken for external evidence support.
+- Causal wording is not directly supported.
+- BMI-independent wording is not directly supported.
+- Horizontal pleiotropy wording is not directly supported.
+
+Critical warning rules:
+
+- Each warning must contain `Affected claim`, `Risk`, and `Required action`.
+- The warning must be specific enough for the user to locate and revise the affected claim or citation.
+- Critical warnings must be consistent with package `Status`; unresolved high-risk warnings usually require `Caution`, `Partial`, or `Unknown`, not `Ready`.
+- Critical warnings must not be hidden only in later reviewer-risk or metadata-QC sections.
+- If no critical warnings apply, write exactly: `No critical warnings`.
+- Critical warnings may be referenced in `Annotated Recommended Text`, reviewer-risk assessment, metadata QC, and final chat summary, but they must not be inserted into `Copy-ready Manuscript Text`.
+- The final chat summary must always display `Status` and `Critical warnings`; if none apply, write `No critical warnings`.
+
+Required output structure:
+
+```markdown
+## Critical Warnings
+| Affected claim | Risk | Required action |
+|----------------|------|-----------------|
+| ... | PubMed unavailable / no direct evidence / contradiction / unverified citation or concept / metadata mismatch / duplicate record / current-study vs external-evidence confusion / unsupported causal wording / unsupported BMI-independent claim / unsupported horizontal pleiotropy claim | Revise wording / verify citation / remove claim / complete PubMed search / resolve metadata / deduplicate records / mark as current-study only |
+```
+
+If there are no warnings:
+
+```markdown
+## Critical Warnings
+No critical warnings
+```
+
+### Search Reproducibility
+
+Every evidence package must include a reproducible search log so the Zotero and PubMed search process can be audited, repeated, or completed later. The section must cover Zotero semantic search, Zotero keyword search, and PubMed search even when one source returns no hits or cannot be executed.
+
+Search reproducibility rules:
+
+- Record every Zotero semantic query, Zotero keyword query, Zotero keyword/structured query, PubMed query, PubMed max results, and PubMed status used or planned.
+- Each row must include `Source`, `Query`, `Mode`, `Max results`, `Status`, `Included`, and `Notes`.
+- `Mode` must distinguish at least `semantic`, `keyword`, `structured`, `PubMed`, `PMID details`, `related`, or `full-text inspection` when applicable.
+- `Max results` must record the requested limit/max_results for each search; if not available, write `Not recorded`, not a guessed number.
+- `Status` must use explicit values such as `Completed`, `Not executed`, `⚠️ Tool unavailable; search not executed`, `Failed; query reported`, `No hits`, or `Partial`.
+- PubMed failed or unavailable cases must still record the attempted or planned PubMed query and the failure reason.
+- `Included` must record the included_count for that search row; for PubMed rows, list included PMIDs in `Notes` when available.
+- `Notes` must record excluded records and reasons, failed reason, included PMIDs, duplicate/metadata exclusion notes, and whether full text was inspected.
+- `full_text_inspected` must be marked as exactly `yes`, `no`, or `partial` in `Notes` for searches whose included evidence depends on full-text/PDF inspection.
+- Excluded records must be traceable by citation, PMID/DOI, or local Zotero label when available, with a short exclusion reason such as `off-topic`, `wrong population`, `not direct evidence`, `metadata mismatch`, `duplicate`, `no full text`, or `contradicts claim`.
+
+Required output structure:
+
+```markdown
+## Search Reproducibility
+| Source | Query | Mode | Max results | Status | Included | Notes |
+|---|---|---|---:|---|---:|---|
+| Zotero | {semantic query} | semantic | {max_results or Not recorded} | Completed / No hits / Failed | {included_count} | full_text_inspected: yes/no/partial; included: {citation keys}; excluded: {record + reason} |
+| Zotero | {keyword query} | keyword / structured | {max_results or Not recorded} | Completed / No hits / Failed | {included_count} | full_text_inspected: yes/no/partial; included: {citation keys}; excluded: {record + reason} |
+| PubMed | {attempted or planned PubMed query} | PubMed | {max_results} | Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported / Not executed | {included_count} | included PMIDs: {PMIDs or none}; excluded: {PMID/citation + reason}; failed reason: {if any}; full_text_inspected: yes/no/partial |
+```
+
+### Copy-ready vs Annotated Output
+
+Every evidence package must separate manuscript-ready prose from evidence-review annotations.
+
+`Copy-ready Manuscript Text` is the text users can copy directly into a manuscript:
+
+- Preserve the manuscript's original language unless translation is explicitly requested.
+- Do not include internal review notes, workflow explanations, QC comments, tool-status commentary, or phrases such as `citation should be verified`.
+- Do not mention PubMed/Zotero execution status inside the copy-ready prose.
+- Keep cautious wording required by evidence level and source layer.
+- If evidence is insufficient, use hedge wording, knowledge-gap wording, or remove the unsupported claim.
+- If a concept, citation, DOI/PMID, or claim is unverified, do not write it as established fact.
+- Use only citations that are recommended and not blocked by metadata/citation warnings.
+
+`Annotated Recommended Text` is the evidence-review explanation layer:
+
+- It may explain citation placement, evidence level, source layer, caveats, reviewer risk, and metadata/tool limitations.
+- It must identify which sentences or clauses are `Current study`, `Zotero external evidence`, `PubMed external evidence`, `Interpretive bridge`, or `Unsupported gap`.
+- It should explain when a citation supports direct evidence, related evidence, mechanism, method, background, plausibility, or only a bridge inference.
+- It may state that a citation, concept, DOI/PMID, or PubMed search requires verification.
+
+Required output structure:
+
+```markdown
+## 2. 可直接使用的稿件文本（Copy-ready Manuscript Text）
+> {manuscript-ready text only; no workflow notes or internal caveats}
+
+## 3. 注释版推荐文本（Annotated Recommended Text）
+| Sentence / clause | Recommended text | Source layer | Evidence level | Citation rationale | Caveat / reviewer risk |
+|-------------------|------------------|--------------|----------------|--------------------|------------------------|
+| ... | ... | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | A / B / C / D / E | ... | ... |
+```
+
 ### Markdown Report Requirements
 
 The report must use Chinese-first user-facing headings and analytical prose by default, while preserving manuscript language and official bibliographic metadata according to **0. Durable Output Language Policy**. It must include these sections in order, including PubMed status even when PubMed was unavailable or failed:
 
-1. `核心结论`
-2. `推荐稿件文本`
-3. `主张—证据矩阵`
-4. `引文放置建议`
-5. `参考文献表`
-6. `Zotero 检索总结`
-7. `PubMed 扩展检索`
-8. `综合写作建议`
-9. `证据缺口与审稿风险`
-10. `元数据质量控制`
-11. `导出文件`
+
+1. `Metadata and Use Status`
+2. `Critical Warnings`
+3. `核心结论`
+4. `可直接使用的稿件文本（Copy-ready Manuscript Text）`
+5. `注释版推荐文本（Annotated Recommended Text）`
+6. `主张—证据矩阵`
+7. `引文放置建议`
+8. `Evidence Logic Chain`
+9. `参考文献表`
+10. `Search Reproducibility`
+11. `Zotero 检索总结`
+12. `PubMed 扩展检索`
+13. `综合写作建议`
+14. `Claims to Revise or Remove`
+15. `证据缺口与审稿风险`
+16. `元数据质量控制`
+17. `导出文件`
 
 Add source and export-standardization detail to the `Reference Table` and `Metadata Quality Control` so the reader can tell whether evidence came from Zotero, PubMed, or both, and whether the RIS was standardized from PMID/PubMed, DOI metadata, or inspected source metadata.
+
+Critical warning report rules:
+
+- `Critical Warnings` must appear immediately after `Metadata and Use Status` and before `## 1. 核心结论（Bottom Line）`.
+- Each warning must include `Affected claim`, `Risk`, and `Required action`.
+- Critical warnings must include PubMed failures, missing direct evidence for central claims, contradictory evidence, unverified citations/concepts, unresolved metadata mismatch, duplicate selected references, current-study/external-evidence confusion, unsupported causal wording, unsupported BMI-independent wording, and unsupported horizontal pleiotropy wording.
+- If no critical warnings apply, write exactly `No critical warnings`.
+
+Search reproducibility report rules:
+
+- `Search Reproducibility` must include Zotero semantic search, Zotero keyword/structured search, and PubMed search rows.
+- Each row must record query, mode, max_results, status, included_count, and excluded_reason through the `Source`, `Query`, `Mode`, `Max results`, `Status`, `Included`, and `Notes` columns.
+- PubMed failed or unavailable cases must record the attempted or planned PubMed query and failed reason.
+- `Notes` must include included PMIDs when available, excluded records and reason, and `full_text_inspected: yes/no/partial`.
+
+Reference canonicalization report rules:
+
+- `Reference Canonicalization Gate` must be completed before `Metadata Quality Control` and before RIS export decisions are finalized.
+- The gate may appear as an explicit subsection inside `元数据质量控制（Metadata Quality Control）` rather than as a separate top-level report section, so the public report preserves the required 17-section order.
+- Every selected reference must check DOI, PMID, title, first author, and year.
+- DOI- or PMID-identical records must be merged into one canonical record, with duplicate Zotero keys recorded.
+- PubMed-vs-Zotero conflicts must be marked `Possible metadata mismatch` and unresolved mismatch must not enter RIS.
+- RIS action must be exactly one of `Include`, `Exclude`, `Verify`, or `Optional`, with a reason for each action.
+
+Copy-ready and annotated text rules:
+
+- `Copy-ready Manuscript Text` must be directly copyable into the manuscript and must not contain internal review notes, workflow explanations, tool-status comments, or `citation should be verified` wording.
+- `Annotated Recommended Text` must explain citation placement, source layer, evidence level, caveats, and reviewer risk in a table.
+- Unsupported or unverified concepts must not be stated as facts in copy-ready text.
+- Caveats, verification needs, PubMed failures, and metadata concerns belong in `Annotated Recommended Text`, `Gaps and Reviewer-risk Assessment`, or `Metadata Quality Control`, not inside copy-ready prose.
+
+Evidence-level report rules:
+
+- The Claim–Evidence Matrix must contain an `Evidence level` column using only `A`, `B`, `C`, `D`, or `E`.
+- Citation Placement must carry forward the same evidence level used for the relevant claim.
+- Reviewer-risk Assessment must state the evidence level in `Evidence basis` so risk judgments are traceable to the same A-E framework.
+- Copy-ready Manuscript Text must be automatically hedged by level: A/B may be moderately confident; C uses plausibility wording; D uses current-study wording plus cautious external-evidence bridge language; E is removed, marked for verification in annotated/risk sections, or strongly hedged.
+
+Evidence-boundary report rules:
+
+- The Claim–Evidence Matrix must contain a `Source layer` column using only `Current study`, `Zotero external evidence`, `PubMed external evidence`, `Interpretive bridge`, or `Unsupported gap`.
+- Citation Placement and Reviewer-risk Assessment must preserve the same source layer used for the relevant claim.
+- Current-study findings must be written as current-study results, not as facts proven by citations.
+- External evidence may support biological plausibility, prior association, method, or mechanism, but must not be used to prove SMR, TWAS, MAGMA, colocalization, enrichment, candidate-gene, or other current-study outputs.
+- Interpretive bridge sentences must use cautious wording such as `consistent with`, `may suggest`, or `provide biological plausibility`.
 
 Reference table rules:
 
@@ -601,6 +883,33 @@ Reference table rules:
 - Use `[PDF](zotero://open-pdf/library/items/{attachment_key})` when a PDF attachment key is available; otherwise use `—`.
 - Use `[DOI](https://doi.org/{doi})` and `[PMID](https://pubmed.ncbi.nlm.nih.gov/{pmid}/)` links when identifiers are available.
 - Use `Not available` for unknown collection membership.
+
+### Reference Canonicalization Gate
+
+Before generating RIS, every selected reference must pass a canonical reference quality-control gate. This gate prevents duplicate keys, incorrect PMID/DOI linkage, abnormal author fields, metadata conflicts, and duplicate RIS export.
+
+Reference canonicalization rules:
+
+- Every selected reference must check DOI, PMID, title, first author, and year before RIS export.
+- Every selected reference must record a canonical identifier: DOI / PMID / Zotero key. Prefer DOI when reliable, then PMID, then canonical Zotero key when no external identifier is available.
+- If DOI or PMID is the same across candidates, merge them into one canonical record and export at most one RIS record.
+- If multiple Zotero keys point to the same work, choose one canonical Zotero key and record all duplicate keys.
+- Duplicate check result must be explicit: `unique`, `merged by DOI`, `merged by PMID`, `possible duplicate`, `duplicate excluded`, or `unresolved duplicate`.
+- Metadata source of truth must be explicit: `PMID/PubMed`, `DOI metadata`, `Zotero metadata`, or `manual verification required`.
+- If PubMed and Zotero metadata conflict for DOI, PMID, title, first author, or year, mark `Possible metadata mismatch`.
+- RIS action must be exactly one of `Include`, `Exclude`, `Verify`, or `Optional`.
+- Unresolved mismatch must not enter RIS; mark RIS action as `Verify` or `Exclude` until resolved.
+- `Optional` is allowed only for relevant background or context references that are not required for the core manuscript claim.
+- Each row must include a reason explaining the canonical identifier choice, duplicate decision, metadata source of truth, and RIS action.
+
+Required output structure:
+
+```markdown
+## Reference Canonicalization Gate
+| Selected reference | Canonical identifier | DOI | PMID | Title check | First author check | Year check | Canonical Zotero key | Duplicate keys | Duplicate check result | Metadata source of truth | RIS action | Reason |
+|--------------------|----------------------|-----|------|-------------|--------------------|------------|----------------------|----------------|------------------------|--------------------------|------------|--------|
+| Author Year | DOI / PMID / Zotero key: ... | matched / missing / conflict | matched / missing / conflict | matched / conflict | matched / conflict | matched / conflict | KEY | KEY2; KEY3 / none | unique / merged by DOI / merged by PMID / possible duplicate / duplicate excluded / unresolved duplicate | PMID/PubMed / DOI metadata / Zotero metadata / manual verification required | Include / Exclude / Verify / Optional | ... |
+```
 
 ### Metadata Quality Control
 
@@ -661,12 +970,66 @@ RIS tag compatibility rules:
 
 Before reporting success, check:
 
-- Markdown report exists and includes Zotero search summary, a PubMed Expansion section with query and execution status, claim–evidence matrix, integrated writing advice, reviewer-risk assessment, metadata quality-control section, and export file section.
+- Markdown report exists and includes metadata/use status, critical warnings immediately after metadata/use status, copy-ready manuscript text, annotated recommended text, Zotero search summary, a PubMed Expansion section with query and execution status, Search Reproducibility with Zotero semantic search, Zotero keyword/structured search, PubMed search, attempted/planned PubMed query when unavailable or failed, included PMIDs, excluded records and reasons, `full_text_inspected: yes/no/partial`, claim–evidence matrix, integrated writing advice, reviewer-risk assessment, Reference Canonicalization Gate, metadata quality-control section, and export file section.
+- Metadata and Use Status records `Related prior packages` and `Run relationship rationale`; new reports may say `Potentially supersedes`, `Complementary to`, or `Related; supersession unclear`, but old reports are not automatically modified and project-level summary files are generated only when the user requests consolidation.
+- Reference Canonicalization Gate checks DOI, PMID, title, first author, and year for every selected reference; records canonical identifier, canonical Zotero key, duplicate keys, duplicate check result, metadata source of truth, RIS action, and reason; merges same DOI/PMID records; blocks unresolved mismatch from RIS.
+- Critical Warnings contains every high-risk issue that meets the trigger conditions and uses `Affected claim`, `Risk`, and `Required action`; if there are no critical warnings, it says exactly `No critical warnings`.
+- Copy-ready Manuscript Text is directly copyable, preserves the manuscript language, and contains no internal review notes, workflow explanations, tool-status comments, or `citation should be verified` wording.
+- Annotated Recommended Text explains citation placement, source layer, evidence level, caveats, and reviewer risk separately from the copy-ready prose.
+- Metadata/use status includes exactly one package status: `Ready`, `Caution`, `Partial`, `Superseded`, or `Unknown`.
+- Every claim in the claim–evidence matrix has a source layer and an A-E evidence level.
+- Current-study findings, including SMR, TWAS, MAGMA, colocalization, enrichment, candidate-gene prioritization, and user-supplied statistical results, are marked as `Current study` and are not described as proven by external literature.
+- Reviewer-risk assessment uses the same A-E evidence levels in the `Evidence basis` column when explaining risk.
+- Copy-ready Manuscript Text is hedged according to evidence level: A/B can be moderately confident, C/D must be cautious, and E must be removed, verified, or strongly hedged.
+- Copy-ready Manuscript Text separates current-study wording from external-evidence wording and uses interpretive bridge language when connecting the two.
+- PubMed status truthfully reflects tool execution: `Completed` requires an actual completed PubMed search and inspected metadata; unavailable, failed, or not-executed searches must not be described as completed.
+- PubMed-only RIS records are included only when the PubMed search completed and the record metadata was inspected.
 - RIS file is plain RIS only, with no Markdown headings, explanations, comments, or code fences.
 - Every RIS record starts with `TY  -` and ends with `ER  -`.
 - Recommended Zotero citations use metadata consistent with Zotero.
 - PubMed-only recommended citations use metadata consistent with completed PubMed search results; if PubMed was not executed, no PubMed-only RIS records are created.
 - Missing metadata, metadata mismatch, and duplicate warning cases are disclosed in the Markdown report and not silently written into RIS.
+- All generated-file paths shown in the report and final chat are relative paths; local absolute paths such as `/Users/...` are not allowed.
+
+### Evidence Package QA Self-Check Prompt
+
+The skill must run this internal QA prompt immediately before writing Markdown/RIS files and again after writing them. Use it as a gate, not as user-facing content. Do not announce completion until failures are corrected or explicitly reported as blocking warnings.
+
+```text
+你是一名科研 evidence package QA 工程师。请在 zotero-evidence-review skill 写入 Markdown 和 RIS 前执行自检。
+检查：
+1. Report 是否包含 Status、Critical Warnings、Copy-ready Manuscript Text；
+2. Claim–Evidence Matrix 是否包含 Evidence level 和 Source layer；
+3. 是否把 current-study finding 错写成 external evidence；
+4. 是否存在 direct causality、BMI independence、horizontal pleiotropy 等过度表述；
+5. PubMed status 是否真实反映工具执行情况；
+6. PubMed-only RIS 是否只来自 completed PubMed search；
+7. unresolved metadata mismatch 是否被排除出 RIS；
+8. RIS 是否无 Markdown heading/code fence；
+9. 所有路径是否为相对路径；
+10. 若发现问题，先修正报告再宣布生成完成。
+输出：内部自检清单，不必完整暴露给用户；最终 chat 只显示 status、paths 和 critical warnings。
+```
+
+Pre-write QA gate checklist:
+
+- `Status`: Markdown report metadata and export section contain exactly one status from `Ready`, `Caution`, `Partial`, `Superseded`, or `Unknown`; final chat will repeat the same status.
+- `Critical Warnings`: the section exists immediately after metadata/use status; it either contains a table with `Affected claim`, `Risk`, `Required action`, or exactly `No critical warnings`; warnings are consistent with package status.
+- `Copy-ready Manuscript Text`: copy-ready text exists, preserves manuscript language, contains no internal QA/tool notes, and excludes unverifiable or unsupported assertions.
+- `Claim evidence level`: every Claim–Evidence Matrix row has `Evidence level` using `A`, `B`, `C`, `D`, or `E`; Citation Placement and Reviewer-risk Assessment preserve the same level.
+- `Source layer`: every claim-level row distinguishes `Current study`, `Zotero external evidence`, `PubMed external evidence`, `Interpretive bridge`, or `Unsupported gap`; current-study findings are not described as proved by external literature.
+- `Overclaim control`: direct causality, BMI independence, horizontal pleiotropy, mediation/mechanism, and genetic-prioritization claims are hedged unless directly supported; E-level claims are removed, marked for verification, or strongly hedged rather than written as established facts.
+- `PubMed status`: `Completed` is used only when PubMed search actually executed and relevant metadata was inspected; unavailable/failed/not-executed cases use the exact allowed status and include the planned or attempted query.
+- `RIS provenance`: PubMed-only RIS records appear only when PubMed status is `Completed`; no PubMed-only RIS records are written for unavailable, failed, or planned-only PubMed searches.
+- `Metadata mismatch`: unresolved metadata mismatch and unresolved duplicate records are disclosed in the report and excluded from RIS unless the user explicitly selected a canonical source.
+- `RIS format`: RIS contains only RIS records; no Markdown headings, prose, comments, or code fences; every record starts with `TY  -` and ends with `ER  -`.
+- `Relative paths`: Markdown report, Export File section, final chat, and any in-report links to generated files use relative paths only; no `/Users/...`, home-directory, or other local absolute paths.
+- `Final response hygiene`: final chat displays only package status, generated relative paths, and critical warnings; do not expose the full internal checklist unless the user asks for debug details.
+
+Post-write QA gate:
+
+- Re-check the written Markdown and RIS against the same checklist before final response.
+- If the post-write gate fails, correct the files first when safe; if correction is impossible, do not say the package is complete—return `Status: Partial` or `Unknown` with the blocking critical warning and paths to any partial files.
 
 ### Output Format
 
@@ -674,11 +1037,15 @@ In chat, after files are written, output only:
 
 ```markdown
 Generated Evidence Package:
+- Status: Ready / Caution / Partial / Superseded / Unknown
+- Critical warnings:
+  - No critical warnings
+  - `<affected claim>` — Risk: `<risk>`; Required action: `<required action>`
 - Markdown report: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_evidence_review.md`
 - EndNote RIS: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris`
 
 Warnings:
-- `<critical metadata/tool warning if any; otherwise omit this section>`
+- `<non-critical metadata/tool/status warning if any; otherwise omit this section>`
 ```
 
 ---
@@ -905,29 +1272,39 @@ Rules:
 ### CLAIM_EVIDENCE_MATRIX
 
 ```markdown
-| # | 主张 | 最佳引文 | 强度 | Gap? |
-|---|------|---------|------|------|
-| 1 | X与Y相关 | Wang 2022 (KEY) | 强；直接证据 | 否 |
-| 2 | Z导致W | — | — | ⚠️ 是 |
+| # | 主张 | Source layer | Evidence level | 最佳引文 | Evidence type | Gap? |
+|---|------|--------------|----------------|---------|---------------|------|
+| 1 | X与Y相关 | Zotero external evidence | A | Wang 2022 (KEY) | 直接证据 | 否 |
+| 2 | 本研究发现Z与W相关 | Current study | D | Li 2023 (KEY2) | 背景/机制支持；不能作为当前研究结果的直接证明 | 否，但需谨慎表述 |
+| 3 | 当前结果可能与既往机制一致 | Interpretive bridge | C | Chen 2021 (KEY3) | 机制合理性 | 否，但需 bridge wording |
+| 4 | Z导致W且独立于BMI | Unsupported gap | E | — | 未验证 / 无直接证据 | ⚠️ 是 |
 ```
 
 Rules:
 - One row per extracted claim.
 - Use claim IDs consistently in gap handling and sentence-level recommendations.
-- Strength should combine support level and evidence type, e.g. `强；直接证据`, `中；间接机制证据`, `弱；背景证据`.
-- Mark unsupported or insufficiently supported claims as `⚠️ 是`.
+- `Source layer` must be exactly one of `Current study`, `Zotero external evidence`, `PubMed external evidence`, `Interpretive bridge`, or `Unsupported gap`.
+- `Evidence level` must be exactly one of `A`, `B`, `C`, `D`, or `E` as defined in **Module 2 → Unified Evidence Level**.
+- `Evidence type` should describe the support role, e.g. `直接证据`, `相近直接证据`, `间接机制证据`, `背景证据`, `current-study only`, `contradicted`, or `requires verification`.
+- Mark unsupported, contradicted, or insufficiently verified claims as `Unsupported gap`, evidence level `E`, and `Gap? = ⚠️ 是`.
+- Mark current-study findings as `Current study` and evidence level `D` unless external literature directly replicates the same finding in a comparable study.
+- External evidence used only for mechanism/background must be represented as `Interpretive bridge` or evidence level C/D, not as proof of the current-study finding.
+- Evidence level C or D requires hedge wording in manuscript recommendations; evidence level E requires removal, verification, or strong hedging.
 
 ### WRITING_SUGGESTIONS_TABLE
 
 ```markdown
-| 句子（前15字） | 推荐引文 | 引用理由 |
-|--------------|---------|---------|
-| "慢性炎症通过…" | Wang 2022 (KEY) | 直接证据；支持炎症通路与结局相关 |
-| "IL-6受体阻断…" | — | ⚠️ 库内无直接证据；建议改为更谨慎表述并外部检索 |
+| 句子（前15字） | 推荐引文 | Source layer | Evidence level | 引用理由 |
+|--------------|---------|--------------|----------------|---------|
+| "慢性炎症通过…" | Wang 2022 (KEY) | Zotero external evidence | A | 直接证据；支持炎症通路与结局相关 |
+| "我们的SMR发现…" | Li 2023 (KEY2) | Current study / Interpretive bridge | D | 当前研究发现只能由本研究表述；引用仅支持机制合理性 |
+| "IL-6受体阻断…" | — | Unsupported gap | E | ⚠️ 库内无直接证据；建议改为更谨慎表述并外部检索 |
 ```
 
 Rules:
 - One row per sentence, not one row per paper.
+- `Source layer` must match the most relevant claim in `CLAIM_EVIDENCE_MATRIX`; if a sentence connects current-study output to external evidence, mark the boundary explicitly as `Current study / Interpretive bridge`.
+- `Evidence level` must match the most relevant claim in `CLAIM_EVIDENCE_MATRIX`; if a sentence combines multiple claims, use the most conservative level.
 - Fold citation-addition, rewording, context, replacement, gap, and terminology advice into the `引用理由` column.
 - Prefer a minimal set of high-value citations rather than citation stuffing.
 
@@ -955,51 +1332,85 @@ Rules:
 ```markdown
 # 证据综述：{topic}
 
-生成日期：{YYYY-MM-DD}
-来源：Zotero 本地库；PubMed: {Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported / Not executed only for explicit chat-only or non-PubMed workflows}
-输入：{user paragraph, claim, or search question}
+## 1. Metadata and Use Status
 
-## 1. 核心结论（Bottom Line）
+来源：Zotero 本地库；PubMed: {Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported / Not executed only for explicit chat-only or non-PubMed workflows}
+
+| Field | Value |
+|-------|-------|
+| 生成日期 | {YYYY-MM-DD} |
+| Package status | Ready / Caution / Partial / Superseded / Unknown |
+| Status rationale | {one sentence explaining the main trigger for this status} |
+| User guidance | {可直接用于写作 / 必须使用 hedge wording / 不建议作为最终证据包 / 仅保留历史记录 / 需要人工检查} |
+| Related prior packages | {none / path + date + topic slug + relationship: Potentially supersedes / Complementary to / Related; supersession unclear} |
+| Run relationship rationale | {topic slug similarity; core keyword overlap; selected references overlap; DOI/PMID overlap; manuscript section relationship} |
+| 来源 | Zotero 本地库；PubMed: {Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported / Not executed only for explicit chat-only or non-PubMed workflows} |
+| 输入 | {user paragraph, claim, or search question} |
+
+## 2. Critical Warnings
+| Affected claim | Risk | Required action |
+|----------------|------|-----------------|
+| ... | PubMed unavailable / no direct evidence / contradiction / unverified citation or concept / metadata mismatch / duplicate record / current-study vs external-evidence confusion / unsupported causal wording / unsupported BMI-independent claim / unsupported horizontal pleiotropy claim | Revise wording / verify citation / remove claim / complete PubMed search / resolve metadata / deduplicate records / mark as current-study only |
+
+If no critical warnings apply, write exactly:
+
+No critical warnings
+
+## 3. 核心结论（Bottom Line）
 - {1-3 句中文证据判断；如稿件原文为英文，可在中文判断后保留必要英文术语}
 
-## 2. 推荐稿件文本（Recommended Manuscript Text）
-> {safe revised paragraph or concise writing recommendation; preserve the manuscript's original language unless translation is requested}
+## 4. 可直接使用的稿件文本（Copy-ready Manuscript Text）
+> {manuscript-ready text only; preserve the manuscript's original language unless translation is requested; hedge according to A-E evidence level; do not include workflow notes, internal caveats, or verification reminders}
 
-## 3. 主张—证据矩阵（Claim–Evidence Matrix）
-| # | 主张 | Zotero 证据 | PubMed 证据 | 证据状态 | 置信度 | 限制/注意 | 推荐引文 |
-|---|------|-------------|-------------|----------|--------|-----------|----------|
-| 1 | ... | Author Year | PubMed confirms / not searched / no direct evidence | 支持 / 部分支持 / 缺口 | 高 / 中 / 低 | ... | Author Year |
+## 5. 注释版推荐文本（Annotated Recommended Text）
+| Sentence / clause | Recommended text | Source layer | Evidence level | Citation rationale | Caveat / reviewer risk |
+|-------------------|------------------|--------------|----------------|--------------------|------------------------|
+| ... | ... | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | A / B / C / D / E | ... | ... |
 
-## 4. 引文放置建议（Citation Placement）
-| 句子 / 位置 | 推荐引文 | 用途 | 措辞建议 |
-|-------------|----------|------|----------|
-| ... | Author Year | background / direct / method / caveat | ... |
+## 6. 主张—证据矩阵（Claim–Evidence Matrix）
+| # | Claim | Source layer | Evidence level | Zotero evidence | PubMed evidence | Evidence status | Confidence | Risk | Recommended action | Recommended citation |
+|---|-------|--------------|----------------|-----------------|-----------------|-----------------|------------|------|--------------------|----------------------|
+| 1 | ... | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | A / B / C / D / E | Author Year / none | PubMed confirms / not searched / no direct evidence | supported / partly supported / current-study only / bridge only / gap / needs verification | High / Medium / Low | Low / Medium / High | keep / hedge / move to annotated text / remove / verify / mark as knowledge gap | Author Year / none |
 
-## 5. 参考文献表（Reference Table）
+## 7. 引文放置建议（Citation Placement）
+| 句子 / 位置 | 推荐引文 | 用途 | Source layer | Evidence level | 措辞建议 |
+|-------------|----------|------|--------------|----------------|----------|
+| ... | Author Year | background / direct / method / caveat / bridge | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | A / B / C / D / E | ... |
+
+## 8. Evidence Logic Chain
+| Step | Current-study element | External evidence link | Source layer | Evidence level | Inference limit |
+|------|-----------------------|------------------------|--------------|----------------|-----------------|
+| 1 | {e.g., SMR/TWAS/MAGMA/colocalization/enrichment/current finding} | {citation or none} | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | A / B / C / D / E | {what can and cannot be inferred} |
+
+## 9. 参考文献表（Reference Table）
 | # | Citation | Year | Study type | Main use | Evidence source | Zotero | PDF | DOI | PMID | Collection |
 |---|----------|------|------------|----------|-----------------|--------|-----|-----|------|------------|
 | 1 | Author et al., *Journal* | 2024 | Systematic review | ... | Zotero / PubMed / Zotero + PubMed | [Item](zotero://select/items/0_KEY) | [PDF](zotero://open-pdf/library/items/ATTACHMENT_KEY) | [DOI](https://doi.org/10.xxxx/xxxx) | [PMID](https://pubmed.ncbi.nlm.nih.gov/PMID/) | Collection name |
 
-## 6. Zotero 检索总结（Zotero Search Summary）
+## 10. Search Reproducibility
+| Source | Query | Mode | Max results | Status | Included | Notes |
+|---|---|---|---:|---|---:|---|
+| Zotero | {semantic query} | semantic | {max_results or Not recorded} | Completed / No hits / Failed | {included_count} | full_text_inspected: yes/no/partial; included: {citation keys}; excluded: {record + reason} |
+| Zotero | {keyword query} | keyword / structured | {max_results or Not recorded} | Completed / No hits / Failed | {included_count} | full_text_inspected: yes/no/partial; included: {citation keys}; excluded: {record + reason} |
+| PubMed | {attempted or planned PubMed query} | PubMed | {max_results} | Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported / Not executed | {included_count} | included PMIDs: {PMIDs or none}; excluded: {PMID/citation + reason}; failed reason: {if any}; full_text_inspected: yes/no/partial |
+
+## 11. Zotero 检索总结（Zotero Search Summary）
 | 检索路径 | Query | Hits | Included | 备注 |
 |----------|-------|-----:|---------:|------|
 | Semantic search | ... | 0 | 0 | ... |
 
-## 7. PubMed 扩展检索（PubMed Expansion）
+## 12. PubMed 扩展检索（PubMed Expansion）
 日期：{YYYY-MM-DD}
 数据库：PubMed
 状态：Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported
 
-检索式：
-```text
-{copyable PubMed query}
-```
+检索式：`{copyable PubMed query}`
 
 | # | Citation | PMID | DOI | In Zotero? | Evidence use | Recommendation |
 |---|----------|------|-----|------------|--------------|----------------|
 | 1 | Author et al., Year | [PMID](https://pubmed.ncbi.nlm.nih.gov/PMID/) | [DOI](https://doi.org/10.xxxx/xxxx) | Yes / No / Possible mismatch | ... | Use / Consider importing / Exclude |
 
-## 8. 综合写作建议（Integrated Writing Advice）
+## 13. 综合写作建议（Integrated Writing Advice）
 ### 原始主张
 {original text}
 
@@ -1015,20 +1426,34 @@ Rules:
 ### 为什么这样表述更安全
 ...
 
-## 9. 证据缺口与审稿风险（Gaps and Reviewer-risk Assessment）
+## 14. Claims to Revise or Remove
+| Claim | Problem | Evidence level | Source layer | Required revision |
+|-------|---------|----------------|--------------|-------------------|
+| ... | unsupported / overconfident / current-study miscast as external evidence / metadata unresolved | A / B / C / D / E | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | hedge / remove / verify / move to gap statement |
+
+## 15. 证据缺口与审稿风险（Gaps and Reviewer-risk Assessment）
 | Affected claim / sentence | Risk | Severity | Evidence basis | Suggested fix |
 |---------------------------|------|----------|----------------|---------------|
-| ... | ... | High / Moderate / Low | ... | ... |
+| ... | ... | High / Moderate / Low | Source layer: Current study / Interpretive bridge / Unsupported gap; Evidence level A / B / C / D / E; ... | ... |
 
-## 10. 元数据质量控制（Metadata Quality Control）
+## 16. 元数据质量控制（Metadata Quality Control）
+
+### Reference Canonicalization Gate
+| Selected reference | Canonical identifier | DOI | PMID | Title check | First author check | Year check | Canonical Zotero key | Duplicate keys | Duplicate check result | Metadata source of truth | RIS action | Reason |
+|--------------------|----------------------|-----|------|-------------|--------------------|------------|----------------------|----------------|------------------------|--------------------------|------------|--------|
+| Author Year | DOI / PMID / Zotero key: ... | matched / missing / conflict | matched / missing / conflict | matched / conflict | matched / conflict | matched / conflict | KEY | KEY2; KEY3 / none | unique / merged by DOI / merged by PMID / possible duplicate / duplicate excluded / unresolved duplicate | PMID/PubMed / DOI metadata / Zotero metadata / manual verification required | Include / Exclude / Verify / Optional | Canonical identifier chosen after DOI, PMID, title, first author, and year checks; Possible metadata mismatch if conflicts remain |
+
+### Metadata QC Table
 | Citation | Missing metadata | Metadata mismatch | Duplicate warning | Evidence source | RIS standardization source | RIS action |
 |----------|------------------|-------------------|-------------------|-----------------|----------------------------|------------|
 | Author Year | DOI / PMID / pages / none | Possible metadata mismatch: Zotero DOI ... vs PubMed DOI ... / none | Possible duplicate with Author Year / none | Zotero / PubMed / Zotero + PubMed | PMID/PubMed / DOI / Zotero metadata / PubMed metadata | Include / exclude / needs manual check |
 
-## 11. 导出文件（Export File）
+## 17. 导出文件（Export File）
 - Markdown report: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_evidence_review.md`
 - EndNote RIS: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris`
 - Evidence source: Zotero local library and PubMed expansion are separate evidence steps; combined results are deduplicated by DOI/PMID/title when available.
+- Package status: Ready / Caution / Partial / Superseded / Unknown.
+- Status rationale: {main trigger for the assigned status}.
 - RIS standardization source: PMID/PubMed metadata when available and retrieved; DOI metadata when PMID is unavailable and DOI lookup succeeded; otherwise inspected Zotero or PubMed source metadata.
 - RIS inclusion rule: final recommended citations only; low-relevance hits excluded.
 - Metadata warnings: {missing fields, mismatches, duplicate warnings, or none}
@@ -1040,6 +1465,8 @@ Rules:
 - If collection membership is unknown, use `Not available`.
 - If PubMed was not actually searched, clearly mark the status and include only the planned or attempted query, not invented results.
 - Always include the metadata quality-control table; use `none` when there are no missing metadata, metadata mismatch, or duplicate warning cases.
+- Every claim-level table in the report must use the same source layer definitions from Module 2; do not merge current-study findings and external evidence into a single unsupported proof statement.
+- Every claim-level table in the report must use the same A-E evidence level definitions from Module 2; do not introduce alternate strength scales such as `strong/moderate/weak` without also mapping them to A-E.
 
 ### RIS_REFERENCE_FILE
 

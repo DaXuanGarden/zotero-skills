@@ -1,0 +1,39 @@
+{
+  "package": "sedentary_behavior_pcos_2026-06-19_020100",
+  "date": "2026-06-19",
+  "zotero_searches": [
+    {
+      "mode": "semantic",
+      "query": "LST sedentary behavior GWAS PCOS demographics European ancestry lifestyle sedentary time limitations",
+      "hits": null,
+      "included": 6,
+      "notes": "Report lists inspected Zotero records: Y2FFFQSB, U9TM26G2, KYX3784V, TVKLYHVL, GD6Q3CC9, D2RRHWP3; final core set includes Wang, Zhang, Kazemi and PubMed additions."
+    }
+  ],
+  "pubmed_searches": [
+    {
+      "query": "PubMed expansion for movement composition, sitting interruption, PCOS GWAS demographics, and multi-ancestry PCOS GWAS",
+      "max_results": null,
+      "sort": "relevance",
+      "status": "completed",
+      "error": "",
+      "included_pmids": ["39366675", "32925494", "32574161", "41188533", "39489338", "35639552"]
+    }
+  ],
+  "inclusion_criteria": [
+    "LST/sedentary behavior GWAS exposure source",
+    "PCOS GWAS demographic structure",
+    "European ancestry and generalizability limitations",
+    "PCOS lifestyle or movement-behavior evidence",
+    "Experimental or mechanistic sitting-interruption evidence"
+  ],
+  "exclusion_criteria": [
+    "Background records less central to GWAS limitations",
+    "Duplicate/replaced Zotero records such as 2IUYX9PH and KAEMNHIA"
+  ],
+  "full_text_inspected": "partial",
+  "unresolved_gaps": [
+    "No dedicated propensity-score-methods citation retrieved",
+    "Evidence supports plausible demographic mismatch, not proof of bias in the present study"
+  ]
+}
