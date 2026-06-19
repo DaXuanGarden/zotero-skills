@@ -11,16 +11,20 @@
 
 ## 1. 项目概览
 
-本仓库提供一个核心 skill：`zotero-evidence-review`。它通过 Zotero MCP 连接本地 Zotero 文献库，支持从“找文献”到完整的 **Paragraph Citation Package Workflow**（段落 → 主张拆解 → Zotero 本地检索 → PubMed 条件扩展 → 引文放置 → Markdown 证据报告 + EndNote RIS）再到“逐条核实引用是否真的支持主张”的证据审查工作流。
+本仓库提供两个互补 skill：`zotero-evidence-review` 是核心 Zotero 本地证据审查工作流；`pubmed-literature-search` 是独立 PubMed MCP 文献检索工作流。前者通过 Zotero MCP 连接本地 Zotero 文献库，支持从“找文献”到完整的 **Paragraph Citation Package Workflow**（段落 → 主张拆解 → Zotero 本地检索 → PubMed 条件扩展 → 引文放置 → Markdown 证据报告 + EndNote RIS）再到“逐条核实引用是否真的支持主张”的证据审查工作流；后者可直接调用 PubMed MCP 进行主题检索、PMID 元数据检查、related/review discovery、OA 全文可用性检查，并可单独导出 Markdown + RIS。
 
-推荐使用路径：先安装并配置 Zotero MCP → 构建语义索引 → 直接在 ZCode / OpenCode 中用自然语言触发 skill → 默认得到一份 Markdown evidence report 和一份 RIS；如果只想聊天查看结果，可明确说 `只在聊天输出` 或 `不要生成文件`。
+推荐使用路径：
+
+- 需要基于本地 Zotero 库找证据、补引用、核实引文时，用 `zotero-evidence-review`。
+- 需要直接检索 PubMed、检查 PMID、找 related/review 文献或导出 PubMed-only RIS 时，用 `pubmed-literature-search`。
+- 如果只想聊天查看结果，可明确说 `只在聊天输出` 或 `不要生成文件`。
 
 | 项目 | 当前状态 |
 |---|---|
-| Skill | `zotero-evidence-review` |
-| 当前版本 | `2.1.1` |
+| Skill | `zotero-evidence-review` / `pubmed-literature-search` |
+| 当前版本 | Zotero skill `2.8.0`；PubMed skill `1.0.0` |
 | 兼容性 | OpenCode / ZCode |
-| 主要依赖 | Zotero 7+、zotero-mcp、Python 3.10+；可选 PubMed MCP（推荐 PancrePal） |
+| 主要依赖 | Zotero 7+、zotero-mcp、Python 3.10+；PubMed 检索 skill 需要 PubMed MCP（推荐 PancrePal） |
 | 安装目标 | ZCode 全局、OpenCode 全局、项目级 `.opencode/skills` |
 | 默认安全策略 | 健康检查只读；删除、批量修改、合并重复项等操作必须先确认 |
 
@@ -53,8 +57,8 @@
 - Zotero 中已启用本地访问：Zotero 设置 → 高级 → 允许其他应用程序访问 Zotero。
 - 已安装 **Python 3.10+**。
 - 已安装 OpenCode 或 ZCode。
-- 已安装并配置 `zotero-mcp`（见 [第 5 节](#5-配置-zotero-mcp)）。
-- 如果需要 PubMed 扩展、PMID 标准化、related/review discovery 或 OA 全文检测，另行配置 PubMed MCP（见 [PubMed Expansion](#83-pubmed-expansion) 和 [`docs/PANCREPAL_PUBMED_MCP_GUIDE.md`](./docs/PANCREPAL_PUBMED_MCP_GUIDE.md)）。
+- 已安装并配置 `zotero-mcp`（见 [第 5 节](#5-配置-zotero-mcp)），用于 `zotero-evidence-review`。
+- 如果需要 PubMed 扩展、PMID 标准化、related/review discovery、OA 全文检测，另行配置 PubMed MCP（见 [PubMed Expansion](#83-pubmed-expansion) 和 [`docs/PANCREPAL_PUBMED_MCP_GUIDE.md`](./docs/PANCREPAL_PUBMED_MCP_GUIDE.md)）；独立 `pubmed-literature-search` skill 需要 PubMed MCP。
 
 ### 3.2 克隆仓库并安装到 ZCode（推荐）
 
@@ -62,11 +66,18 @@
 git clone https://github.com/DaXuanGarden/zotero-skills.git
 cd zotero-skills
 
-# 安装/更新到 ZCode 全局 skill 目录，并在覆盖前备份旧版本
+# 安装/更新 Zotero evidence review 到 ZCode 全局 skill 目录，并在覆盖前备份旧版本
 scripts/install-skill.sh --target zcode --backup
+
+# 安装/更新独立 PubMed literature search skill
+scripts/install-skill.sh --skill pubmed-literature-search --target zcode --backup
+
+# 或一次安装两个 skill
+scripts/install-skill.sh --skill all-skills --target zcode --backup
 
 # 验证 skill 文件结构
 scripts/validate-skill.py
+scripts/validate-pubmed-skill.py
 ```
 
 `scripts/validate-skill.py` 是静态校验工具：它检查 `zotero-evidence-review/SKILL.md` 的 frontmatter、依赖声明（`metadata.requires: zotero-mcp` / `metadata.optional: pubmed-mcp`）、章节、输出模板、Evidence Package/RIS 约束和外部工具安全防护说明；它不会连接 Zotero、不会执行 PubMed 检索，也不会验证 README 的自然语言描述。
@@ -104,13 +115,19 @@ All validations passed.
 
 ## 4. 安装目标与同步方式
 
-`scripts/install-skill.sh` 用于把仓库中的最新版 `zotero-evidence-review` 同步到不同 skill 目录，避免“仓库版本已更新，但全局安装版本仍是旧版”的漂移问题。
+`scripts/install-skill.sh` 用于把仓库中的最新版 skill 同步到不同 skill 目录，避免“仓库版本已更新，但全局安装版本仍是旧版”的漂移问题。默认安装 `zotero-evidence-review`；可用 `--skill pubmed-literature-search` 安装独立 PubMed skill，或用 `--skill all-skills` 一次安装全部。
 
 ### 4.1 安装到不同目标
 
 ```bash
-# ZCode 全局目录（推荐给 ZCode 用户）
+# ZCode 全局目录（推荐给 ZCode 用户；默认安装 zotero-evidence-review）
 scripts/install-skill.sh --target zcode --backup
+
+# 安装独立 PubMed literature search skill
+scripts/install-skill.sh --skill pubmed-literature-search --target zcode --backup
+
+# 一次安装全部 skill
+scripts/install-skill.sh --skill all-skills --target zcode --backup
 
 # OpenCode 全局目录（推荐给 OpenCode 用户）
 scripts/install-skill.sh --target opencode --backup
@@ -126,9 +143,9 @@ scripts/install-skill.sh --target all --backup
 
 | `--target` | 安装路径 |
 |---|---|
-| `zcode` | `~/.zcode/skills/zotero-evidence-review` |
-| `opencode` | `~/.config/opencode/skills/zotero-evidence-review` |
-| `project` | 当前仓库的 `.opencode/skills/zotero-evidence-review` |
+| `zcode` | `~/.zcode/skills/<skill-name>` |
+| `opencode` | `~/.config/opencode/skills/<skill-name>` |
+| `project` | 当前仓库的 `.opencode/skills/<skill-name>` |
 | `all` | 同步到以上三个位置 |
 
 ### 4.3 备份规则
@@ -301,7 +318,7 @@ zotero-mcp update-db --force-rebuild
 
 ## 7. 使用教程与提示词示例
 
-安装并配置完成后，在 OpenCode / ZCode 中直接对话即可。最简单的方式是用 `/zotero-evidence-review` 开头，然后用一句话说明需求；skill 会自动识别检索、段落补引用、Evidence Package 导出、引用核实或健康检查工作流。
+安装并配置完成后，在 OpenCode / ZCode 中直接对话即可。基于 Zotero 本地库找证据时用 `/zotero-evidence-review` 开头；直接检索 PubMed、检查 PMID 或导出 PubMed-only RIS 时用 `/pubmed-literature-search` 开头。
 
 推荐短提示词：
 
@@ -317,7 +334,15 @@ zotero-mcp update-db --force-rebuild
 /zotero-evidence-review 只在聊天输出，不要生成文件：帮我分析这段话的证据和推荐引用。
 ```
 
-如果不用 slash command，也可以直接说“帮我补引用”“帮我导出 Evidence Package”等自然语言需求；只要意图清楚，skill 会自动路由。
+```text
+/pubmed-literature-search 检索近 5 年 PCOS 与 sedentary behavior 相关的 PubMed 文献，列出可引用的关键研究。
+```
+
+```text
+/pubmed-literature-search 根据 PMID 12345678 找 related reviews，并导出 Markdown 报告和 EndNote RIS。
+```
+
+如果不用 slash command，也可以直接说“帮我补引用”“帮我导出 Evidence Package”“帮我直接检索 PubMed”等自然语言需求；只要意图清楚，skill 会自动路由。
 
 ### 7.0 端到端运行总览
 
@@ -329,10 +354,11 @@ zotero-mcp update-db --force-rebuild
 
 | 需求类型 | 默认路线 | PubMed MCP 用法 | 文件输出 |
 |---|---|---|---|
-| 找文献 / 主题综述 | Module 1：Zotero 语义+结构检索 | 生物医学主题在 Zotero 后条件性扩展 | 默认聊天输出；用户要求时导出 |
-| 段落找证据、找引文、补引用 | Module 2 → Module 2.5 完整 Paragraph Citation Package Workflow | Zotero 本地检索后自动 PubMed expansion；按 DOI/PMID 去重 | 默认生成 Markdown report + EndNote RIS |
-| 精确核实某条引用是否支持某主张 | Module 3：读取元数据/全文并逐条判断 | 仅在需要 PMID 元数据、外部摘要或 OA/full-text triage 时使用 | 默认聊天输出 |
-| 库状态、索引、PDF 覆盖率 | Module 0.5：只读健康检查 | 不需要 PubMed | 不导出，除非用户另行要求 |
+| 找文献 / 主题综述 | `zotero-evidence-review` Module 1：Zotero 语义+结构检索 | 生物医学主题在 Zotero 后条件性扩展 | 默认聊天输出；用户要求时导出 |
+| 直接 PubMed 主题检索 / PMID 检查 | `pubmed-literature-search`：PubMed search → PMID metadata → optional related/review expansion | 作为主检索层，必须实际调用 PubMed MCP 才能标记 Completed | 默认聊天输出；用户要求时导出 PubMed review + RIS |
+| 段落找证据、找引文、补引用 | `zotero-evidence-review` Module 2 → Module 2.5 完整 Paragraph Citation Package Workflow | Zotero 本地检索后自动 PubMed expansion；按 DOI/PMID 去重 | 默认生成 Markdown report + EndNote RIS |
+| 精确核实某条引用是否支持某主张 | `zotero-evidence-review` Module 3：读取元数据/全文并逐条判断 | 仅在需要 PMID 元数据、外部摘要或 OA/full-text triage 时使用 | 默认聊天输出 |
+| 库状态、索引、PDF 覆盖率 | `zotero-evidence-review` Module 0.5：只读健康检查 | 不需要 PubMed | 不导出，除非用户另行要求 |
 | 只想快速看看，不要文件 | 对应模块的 chat-only 路线 | 可用则标注实际 PubMed 状态 | 不生成文件 |
 
 语言与格式约定：
@@ -502,7 +528,7 @@ PubMed 是 Paragraph Citation Package Workflow 中的条件扩展步骤：段落
 
 #### PubMed 工具配置
 
-本仓库只提供 `zotero-evidence-review` skill，不内置 PubMed MCP server。**结论是：需要你先把 PubMed MCP server 配置到你正在使用的 Agent IDE；skill 负责识别并调用当前会话中已经可见的 PubMed 工具。** README 只保留 quickstart 和协同原则；完整安装、构建、launcher、NCBI API key 与 smoke-test 细节请以 [`docs/PANCREPAL_PUBMED_MCP_GUIDE.md`](./docs/PANCREPAL_PUBMED_MCP_GUIDE.md) 为准。
+本仓库不内置 PubMed MCP server。**结论是：需要你先把 PubMed MCP server 配置到你正在使用的 Agent IDE；`zotero-evidence-review` 和 `pubmed-literature-search` 都只负责识别并调用当前会话中已经可见的 PubMed 工具。** README 只保留 quickstart 和协同原则；完整安装、构建、launcher、NCBI API key 与 smoke-test 细节请以 [`docs/PANCREPAL_PUBMED_MCP_GUIDE.md`](./docs/PANCREPAL_PUBMED_MCP_GUIDE.md) 为准。
 
 不要把 OpenCode、ZCode、Claude Desktop、Cherry Studio 等客户端的 MCP 配置示例混用：它们的配置路径和 JSON 形态可能不同。常见区别如下：
 
@@ -520,7 +546,8 @@ PubMed 是 Paragraph Citation Package Workflow 中的条件扩展步骤：段落
 | 层级 | 负责什么 | 是否由本 skill 内置 |
 |------|----------|--------------------|
 | PubMed MCP server | 连接 PubMed / NCBI、执行 search / fetch / fulltext / export 等工具调用 | 否，需要单独安装配置 |
-| `zotero-evidence-review` skill | 生成 PubMed query、调用可见 PubMed 工具、合并 Zotero/PubMed 结果、去重、写 Evidence Report + RIS | 是 |
+| `zotero-evidence-review` skill | 在 Zotero local search 后生成 PubMed query、调用可见 PubMed 工具、合并 Zotero/PubMed 结果、去重、写 Evidence Report + RIS | 是 |
+| `pubmed-literature-search` skill | 直接以 PubMed MCP 为主检索层，执行主题检索、PMID metadata inspection、related/review expansion、OA full-text triage，并可导出 PubMed review + RIS | 是 |
 
 当前已知可接入方案有两类：
 
