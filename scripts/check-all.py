@@ -43,6 +43,24 @@ def parse_args() -> argparse.Namespace:
         metavar="YYYY-MM-DD",
         help="Ignore output audit/RIS warnings for packages dated before this cutoff; errors still fail",
     )
+    parser.add_argument(
+        "--mcp-config",
+        choices=("skip", "warn", "fail"),
+        default="skip",
+        help="Optionally run read-only MCP config sanity checks",
+    )
+    parser.add_argument(
+        "--installed-skills",
+        choices=("skip", "warn", "fail"),
+        default="skip",
+        help="Optionally check installed ZCode/OpenCode skill copies for drift",
+    )
+    parser.add_argument(
+        "--smoke-prompts",
+        choices=("skip", "check", "print"),
+        default="skip",
+        help="Optionally validate or print safe manual MCP smoke-test prompts",
+    )
     return parser.parse_args()
 
 
@@ -57,6 +75,12 @@ def append_output_warning_args(command: list[str], args: argparse.Namespace) -> 
     if args.output_warnings == "fail":
         command.append("--fail-on-warnings")
     return command
+
+
+def optional_step(label: str, command: list[str], mode: str) -> tuple[str, list[str]]:
+    if mode == "fail":
+        return (label, command)
+    return (f"{label} (warn only)", command)
 
 
 def main() -> None:
@@ -100,9 +124,31 @@ def main() -> None:
                 )
             )
 
+    if args.mcp_config != "skip":
+        command = [PYTHON, "scripts/mcp_config_sanity.py", "--client", "auto"]
+        if args.mcp_config == "fail":
+            command.append("--strict")
+        steps.append(optional_step("Check MCP client configs", command, args.mcp_config))
+
+    if args.installed_skills != "skip":
+        steps.append(
+            optional_step(
+                "Check installed skill drift",
+                [PYTHON, "scripts/check-installed-skills.py", "--target", "all", "--mode", args.installed_skills],
+                args.installed_skills,
+            )
+        )
+
+    if args.smoke_prompts == "check":
+        steps.append(("Validate MCP smoke prompts", [PYTHON, "scripts/smoke_prompts.py", "--check"]))
+    elif args.smoke_prompts == "print":
+        steps.append(("Print MCP smoke prompts", [PYTHON, "scripts/smoke_prompts.py"]))
+
     failures = 0
     for label, command in steps:
-        failures += 1 if run_step(label, command) != 0 else 0
+        return_code = run_step(label, command)
+        if return_code != 0 and "(warn only)" not in label:
+            failures += 1
 
     if failures:
         print(f"\nQuality gate failed: {failures} step(s) returned non-zero.")

@@ -198,6 +198,15 @@ PubMed MCP Server ... running on stdio
 
 ZCode / OpenCode 尤其是 GUI 启动时可能不继承 shell 的 `PATH`，因此长期配置建议使用一个绝对路径 launcher，避免把 MCP 配置写成裸 `node` 后在客户端里找不到 Node.js。
 
+本仓库也提供只读配置体检脚本，可在配置后先检查 JSON 形态、command 路径和 PubMed env 是否明显异常：
+
+```bash
+scripts/mcp_config_sanity.py --client auto
+scripts/mcp_config_sanity.py --client auto --strict
+```
+
+该脚本不会启动 PubMed MCP、不会访问 NCBI、不会修改配置；它只能帮助发现 `mcpServers`/`mcp` 形态混用、裸 `node` 带来的 GUI PATH 风险、`MCP_TRANSPORT`/`ABSTRACT_MODE`/`FULLTEXT_MODE` 缺失等本地问题。需要人工 runtime smoke test 时，可运行 `scripts/smoke_prompts.py --prompt pubmed-readiness` 或 `scripts/smoke_prompts.py --prompt pubmed-search` 复制安全提示词到 ZCode/OpenCode。
+
 创建 launcher 示例：
 
 ```bash

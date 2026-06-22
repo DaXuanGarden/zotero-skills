@@ -211,6 +211,23 @@ PUBMED_SEQUENTIAL_GUARDRAIL_REQUIREMENTS = [
     "retry the query at most once",
     "do not fabricate PMIDs or continue to PubMed metadata inspection",
 ]
+ZOTERO_SEQUENTIAL_GUARDRAIL_REQUIREMENTS = [
+    "Zotero Sequential Execution Guardrail",
+    "Zotero discovery and Zotero item inspection as a dependency chain, not a batch job",
+    "Do not schedule `zotero_search_items`, `zotero_semantic_search`, or `zotero_advanced_search` in the same tool-call batch as downstream tools",
+    "Run one Zotero search step, inspect its result",
+    "stop the Zotero inspection chain immediately",
+    "retry the query at most once",
+    "not a downstream call pre-scheduled in the same tool-call batch",
+]
+SCHEDULED_TOOL_FAILURE_REQUIREMENTS = [
+    "Scheduled Tool Failure Handling",
+    "Tool skipped because a previous tool call in the scheduled sequence failed",
+    "treat the skipped tool as **not executed**",
+    "Identify and report the first failed tool in that scheduled sequence as the root cause",
+    "rerun that specific upstream tool as a separate MCP call",
+    "Never chain additional Zotero or PubMed dependent calls after a scheduled-sequence failure",
+]
 
 PHASE10_REQUIREMENTS = [
     "### Evidence Package Status",
@@ -448,7 +465,9 @@ def main() -> None:
     require_all(text, PUBMED_TOOL_REQUIREMENTS, "PubMed tool requirement")
     require_all(text, PUBMED_GUARDRAIL_REQUIREMENTS, "PubMed guardrail requirement")
     require_all(text, PUBMED_SEQUENTIAL_GUARDRAIL_REQUIREMENTS, "PubMed sequential execution guardrail")
-    ok("MCP readiness and PubMed guardrail requirements present")
+    require_all(text, ZOTERO_SEQUENTIAL_GUARDRAIL_REQUIREMENTS, "Zotero sequential execution guardrail")
+    require_all(text, SCHEDULED_TOOL_FAILURE_REQUIREMENTS, "scheduled tool failure handling guardrail")
+    ok("MCP readiness, sequential execution, and scheduled-failure guardrail requirements present")
 
     require_all(text, PHASE10_REQUIREMENTS, "Phase 10 evidence package format requirement")
     ok("Phase 10 evidence package status, section, matrix, and final-chat requirements present")

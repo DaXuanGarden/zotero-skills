@@ -84,7 +84,13 @@ PubMed workflows are dependency chains, not batch jobs. Do not schedule `pubmed_
 
 Run one PubMed step, inspect its result, and only then decide whether the next PubMed step has valid inputs. If `pubmed_system_status`, `pubmed_search`, or any required upstream PubMed call fails, stop the PubMed chain immediately, report `Failed; query reported` with the attempted query/error, and do not schedule dependent details, related, full-text, export, or PubMed-only RIS steps.
 
-If a search returns zero usable PMIDs, revise and retry the query at most once when broadening is appropriate. If no usable PMIDs are returned after that, report zero hits and do not fabricate PMIDs or continue to metadata inspection.
+If a search returns zero usable PMIDs, revise and retry the query at most once when broadening is appropriate. The retry must be a separate MCP call after inspecting the failed or empty result, not a downstream call pre-scheduled in the same tool-call batch. If no usable PMIDs are returned after that, report zero hits and do not fabricate PMIDs or continue to metadata inspection.
+
+### Scheduled Tool Failure Handling
+
+When an MCP result says `Tool skipped because a previous tool call in the scheduled sequence failed`, treat the skipped tool as **not executed**. Do not interpret it as a PubMed zero-hit result, unavailable PMID, or metadata failure. Identify and report the first failed tool in that scheduled sequence as the root cause; then, if the skipped search or inspection is still needed, rerun that specific upstream PubMed tool as a separate MCP call after the failure has been inspected.
+
+Never chain additional PubMed dependent calls after a scheduled-sequence failure. First stabilize the upstream status/search call, then continue with one inspected step at a time.
 
 ---
 

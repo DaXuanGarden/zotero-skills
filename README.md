@@ -155,6 +155,22 @@ scripts/check-all.py
 
 `scripts/check-all.py` 是只读本地质量门禁，会串行运行两个 skill validator，并在输出目录存在时运行 output audit 和 RIS lint。默认模式等价于严格提交前检查：`scripts/evidence_output_audit.py --fail-on-warnings` 与 `scripts/ris_lint.py --fail-on-warnings` 都会把 warning 作为失败；如果历史 evidence package 触发 warning，应按报告逐项判断是旧产物问题还是需要更新模板。处理旧包噪音时可显式使用 `scripts/check-all.py --output-warnings warn`（打印但不因 output warnings 失败）、`scripts/check-all.py --output-warnings skip`（只跑 skill validators），或 `scripts/check-all.py --ignore-output-warnings-before YYYY-MM-DD`（仍严格检查新包，但抑制 cutoff 之前旧包的 warnings；RIS errors 仍会失败）。
 
+可选运行时诊断 gate 默认关闭，避免因为不同机器的本地 MCP 配置影响常规校验；需要排查 Zotero/PubMed MCP 时可显式开启：
+
+```bash
+# 只读检查 ZCode/OpenCode MCP config 形态、command 路径和关键 env；不启动 MCP、不联网
+scripts/check-all.py --output-warnings skip --mcp-config warn
+
+# 检查仓库 skill 与 ~/.zcode/skills、OpenCode skill 副本是否漂移
+scripts/check-all.py --output-warnings skip --installed-skills warn
+
+# 校验或打印可复制的人工 MCP smoke-test prompts
+scripts/check-all.py --output-warnings skip --smoke-prompts check
+scripts/smoke_prompts.py
+```
+
+也可以单独运行：`scripts/mcp_config_sanity.py --client auto`、`scripts/check-installed-skills.py --target all --mode warn`、`scripts/smoke_prompts.py --check`。
+
 ### 3.3 静态校验 vs 运行时 MCP 就绪
 
 静态校验通过只说明 skill 文本结构正确，不等于当前 Agent IDE 会话已经能调用 Zotero / PubMed。真正执行工作流前，请按下面的只读 checklist 快速确认：
@@ -167,6 +183,16 @@ scripts/check-all.py
 | PubMed 已实际运行且元数据已检查 | PubMed search 有返回，候选 PMID 已用详情/抽取工具检查 | 只有此时才能写 `PubMed: Completed` 或生成 PubMed-only RIS |
 
 换句话说：validator 是仓库侧 guardrail；MCP readiness 是当前 ZCode / OpenCode 会话侧状态。PubMed 不可见不是 Zotero 检索失败，而是可选 PubMed 扩展层未接入。
+
+本仓库提供三个只读辅助脚本来定位“配置存在但当前会话不能稳定调用”的问题：
+
+| 脚本 | 用途 | 是否调用 MCP/联网/改配置 |
+|---|---|---|
+| `scripts/mcp_config_sanity.py --client auto` | 检查 `~/.zcode/v2/config.json`、`~/.zcode/cli/config.json`、`~/.config/opencode/opencode.json` 的 JSON 形态、`mcp`/`mcp.servers`/`mcpServers` 差异、command 路径、GUI PATH 风险、PubMed/Zotero 关键 env | 否 |
+| `scripts/check-installed-skills.py --target all --mode warn` | 比较仓库 `SKILL.md` 与 `~/.zcode/skills`、OpenCode 全局、项目级 `.opencode/skills` 中的 installed copy 是否一致 | 否 |
+| `scripts/smoke_prompts.py` | 打印可复制到 ZCode/OpenCode 的安全人工 smoke-test prompt，强调只读、分步调用、不可伪造结果 | 否 |
+
+如果 `mcp_config_sanity.py` 提示 `mcpServers`，通常说明把 Claude 风格配置粘贴到了 ZCode/OpenCode 配置；如果提示 command 不是绝对路径，GUI 启动的 ZCode/OpenCode 可能拿不到 shell `PATH`。这些脚本只能检查本地文件和 prompt 文本，不能替代当前会话真实 MCP tool list；修改配置或同步 skill 后仍需完整重启客户端或开启新会话。
 
 如果验证成功，会看到类似：
 
@@ -256,6 +282,24 @@ zotero-evidence-review.backup-YYYYmmdd-HHMMSS
 ```
 
 然后再覆盖安装。建议每次更新都使用 `--backup`。
+
+### 4.4 更新后确认当前会话使用的是新 skill
+
+修改仓库中的 `SKILL.md` 不会自动更新已经安装到 `~/.zcode/skills/` 或 OpenCode 目录中的旧副本。每次修复 workflow、MCP guardrail 或输出模板后，请重新运行安装脚本同步目标目录，例如：
+
+```bash
+scripts/install-skill.sh --skill all-skills --target zcode --backup
+```
+
+同步后请完全重启 ZCode / OpenCode 或开启新会话；仅刷新当前聊天通常不会重新加载 skill 与 MCP tool 列表。若仍看到 `Tool skipped because a previous tool call in the scheduled sequence failed`，先检查同一批工具调用中第一个失败的 MCP 调用，并确认当前会话加载的是同步后的 skill 副本。
+
+可用下面的只读命令确认 installed copy 是否与仓库一致：
+
+```bash
+scripts/check-installed-skills.py --target all --mode warn
+```
+
+若报告 `different` 或 `missing`，先重新运行 `scripts/install-skill.sh --skill all-skills --target ... --backup`，再重启客户端。
 
 ---
 

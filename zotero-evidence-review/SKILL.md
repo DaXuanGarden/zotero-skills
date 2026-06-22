@@ -119,6 +119,20 @@ Use this readiness gate before any workflow that depends on Zotero or PubMed. Th
 3. **Zotero is not PubMed**: do not treat Zotero MCP as a PubMed search client. Zotero records may contain DOI/PMID links, but live PubMed expansion requires a separate visible PubMed/NCBI-capable tool.
 4. **No silent fallback**: if a required tool is unavailable, report the limitation and provide a copyable query or next step. Do not imply that unavailable tools were executed.
 
+### Zotero Sequential Execution Guardrail
+
+Treat Zotero discovery and Zotero item inspection as a dependency chain, not a batch job. Do not schedule `zotero_search_items`, `zotero_semantic_search`, or `zotero_advanced_search` in the same tool-call batch as downstream tools that require returned Zotero item keys, including `zotero_get_item_metadata`, `zotero_get_item_children`, `zotero_get_items_children`, `zotero_get_item_fulltext`, `zotero_read_pdf_pages`, `zotero_get_annotations`, `zotero_get_notes`, or RIS generation from Zotero records.
+
+Run one Zotero search step, inspect its result, and only then decide whether the next Zotero step has valid item keys or attachment keys. If `zotero_get_search_database_status`, `zotero_search_items`, `zotero_semantic_search`, `zotero_advanced_search`, or any required upstream Zotero call fails, stop the Zotero inspection chain immediately, report the attempted query/error briefly, and do not schedule dependent metadata, PDF, notes, annotation, collection, full-text, or RIS steps.
+
+If a Zotero search query fails or returns no usable items, revise and retry the query at most once when broadening is appropriate. The retry must be a separate MCP call after inspecting the failed or empty result, not a downstream call pre-scheduled in the same tool-call batch.
+
+### Scheduled Tool Failure Handling
+
+When an MCP result says `Tool skipped because a previous tool call in the scheduled sequence failed`, treat the skipped tool as **not executed**. Do not interpret it as a Zotero/PubMed search miss, zero-hit result, or metadata failure. Identify and report the first failed tool in that scheduled sequence as the root cause; then, if the skipped search or inspection is still needed, rerun that specific upstream tool as a separate MCP call after the failure has been inspected.
+
+Never chain additional Zotero or PubMed dependent calls after a scheduled-sequence failure. First stabilize the upstream search/status call, then continue with one inspected step at a time.
+
 ### PubMed status decision tree
 
 Use these status values consistently in reports and final warnings:

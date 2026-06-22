@@ -62,7 +62,16 @@ PUBMED_SEQUENTIAL_GUARDRAIL_REQUIREMENTS = [
     "stop the PubMed chain immediately",
     "do not schedule dependent details, related, full-text, export, or PubMed-only RIS steps",
     "retry the query at most once",
+    "not a downstream call pre-scheduled in the same tool-call batch",
     "do not fabricate PMIDs or continue to metadata inspection",
+]
+SCHEDULED_TOOL_FAILURE_REQUIREMENTS = [
+    "Scheduled Tool Failure Handling",
+    "Tool skipped because a previous tool call in the scheduled sequence failed",
+    "treat the skipped tool as **not executed**",
+    "Identify and report the first failed tool in that scheduled sequence as the root cause",
+    "rerun that specific upstream PubMed tool as a separate MCP call",
+    "Never chain additional PubMed dependent calls after a scheduled-sequence failure",
 ]
 
 OUTPUT_REQUIREMENTS = [
@@ -240,7 +249,8 @@ def main() -> None:
     require_all(text, PUBMED_TOOL_REQUIREMENTS, "PubMed tool requirement")
     require_all(text, PUBMED_GUARDRAIL_REQUIREMENTS, "PubMed guardrail requirement")
     require_all(text, PUBMED_SEQUENTIAL_GUARDRAIL_REQUIREMENTS, "PubMed sequential execution guardrail")
-    ok("PubMed tool and guardrail requirements present")
+    require_all(text, SCHEDULED_TOOL_FAILURE_REQUIREMENTS, "scheduled tool failure handling guardrail")
+    ok("PubMed tool, sequential, and scheduled-failure guardrail requirements present")
 
     require_all(text, OUTPUT_REQUIREMENTS, "output requirement")
     require_all(text, PMID_INSPECTION_LEDGER_REQUIREMENTS, "PMID Inspection Ledger requirement")
