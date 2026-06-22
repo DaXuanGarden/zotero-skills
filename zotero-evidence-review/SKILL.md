@@ -119,6 +119,29 @@ Use this readiness gate before any workflow that depends on Zotero or PubMed. Th
 3. **Zotero is not PubMed**: do not treat Zotero MCP as a PubMed search client. Zotero records may contain DOI/PMID links, but live PubMed expansion requires a separate visible PubMed/NCBI-capable tool.
 4. **No silent fallback**: if a required tool is unavailable, report the limitation and provide a copyable query or next step. Do not imply that unavailable tools were executed.
 
+### Zotero live connection smoke test
+
+Before any Zotero-dependent workflow, run a lightweight read-only Zotero MCP smoke test. Tool visibility alone is not enough, because a tool can be listed in the active session while the Zotero MCP server is disconnected.
+
+Required first check:
+
+1. `zotero_get_recent` with `limit=3`.
+
+Optional supporting checks:
+
+2. `zotero_list_libraries`.
+3. `zotero_get_search_database_status`.
+
+If the first smoke test fails, returns `Not connected`, reports a transport/session error, or returns no callable result:
+
+- stop the Zotero-dependent workflow immediately;
+- report `Zotero MCP visible but not connected`;
+- do not run semantic search, structured search, metadata inspection, PDF/full-text reading, note/annotation retrieval, duplicate checking, RIS export, or evidence package generation;
+- suggest keeping Zotero Desktop open and restarting the active ZCode/MCP session;
+- if direct local Zotero HTTP API is known to be reachable, state that the issue is the ZCode ↔ Zotero MCP connection layer, not Zotero Desktop itself.
+
+Do not treat local Zotero HTTP API availability as equivalent to Zotero MCP readiness. This skill depends on callable Zotero MCP tools in the active session.
+
 ### Zotero Sequential Execution Guardrail
 
 Treat Zotero discovery and Zotero item inspection as a dependency chain, not a batch job. Do not schedule `zotero_search_items`, `zotero_semantic_search`, or `zotero_advanced_search` in the same tool-call batch as downstream tools that require returned Zotero item keys, including `zotero_get_item_metadata`, `zotero_get_item_children`, `zotero_get_items_children`, `zotero_get_item_fulltext`, `zotero_read_pdf_pages`, `zotero_get_annotations`, `zotero_get_notes`, or RIS generation from Zotero records.
