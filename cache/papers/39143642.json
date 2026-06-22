@@ -1,0 +1,32 @@
+{
+  "pmid": "39143642",
+  "title": "A metabolome-wide Mendelian randomization study prioritizes causal circulating metabolites for reproductive disorders including primary ovarian insufficiency, polycystic ovary syndrome, and abnormal spermatozoa.",
+  "authors": [
+    "Chen S",
+    "Sun S",
+    "Cai M",
+    "Zhou Z",
+    "Ma Y",
+    "Zhou Z",
+    "Wang F",
+    "Liu J",
+    "Song W",
+    "Liu Y",
+    "Huang K",
+    "Yang Q",
+    "Guo Y"
+  ],
+  "journal": "J Ovarian Res",
+  "publicationDate": "2024 Aug 14",
+  "volume": "17",
+  "issue": "1",
+  "pages": "166",
+  "abstract": "1. J Ovarian Res. 2024 Aug 14;17(1):166. doi: 10.1186/s13048-024-01486-1.\n\nA metabolome-wide Mendelian randomization study prioritizes causal circulating \nmetabolites for reproductive disorders including primary ovarian insufficiency, \npolycystic ovary syndrome, and abnormal spermatozoa.\n\nChen S(#)(1), Sun S(#)(2), Cai M(#)(1), Zhou Z(3), Ma Y(1), Zhou Z(1), Wang \nF(1), Liu J(1), Song W(1), Liu Y(1), Huang K(1), Yang Q(4), Guo Y(5).\n\nAuthor information:\n(1)Center of Reproductive Medicine, The First Affiliated Hospital of Zhengzhou \nUniversity, Zhengzhou, 450052, Henan, China.\n(2)Department of Breast Surgery, The First Affiliated Hospital of Zhengzhou \nUniversity, Zhengzhou, 450052, Henan, China.\n(3)Department of Urology, The First Affiliated Hospital of Zhengzhou University, \nZhengzhou, 450052, Henan, China.\n(4)Center of Reproductive Medicine, The First Affiliated Hospital of Zhengzhou \nUniversity, Zhengzhou, 450052, Henan, China. qingling531@163.com.\n(5)Center of Reproductive Medicine, The First Affiliated Hospital of Zhengzhou \nUniversity, Zhengzhou, 450052, Henan, China. 13613863710@163.com.\n(#)Contributed equally\n\nBACKGROUND: Accumulating studies have highlighted the significant role of \ncirculating metabolomics in the etiology of reproductive system disorders. \nHowever, the causal effects between genetically determined metabolites (GDMs) \nand reproductive diseases, including primary ovarian insufficiency (POI), \npolycystic ovary syndrome (PCOS), and abnormal spermatozoa (AS), still await \nthorough clarification.\nMETHODS: With the currently most comprehensive genome-wide association studies \n(GWAS) data of metabolomics, systematic two-sample Mendelian randomization (MR) \nanalyses were conducted to disclose causal associations between 1,091 blood \nmetabolites and 309 metabolite ratios with reproductive disorders. The \ninverse-variance weighted (IVW) method served as the primary analysis approach, \nand multiple effective MR methods were employed as complementary analyses \nincluding MR-Egger, weighted median, constrained maximum likelihood (cML-MA), \ncontamination mixture method, robust adjusted profile score (MR-RAPS), and \ndebiased inverse-variance weighted method. Heterogeneity and pleiotropy were \nassessed via MR-Egger intercept and Cochran's Q statistical analysis. Outliers \nwere detected by Radial MR and MR-PRESSO methods. External replication and \nmetabolic pathway analysis were also conducted.\nRESULTS: Potential causal associations of 63 GDMs with POI were unearthed, and \nfive metabolites with strong causal links to POI were emphasized. Two metabolic \npathways related to the pathogenesis of POI were pinpointed. Suggestive causal \neffects of 70 GDMs on PCOS were detected, among which 7 metabolites stood out \nfor strong causality with elevated PCOS risk. Four metabolic pathways associated \nwith PCOS mechanisms were recognized. For AS, 64 GDMs as potential predictive \nbiomarkers were identified, particularly highlighting two metabolites for their \nstrong causal connections with AS. Three pathways underneath the AS mechanism \nwere identified. Multiple assessments were conducted to further confirm the \nreliability and robustness of our causal inferences.\nCONCLUSION: By extensively assessing the causal implications of circulating GDMs \non reproductive system disorders, our study underscores the intricate and \npivotal role of metabolomics in reproductive ill-health, laying a theoretical \nfoundation for clinical strategies from metabolic insights.\n\n© 2024. The Author(s).\n\nDOI: 10.1186/s13048-024-01486-1\nPMCID: PMC11325614\nPMID: 39143642 [Indexed for MEDLINE]\n\nConflict of interest statement: The authors declare no competing interests.",
+  "doi": "doi: 10.1186/s13048-024-01486-1",
+  "url": "https://pubmed.ncbi.nlm.nih.gov/39143642/",
+  "publicationTypes": [
+    "Journal Article"
+  ],
+  "meshTerms": [],
+  "keywords": []
+}

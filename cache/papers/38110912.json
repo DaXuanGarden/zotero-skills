@@ -1,0 +1,27 @@
+{
+  "pmid": "38110912",
+  "title": "Effects of physical activity and sedentary time on depression, anxiety and well-being: a bidirectional Mendelian randomisation study.",
+  "authors": [
+    "Casanova F",
+    "O'Loughlin J",
+    "Karageorgiou V",
+    "Beaumont RN",
+    "Bowden J",
+    "Wood AR",
+    "Tyrrell J"
+  ],
+  "journal": "BMC Med",
+  "publicationDate": "2023 Dec 18",
+  "volume": "21",
+  "issue": "1",
+  "pages": "501",
+  "abstract": "1. BMC Med. 2023 Dec 18;21(1):501. doi: 10.1186/s12916-023-03211-z.\n\nEffects of physical activity and sedentary time on depression, anxiety and \nwell-being: a bidirectional Mendelian randomisation study.\n\nCasanova F(1), O'Loughlin J(1), Karageorgiou V(1), Beaumont RN(1), Bowden J(1), \nWood AR(1), Tyrrell J(2).\n\nAuthor information:\n(1)Genetics of Complex Traits, Department of Biomedical & Clinical Science, \nUniversity of Exeter Medical School, Exeter, UK.\n(2)Genetics of Complex Traits, Department of Biomedical & Clinical Science, \nUniversity of Exeter Medical School, Exeter, UK. j.tyrrell@exeter.ac.uk.\n\nBACKGROUND: Mental health conditions represent one of the major groups of \nnon-transmissible diseases. Physical activity (PA) and sedentary time (ST) have \nbeen shown to affect mental health outcomes in opposite directions. In this \nstudy, we use accelerometery-derived measures of PA and ST from the UK Biobank \n(UKB) and depression, anxiety and well-being data from the UKB mental health \nquestionnaire as well as published summary statistics to explore the causal \nassociations between these phenotypes.\nMETHODS: We used MRlap to test if objectively measured PA and ST associate with \nmental health outcomes using UKB data and summary statistics from published \ngenome-wide association studies. We also tested for bidirectional associations. \nWe performed sex stratified as well as sensitivity analyses.\nRESULTS: Genetically instrumented higher PA was associated with lower odds of \ndepression (OR = 0.92; 95% CI: 0.88, 0.97) and depression severity \n(beta =  - 0.11; 95% CI: - 0.18, - 0.04), Genetically instrumented higher ST was \nassociated higher odds of anxiety (OR = 2.59; 95% CI: 1.10, 4.60). PA was \nassociated with higher well-being (beta = 0.11, 95% CI: 0.04; 0.18) and ST with \nlower well-being (beta =  - 0.18; 95% CI: - 0.32, - 0.03). Similar findings were \nobserved when stratifying by sex. There was evidence for a bidirectional \nrelationship, with higher genetic liability to depression associated with lower \nPA (beta =  - 0.25, 95% CI: - 0.42; - 0.08) and higher well-being associated \nwith higher PA (beta = 0.15; 95% CI: 0.05, 0.25).\nCONCLUSIONS: We have demonstrated the bidirectional effects of both PA and ST on \na range of mental health outcomes using objectively measured predictors and MR \nmethods for causal inference. Our findings support a causal role for PA and ST \nin the development of mental health problems and in affecting well-being.\n\n© 2023. The Author(s).\n\nDOI: 10.1186/s12916-023-03211-z\nPMCID: PMC10729457\nPMID: 38110912 [Indexed for MEDLINE]\n\nConflict of interest statement: The authors declare that they have no competing \ninterests.",
+  "doi": "doi: 10.1186/s12916-023-03211-z",
+  "url": "https://pubmed.ncbi.nlm.nih.gov/38110912/",
+  "publicationTypes": [
+    "Journal Article",
+    "Research Support, Non-U.S. Gov't"
+  ],
+  "meshTerms": [],
+  "keywords": []
+}

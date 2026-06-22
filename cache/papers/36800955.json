@@ -1,0 +1,30 @@
+{
+  "pmid": "36800955",
+  "title": "The hepato-ovarian axis: genetic evidence for a causal association between non-alcoholic fatty liver disease and polycystic ovary syndrome.",
+  "authors": [
+    "Liu D",
+    "Gao X",
+    "Pan XF",
+    "Zhou T",
+    "Zhu C",
+    "Li F",
+    "Fan JG",
+    "Targher G",
+    "Zhao J"
+  ],
+  "journal": "BMC Med",
+  "publicationDate": "2023 Feb 20",
+  "volume": "21",
+  "issue": "1",
+  "pages": "62",
+  "abstract": "1. BMC Med. 2023 Feb 20;21(1):62. doi: 10.1186/s12916-023-02775-0.\n\nThe hepato-ovarian axis: genetic evidence for a causal association between \nnon-alcoholic fatty liver disease and polycystic ovary syndrome.\n\nLiu D(1), Gao X(2), Pan XF(3)(4), Zhou T(5), Zhu C(6), Li F(1)(7)(8), Fan \nJG(9)(10), Targher G(11), Zhao J(12)(13)(14).\n\nAuthor information:\n(1)Ministry of Education and Shanghai Key Laboratory of Children's Environmental \nHealth, Xinhua Hospital, Shanghai Jiao Tong University School of Medicine, \nNo.1665, Kongjiang Road, Yangpu District, Shanghai, 200092, China.\n(2)Department of Health Statistics, School of Public Health, Shanxi Medical \nUniversity, Taiyuan, Shanxi, China.\n(3)Ministry of Education Key Laboratory of Birth Defects and Related Diseases in \nWomen and Children, West China Second University Hospital, Sichuan University, \nChengdu, Sichuan, China.\n(4)Shuangliu Institute of Women's and Children's Health, Shuangliu Maternal and \nChild Health Hospital, Chengdu, Sichuan, China.\n(5)School of Public Health (Shenzhen), Shenzhen Campus of Sun Yat-sen \nUniversity, Shenzhen, China.\n(6)West China School of Public Health and West China Fourth Hospital, Sichuan \nUniversity, Chengdu, Sichuan, China.\n(7)Department of Developmental and Behavioral Pediatric & Child Primary Care, \nBrain and Behavioral Research Unit of Shanghai Institute for Pediatric Research, \nXinhua Hospital, Shanghai Jiao Tong University School of Medicine, Shanghai, \nChina.\n(8)Department of Maternal and Child Health, School of Public Health, Shanghai \nJiao Tong University, Shanghai, China.\n(9)Department of Gastroenterology, Xinhua Hospital, Shanghai Jiao Tong \nUniversity School of Medicine, Shanghai, China.\n(10)Shanghai Key Lab of Pediatric Gastroenterology and Nutrition, Shanghai, \nChina.\n(11)Section of Endocrinology, Diabetes and Metabolism, Department of Medicine, \nUniversity of Verona, Verona, Italy.\n(12)Ministry of Education and Shanghai Key Laboratory of Children's \nEnvironmental Health, Xinhua Hospital, Shanghai Jiao Tong University School of \nMedicine, No.1665, Kongjiang Road, Yangpu District, Shanghai, 200092, China. \njzhao.epi@gmail.com.\n(13)Department of Maternal and Child Health, School of Public Health, Shanghai \nJiao Tong University, Shanghai, China. jzhao.epi@gmail.com.\n(14)MRC Integrative Epidemiology Unit, University of Bristol, Bristol, UK. \njzhao.epi@gmail.com.\n\nBACKGROUND: Recent studies found associations between non-alcoholic fatty liver \ndisease (NAFLD) and polycystic ovary syndrome (PCOS), but the causal nature of \nthis association is still uncertain.\nMETHODS: We performed a bidirectional two-sample Mendelian randomization (MR) \nanalysis to test for the causal association between NAFLD and PCOS using data \nfrom a large-scale biopsy-confirmed NAFLD genome-wide association study (GWAS) \n(1483 cases and 17,781 controls) and PCOS GWAS (10,074 cases and 103,164 \ncontrols) in European ancestries. Data from glycemic-related traits GWAS (in up \nto 200,622 individuals) and sex hormones GWAS (in 189,473 women) in the UK \nBiobank (UKB) were used in the MR mediation analysis to assess potential \nmediating roles of these molecules in the causal pathway between NAFLD and PCOS. \nReplication analysis was conducted using two independent datasets from NAFLD and \nPCOS GWASs in the UKB and a meta-analysis of data from FinnGen and the Estonian \nBiobank, respectively. A linkage disequilibrium score regression was conducted \nto assess genetic correlations between NAFLD, PCOS, glycemic-related traits, and \nsex hormones using full summary statistics.\nRESULTS: Individuals with higher genetic liability to NAFLD were more likely to \ndevelop PCOS (OR per one-unit log odds increase in NAFLD: 1.10, 95% CI: \n1.02-1.18; P = 0.013). Indirect causal effects of NAFLD on PCOS via fasting \ninsulin only (OR: 1.02, 95% CI: 1.01-1.03; P = 0.004) and further a suggestive \nindirect causal effect via fasting insulin in concert with androgen levels were \nrevealed in MR mediation analyses. However, the conditional F statistics of \nNAFLD and fasting insulin were less than 10, suggesting likely weak instrument \nbias in the MVMR and MR mediation analyses.\nCONCLUSIONS: Our study suggests that genetically predicted NAFLD was associated \nwith a higher risk of developing PCOS but less evidence for vice versa. Fasting \ninsulin and sex hormones might mediate the link between NAFLD and PCOS.\n\n© 2023. The Author(s).\n\nDOI: 10.1186/s12916-023-02775-0\nPMCID: PMC9940436\nPMID: 36800955 [Indexed for MEDLINE]\n\nConflict of interest statement: The authors declare that they have no competing \ninterests.",
+  "doi": "doi: 10.1186/s12916-023-02775-0",
+  "url": "https://pubmed.ncbi.nlm.nih.gov/36800955/",
+  "publicationTypes": [
+    "Meta-Analysis",
+    "Journal Article",
+    "Research Support, Non-U.S. Gov't"
+  ],
+  "meshTerms": [],
+  "keywords": []
+}

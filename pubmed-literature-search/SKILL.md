@@ -78,6 +78,14 @@ Expected PubMed MCP tools for PancrePal-style servers include `pubmed_search`, `
 
 Only actual PubMed execution plus inspected metadata can justify `Completed` or PubMed-only RIS inclusion. Tool visibility alone is not enough.
 
+### Sequential Execution Guardrail
+
+PubMed workflows are dependency chains, not batch jobs. Do not schedule `pubmed_search` in the same tool-call batch as downstream tools that require its returned PMIDs, including `pubmed_get_details`, `pubmed_extract_info`, `pubmed_find_related`, `pubmed_detect_fulltext`, or `pubmed_download_fulltext`.
+
+Run one PubMed step, inspect its result, and only then decide whether the next PubMed step has valid inputs. If `pubmed_system_status`, `pubmed_search`, or any required upstream PubMed call fails, stop the PubMed chain immediately, report `Failed; query reported` with the attempted query/error, and do not schedule dependent details, related, full-text, export, or PubMed-only RIS steps.
+
+If a search returns zero usable PMIDs, revise and retry the query at most once when broadening is appropriate. If no usable PMIDs are returned after that, report zero hits and do not fabricate PMIDs or continue to metadata inspection.
+
 ---
 
 ## 0.5 PubMed MCP Health Check
@@ -118,6 +126,7 @@ Choose the smallest PubMed MCP call that satisfies the task:
 - Never fabricate PMIDs, DOI, titles, authors, journals, years, abstracts, statistics, or RIS records.
 - Do not report PubMed status as `Completed` unless the relevant PubMed tool call actually ran and selected metadata was inspected.
 - Do not create PubMed-only RIS records from uninspected search snippets.
+- Maintain a PMID Inspection Ledger for every PMID that is recommended, exported, excluded for metadata reasons, or considered for RIS.
 - Do not treat Zotero MCP as PubMed MCP.
 - Ask before `pubmed_download_fulltext` unless the user explicitly requested OA PDF/full-text download in the current task.
 - Ask before `pubmed_manage_cache` clean/clear actions.
@@ -140,8 +149,9 @@ Use for topic-level biomedical literature searches.
    - systematic-style scan: use a larger result count only when the user requests breadth.
 4. Execute `pubmed_search` only if PubMed MCP is visible.
 5. Inspect selected candidate PMIDs with `pubmed_get_details` or `pubmed_extract_info` before making citation recommendations.
-6. Classify results by relevance, study type, evidence role, and citation readiness.
-7. If no results are found, revise the query once by broadening synonyms, removing overly narrow filters, or switching from MeSH-heavy to keyword-heavy terms.
+6. Record every selected, recommended, excluded-for-metadata, or RIS-candidate PMID in the PMID Inspection Ledger with inspection status, route/tool, inspected fields, DOI, abstract status, metadata/retraction warning, evidence use, and RIS action.
+7. Classify results by relevance, study type, evidence role, and citation readiness.
+8. If no results are found, revise the query once by broadening synonyms, removing overly narrow filters, or switching from MeSH-heavy to keyword-heavy terms.
 
 ### Chat Output
 
@@ -174,7 +184,8 @@ Use when the user provides PMID(s), PubMed URLs, or asks for citation-ready meta
 2. Retrieve details with `pubmed_get_details` for up to 20 PMIDs at a time.
 3. Use `pubmed_extract_info` only when targeted fields are enough.
 4. Report missing DOI, missing abstract, retraction concern if surfaced, publication type, and whether the record is citation-ready.
-5. Do not infer missing metadata from memory.
+5. Add every inspected PMID to the PMID Inspection Ledger; mark PMIDs that came only from search snippets as `not inspected` and exclude them from RIS by default.
+6. Do not infer missing metadata from memory.
 
 ### Output Table
 
@@ -247,8 +258,9 @@ Do not write package files for chat-only requests. Do not overwrite existing fil
 1. Run the relevant search, PMID inspection, and optional related/review expansion first.
 2. Include only selected PMIDs whose metadata was inspected with `pubmed_get_details`, `pubmed_extract_info`, or equivalent visible PubMed metadata tooling.
 3. Exclude uninspected hits, failed-query hits, metadata-conflict records, and low-relevance records from RIS by default.
-4. Record the PubMed query, tool status, selected PMIDs, excluded PMIDs, and metadata warnings in the Markdown report.
+4. Record the PubMed query, tool status, selected PMIDs, excluded PMIDs, PMID Inspection Ledger, and metadata warnings in the Markdown report.
 5. Generate EndNote-compatible RIS records using inspected metadata only.
+6. Only PMIDs with `Inspection status = completed` through `pubmed_get_details`, `pubmed_extract_info`, or equivalent visible PubMed metadata tooling may use `RIS action = include`; search snippets alone are insufficient for recommended citations or RIS export.
 
 ### Final Chat Output
 
@@ -307,6 +319,20 @@ Critical Warnings:
 
 ## 6. Metadata Quality Control
 
+### PMID Inspection Ledger
+
+| PMID | Citation | Inspection status | Inspection tool / route | Inspected fields | DOI | Abstract status | Retraction / metadata warning | Evidence use | RIS action |
+|---|---|---|---|---|---|---|---|---|---|
+| `{PMID}` | `{Author et al., year}` | `{completed|partial|not inspected|failed}` | `{pubmed_get_details|pubmed_extract_info|equivalent PubMed metadata tool|search snippet only}` | `{title; authors; journal; year; DOI; abstract; publication type}` | `{doi or —}` | `{available|missing|not inspected}` | `{none / retraction concern / metadata conflict / missing required field}` | `{recommended citation|background|excluded|low relevance|metadata only}` | `{include|exclude|verify|optional}` |
+
+Ledger rules:
+
+- Every PMID that is recommended, considered for RIS, excluded for metadata reasons, or reported as an inspected candidate must appear in the PMID Inspection Ledger.
+- `Inspection status = completed` requires inspected metadata from `pubmed_get_details`, `pubmed_extract_info`, or equivalent visible PubMed metadata tooling.
+- `search snippet only` is not sufficient for recommended citations or RIS export.
+- Only PMIDs with `Inspection status = completed` and no unresolved metadata/retraction warning may use `RIS action = include`.
+- PMIDs with `Inspection status = not inspected`, `partial`, `failed`, or unresolved metadata conflict must use `RIS action = exclude` or `verify` by default.
+
 | PMID | DOI | Title check | Authors check | Year check | Metadata warning | RIS action |
 |---|---|---|---|---|---|---|
 | `{PMID}` | `{doi or —}` | `{matched/verify}` | `{matched/verify}` | `{matched/verify}` | `{warning or none}` | `{include/exclude/verify}` |
@@ -315,7 +341,7 @@ Critical Warnings:
 
 - Markdown report: `{relative/path}`
 - EndNote RIS: `{relative/path}`
-- RIS inclusion rule: inspected selected PMIDs only.
+- RIS inclusion rule: completed PMID Inspection Ledger rows only; inspected selected PMIDs only.
 - Metadata source of truth: PubMed metadata inspected in this run.
 ```
 

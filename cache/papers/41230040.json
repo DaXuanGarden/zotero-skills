@@ -1,0 +1,21 @@
+{
+  "pmid": "41230040",
+  "title": "Causal Relationships Among Lifestyle, Lipidome, and Polycystic Ovary Syndrome: A Mendelian Randomization Study.",
+  "authors": [
+    "Kou X",
+    "Jing X"
+  ],
+  "journal": "Int J Womens Health",
+  "publicationDate": "2025",
+  "volume": "17",
+  "issue": "",
+  "pages": "4291-4300",
+  "abstract": "1. Int J Womens Health. 2025 Nov 7;17:4291-4300. doi: 10.2147/IJWH.S531967. \neCollection 2025.\n\nCausal Relationships Among Lifestyle, Lipidome, and Polycystic Ovary Syndrome: A \nMendelian Randomization Study.\n\nKou X(1), Jing X(1).\n\nAuthor information:\n(1)Reproductive Medicine Department, Xi'an Gaoxin Hospital, Xi'an, Shaanxi, \n710075, People's Republic of China.\n\nBACKGROUND: Lifestyle interventions often influence lipid levels in patients \nwith polycystic ovary syndrome (PCOS), thereby modulating disease progression. \nHowever, whether lipid levels play a mediating role remains unclear.\nOBJECTIVE: To investigate causal associations between lifestyle, lipidome, and \nPCOS, as well as mediating role of lipidome.\nMETHODS: This study employed a bidirectional two-sample Mendelian randomization \n(MR) analysis, with lifestyle and lipidome as exposures and PCOS as outcome. A \ntwo-step MR approach was used to assess mediating role of lipidome. \nInverse-variance weighted (IVW) method was primarily applied, and sensitivity \nanalyses were conducted to test robustness of results.\nRESULTS: Overall physical activity time (OR = 0.590, 95% CI: 0.394-0.882, P = \n0.010) was significantly negatively associated with PCOS risk, while leisure \nscreen time (OR = 1.377, 95% CI: 1.050-1.804, P = 0.021) was significantly \npositively associated with PCOS risk. 25 lipid levels were significantly \nassociated with PCOS risk, with 3 showing negative correlations and 22 showing \npositive correlations (P < 0.05). Mediation analysis revealed that TAG (50:1) \n(triacylglycerol with 50 carbon atoms and 1 double bond) levels mediated causal \nrelationship between increased overall physical activity time and lowered PCOS \nrisk. The median effect accounted for 23.8% of the total effect (B = -0.126, 95% \nCI: -0.238 to -0.014, P = 0.027).\nCONCLUSION: This study revealed causal associations between overall physical \nactivity time, leisure screen time, and PCOS, and identified mediating role of \nTAG (50:1) levels. These findings provide scientific insights for lifestyle \nmanagement in PCOS patients.\n\n© 2025 Kou and Jing.\n\nDOI: 10.2147/IJWH.S531967\nPMCID: PMC12604502\nPMID: 41230040\n\nConflict of interest statement: The authors declare that they have no known \nconflicts of interest in this work.",
+  "doi": "doi: 10.2147/IJWH.S531967",
+  "url": "https://pubmed.ncbi.nlm.nih.gov/41230040/",
+  "publicationTypes": [
+    "Journal Article"
+  ],
+  "meshTerms": [],
+  "keywords": []
+}

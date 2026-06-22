@@ -1,0 +1,31 @@
+{
+  "pmid": "38583262",
+  "title": "Sedentary lifestyle, physical activity, and gastrointestinal diseases: evidence from mendelian randomization analysis.",
+  "authors": [
+    "Chen J",
+    "Ruan X",
+    "Fu T",
+    "Lu S",
+    "Gill D",
+    "He Z",
+    "Burgess S",
+    "Giovannucci EL",
+    "Larsson SC",
+    "Deng M",
+    "Yuan S",
+    "Li X"
+  ],
+  "journal": "EBioMedicine",
+  "publicationDate": "2024 May",
+  "volume": "103",
+  "issue": "",
+  "pages": "105110",
+  "abstract": "1. EBioMedicine. 2024 May;103:105110. doi: 10.1016/j.ebiom.2024.105110. Epub 2024\n Apr 6.\n\nSedentary lifestyle, physical activity, and gastrointestinal diseases: evidence \nfrom mendelian randomization analysis.\n\nChen J(1), Ruan X(2), Fu T(2), Lu S(3), Gill D(4), He Z(5), Burgess S(6), \nGiovannucci EL(7), Larsson SC(8), Deng M(9), Yuan S(10), Li X(11).\n\nAuthor information:\n(1)School of Public Health and the Second Affiliated Hospital, Zhejiang \nUniversity School of Medicine, Hangzhou, Zhejiang, China; Department of \nGastroenterology, The Third Xiangya Hospital, Central South University, \nChangsha, China.\n(2)Department of Gastroenterology, The Third Xiangya Hospital, Central South \nUniversity, Changsha, China.\n(3)Department of Gastroenterology, The Second Affiliated Hospital of Zhejiang \nUniversity School of Medicine, Hangzhou, China.\n(4)Department of Epidemiology and Biostatistics, School of Public Health, \nImperial College London, London, UK.\n(5)Department of Gastroenterology, Changhai Hospital, Second Military Medical \nUniversity/Naval Medical University, Shanghai, China.\n(6)MRC Biostatistics Unit, University of Cambridge, Cambridge, UK; Department of \nPublic Health and Primary Care, University of Cambridge, Cambridge, UK.\n(7)Department of Epidemiology, Harvard T H Chan School of Public Health, Boston, \nMA, USA; Department of Nutrition, Harvard T H Chan School of Public Health, \nBoston, MA, USA.\n(8)Unit of Cardiovascular and Nutritional Epidemiology, Institute of \nEnvironmental Medicine, Karolinska Institutet, Stockholm, Sweden; Unit of \nMedical Epidemiology, Department of Surgical Sciences, Uppsala University, \nUppsala, Sweden.\n(9)Department of Gastroenterology, The Third Xiangya Hospital, Central South \nUniversity, Changsha, China. Electronic address: dengmz@csu.edu.cn.\n(10)Unit of Cardiovascular and Nutritional Epidemiology, Institute of \nEnvironmental Medicine, Karolinska Institutet, Stockholm, Sweden. Electronic \naddress: shuai.yuan@ki.se.\n(11)School of Public Health and the Second Affiliated Hospital, Zhejiang \nUniversity School of Medicine, Hangzhou, Zhejiang, China; Centre for Global \nHealth Research, Usher Institute, University of Edinburgh, Edinburgh, UK. \nElectronic address: xue.li@ed.ac.uk.\n\nBACKGROUND: The causal associations of physical activity and sedentary behavior \nwith the risk of gastrointestinal disease are unclear. We performed a Mendelian \nrandomization analysis to examine these associations.\nMETHODS: Genetic instruments associated with leisure screen time (LST, an \nindicator of a sedentary lifestyle) and moderate-to-vigorous intensity physical \nactivity (MVPA) at the genome-wide significance (P < 5 × 10-8) level were \nselected from a genome-wide association study. Summary statistics for \ngastrointestinal diseases were obtained from the UK Biobank study, the FinnGen \nstudy, and large consortia. Multivariable MR analyses were conducted for \ngenetically determined LST with adjustment for MVPA and vice versa. We also \nperformed multivariable MR with adjustment for genetically proxied smoking, body \nmass index (BMI), waist-to-hip ratio, type 2 diabetes, and fasting insulin for \nboth exposures.\nFINDINGS: Genetically proxied longer LST was associated with an increased risk \nof gastrointestinal reflux, gastric ulcer, duodenal ulcer, chronic gastritis, \nirritable bowel syndrome, diverticular disease, Crohn's disease, ulcerative \ncolitis, non-alcoholic fatty liver disease, alcoholic liver disease, \ncholangitis, cholecystitis, cholelithiasis, acute pancreatitis, chronic \npancreatitis, and acute appendicitis. Most associations remained after \nadjustment for genetic liability to MVPA. Genetic liability to MVPA was \nassociated with decreased risk of gastroesophageal reflux, gastric ulcer, \nchronic gastritis, irritable bowel syndrome, cholecystitis, cholelithiasis, \nacute and chronic pancreatitis. The associations attenuated albeit directionally \nremained after adjusting for genetically predicted LST. Multivariable MR \nanalysis found that BMI and type 2 diabetes mediated the associations of LST and \nMVPA with several gastrointestinal diseases.\nINTERPRETATION: The study suggests that a sedentary lifestyle may play a causal \nrole in the development of many gastrointestinal diseases.\nFUNDING: Natural Science Fund for Distinguished Young Scholars of Zhejiang \nProvince (LR22H260001), Natural Science Foundation of Hunan Province \n(2021JJ30999), Swedish Heart-Lung Foundation (Hjärt-Lungfonden, 20210351), \nSwedish Research Council (Vetenskapsrådet, 2019-00977), Swedish Cancer Society \n(Cancerfonden), the Wellcome Trust (225790/7/22/Z), United Kingdom Research and \nInnovation Medical Research Council (MC_UU_00002/7) and National Institute for \nHealth Research Cambridge Biomedical Research Centre (NHIR203312).\n\nCopyright © 2024 The Author(s). Published by Elsevier B.V. All rights reserved.\n\nDOI: 10.1016/j.ebiom.2024.105110\nPMCID: PMC11004085\nPMID: 38583262 [Indexed for MEDLINE]\n\nConflict of interest statement: Declaration of interests All authors declare no \ncompeting interests.",
+  "doi": "doi: 10.1016/j.ebiom.2024.105110",
+  "url": "https://pubmed.ncbi.nlm.nih.gov/38583262/",
+  "publicationTypes": [
+    "Journal Article"
+  ],
+  "meshTerms": [],
+  "keywords": []
+}

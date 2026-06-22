@@ -56,6 +56,19 @@ Evidence levels:
 
 List recommended sentence-level citation placement. Avoid assigning citations to statements that the cited papers did not test directly.
 
+### Citation Support Ledger
+
+| Claim / sentence | Recommended citation | Source layer | Evidence level | Inspection route | Evidence location | Support verdict | RIS action | Required wording/action |
+|---|---|---|---|---|---|---|---|---|
+| `{claim or sentence}` | `{Author Year / none}` | `{Current study|Zotero external evidence|PubMed external evidence|Interpretive bridge|Unsupported gap}` | `{A|B|C|D|E}` | `{Zotero metadata|Zotero full text|Zotero abstract|PubMed details|PubMed abstract|Not inspected}` | `{PDF page / annotation / note / PMID abstract / DOI metadata / none}` | `{supports|partly supports|background only|contradicts|not addressed|not inspected}` | `{Include|Exclude|Verify|Optional}` | `{keep|hedge|reframe as background|remove|replace citation|complete inspection}` |
+
+Ledger rules:
+
+- Every citation used in copy-ready text, annotated text, Citation Placement, Reference Table, Reference Canonicalization Gate, or RIS must appear here.
+- Search snippets alone are not an inspection route.
+- `not inspected`, `contradicts`, and `not addressed` must not enter RIS by default; mark `RIS action` as `Exclude` or `Verify`.
+- `background only` may be `Optional`, or `Include` only when the manuscript wording explicitly frames it as background/context.
+
 ## 8. Evidence Logic Chain
 
 | Step | Current-study element | External evidence link | Source layer | Evidence level | Inference limit |
@@ -141,6 +154,8 @@ Required checks:
 
 - Report contains Status, Critical Warnings, and Copy-ready Manuscript Text.
 - Claim–Evidence Matrix contains Evidence level, Source layer, Recommended action, and Recommended citation.
+- Citation Support Ledger contains every recommended citation and every RIS candidate, with Inspection route, Evidence location, Support verdict, RIS action, and Required wording/action.
+- Citations marked `not inspected`, `contradicts`, or `not addressed` in the Citation Support Ledger are excluded from RIS or marked `Verify`.
 - Current-study findings are not mislabeled as external evidence.
 - Direct causality, BMI independence, horizontal pleiotropy, mediation/mechanism, and genetic-prioritization claims are not overconfident unless directly supported.
 - PubMed status truthfully reflects actual tool execution; `Completed` requires executed PubMed search plus inspected metadata.

@@ -1,0 +1,29 @@
+{
+  "pmid": "38349064",
+  "title": "Physical activity, sedentary behavior, and the risk of frailty and falling: A Mendelian randomization study.",
+  "authors": [
+    "Zhou Y",
+    "Zhu J",
+    "Huang Y",
+    "Ma Y",
+    "Liu Y",
+    "Wu K",
+    "Lin Q",
+    "Zhou J",
+    "Tu T",
+    "Liu Q"
+  ],
+  "journal": "Scand J Med Sci Sports",
+  "publicationDate": "2024 Feb",
+  "volume": "34",
+  "issue": "2",
+  "pages": "e14582",
+  "abstract": "1. Scand J Med Sci Sports. 2024 Feb;34(2):e14582. doi: 10.1111/sms.14582.\n\nPhysical activity, sedentary behavior, and the risk of frailty and falling: A \nMendelian randomization study.\n\nZhou Y(1), Zhu J(1), Huang Y(1), Ma Y(1), Liu Y(1), Wu K(1), Lin Q(1), Zhou \nJ(1), Tu T(1), Liu Q(1).\n\nAuthor information:\n(1)Department of Cardiovascular Medicine, The Second Xiangya Hospital of Central \nSouth University, Changsha, Hunan, China.\n\nBACKGROUND: Due to inconclusive evidence from observational studies regarding \nthe impact of physical activity (PA) and sedentary behavior on frailty and \nfalling risk, we conducted a two-sample Mendelian randomization analysis to \ninvestigate the causal associations between PA, sedentary behavior, and frailty \nand falls.\nMETHODS: We extracted summary data from genome-wide association studies \nconducted among individuals of European ancestry, encompassing PA \n(n = 90 667-608 595), sedentary behavior (n = 372 609-526 725), frailty index \n(n = 175 226), and falling risk (n = 451 179). Single nucleotide polymorphisms \nassociated with accelerometer assessed fraction >425 milligravities, \nself-reported vigorous activity, moderate to vigorous physical acticity (MVPA), \nleisure screen time (LST), and sedentary behavior at work were taken as \ninstrumental variables. The causal effects were primarily estimated using \ninverse variance weighted methods, complemented by several sensitivity and \nvalidation analyses.\nRESULTS: Genetically predicted higher levels of PA were significantly associated \nwith a reduction in the frailty index (accelerometer assessed fraction >425 \nmilligravities: β = -0.25, 95% CI = -0.36 to -0.14, p = 1.27 × 10-5 ; \nself-reported vigorous activity: β = -0.13, 95% CI = -0.20 to -0.05, \np = 7.9 × 10-4 ; MVPA: β = -0.28, 95% CI = -0.40 to -0.16, p = 9.9 × 10-6 ). \nBesides, LST was significantly associated with higher frailty index (β = 0.18, \n95% CI = 0.14-0.22, p = 5.2 × 10-20 ) and higher odds of falling (OR = 1.13, \nCI = 1.07-1.19, p = 6.9 × 10-6 ). These findings remained consistent throughout \nsensitivity and validation analyses.\nCONCLUSIONS: Our study offers evidence supporting a causal relationship between \nPA and a reduced risk of frailty. Furthermore, it underscores the association \nbetween prolonged LST and an elevated risk of frailty and falls. Therefore, \npromoting PA and reducing sedentary behavior may be an effective strategy in \nprimary frailty and falls prevention.\n\n© 2024 John Wiley & Sons A/S. Published by John Wiley & Sons Ltd.\n\nDOI: 10.1111/sms.14582\nPMID: 38349064 [Indexed for MEDLINE]",
+  "doi": "doi: 10.1111/sms.14582",
+  "url": "https://pubmed.ncbi.nlm.nih.gov/38349064/",
+  "publicationTypes": [
+    "Journal Article"
+  ],
+  "meshTerms": [],
+  "keywords": []
+}

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Audit Zotero evidence output packages.
 
-The script scans evidence-review Markdown and RIS files, reports common QA
-issues, and writes draft project-level summary/TSV files. It does not modify
-source reports.
+The script scans evidence-review Markdown and RIS files and reports common QA
+issues. It is read-only by default; draft project-level summary/TSV files are
+created only when explicit --write-* flags are supplied.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import csv
 import re
+from datetime import date
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -96,18 +97,55 @@ class PackageAudit:
     evidence_logic_chain_present: bool
     claims_to_revise_present: bool
     reference_canonicalization_present: bool
+    citation_support_ledger_present: bool
+    citation_support_ledger_has_required_columns: bool
+    citation_support_ledger_unsafe_inclusions: list[str]
+    citation_support_ledger_search_snippet_routes: list[str]
+    numbered_citation_repair_expected: bool
+    numbered_citation_repair_present: bool
+    numbered_citation_repair_has_required_columns: bool
     phase10_section_order_ok: bool
     ris_markdown_artifacts: list[str]
     unresolved_mismatch_mentions: list[str]
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Audit zotero-evidence-output packages")
+    parser = argparse.ArgumentParser(description="Audit zotero-evidence-output packages; read-only by default")
     parser.add_argument("--input", default=str(DEFAULT_INPUT), help="Evidence output directory")
     parser.add_argument("--write-summary", action="store_true", help="Write PROJECT_SUMMARY.draft.md")
     parser.add_argument("--write-claims", action="store_true", help="Write evidence_claims_master.draft.tsv")
     parser.add_argument("--write-reference-qc", action="store_true", help="Write reference_qc_master.draft.tsv")
+    parser.add_argument("--fail-on-warnings", action="store_true", help="Exit non-zero when automated warnings are detected")
+    parser.add_argument("--ignore-before", metavar="YYYY-MM-DD", help="Suppress warnings for output packages dated before this cutoff")
     return parser.parse_args()
+
+
+def parse_cutoff(value: str | None) -> date | None:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise SystemExit(f"Invalid --ignore-before date {value!r}; expected YYYY-MM-DD") from exc
+
+
+def extract_date(value: str) -> date | None:
+    match = re.search(r"(20\d{2}-\d{2}-\d{2})", value)
+    if not match:
+        return None
+    try:
+        return date.fromisoformat(match.group(1))
+    except ValueError:
+        return None
+
+
+def package_date(package: PackageAudit) -> date | None:
+    return extract_date(package.folder) or extract_date(package.generated)
+
+
+def is_historical_package(package: PackageAudit, cutoff: date | None) -> bool:
+    package_day = package_date(package)
+    return bool(cutoff and package_day and package_day < cutoff)
 
 
 def read_text(path: Path) -> str:
@@ -263,6 +301,92 @@ def section_contains(text: str, heading_pattern: str) -> bool:
     return bool(extract_section_lines(text, heading_pattern))
 
 
+def text_suggests_numbered_citation_repair(text: str) -> bool:
+    cues = (
+        "existing numbered citation repair",
+        "original citation number",
+        "unsupported numbered citation",
+        "citation number → supplied reference metadata → claim",
+        "final endnote numbering",
+        "endnote/word will renumber",
+    )
+    lowered = text.lower()
+    return any(cue.lower() in lowered for cue in cues)
+
+
+def numbered_citation_repair_columns_ok(text: str) -> bool:
+    lines = extract_section_lines(text, r"^#{2,3}\s+.*Existing Numbered Citation Repair.*$")
+    rows = split_markdown_table(lines)
+    if not rows:
+        return False
+    header = " | ".join(rows[0]).lower()
+    numbered_citation_repair_required_terms = (
+        "original citation number",
+        "supplied reference",
+        "claim supported by this number",
+        "support verdict",
+        "verification verdict",
+        "evidence level",
+        "action",
+        "replacement candidate",
+        "original citation number preserved for audit",
+        "final numbering handled by endnote/word",
+        "ris action",
+        "reason",
+    )
+    return all(term in header for term in numbered_citation_repair_required_terms)
+
+
+def citation_support_ledger_rows(text: str) -> tuple[list[dict[str, str]], bool]:
+    lines = extract_section_lines(text, r"^#{2,3}\s+.*Citation Support Ledger.*$")
+    rows = split_markdown_table(lines)
+    if not rows:
+        return [], False
+    header = [cell.strip() for cell in rows[0]]
+    header_lc = [cell.lower() for cell in header]
+    required_terms = (
+        "claim / sentence",
+        "recommended citation",
+        "source layer",
+        "evidence level",
+        "inspection route",
+        "evidence location",
+        "support verdict",
+        "ris action",
+        "required wording/action",
+    )
+    has_required_columns = all(term in " | ".join(header_lc) for term in required_terms)
+    output: list[dict[str, str]] = []
+    for row in rows[1:]:
+        item = {header[index]: row[index] if index < len(row) else "" for index in range(len(header))}
+        if any(value.strip() for value in item.values()):
+            output.append(item)
+    return output, has_required_columns
+
+
+def citation_support_ledger_unsafe_inclusions(rows: list[dict[str, str]]) -> list[str]:
+    unsafe_verdicts = {"not inspected", "contradicts", "not addressed"}
+    findings: list[str] = []
+    for index, row in enumerate(rows, start=1):
+        verdict = next((value for key, value in row.items() if key.lower() == "support verdict"), "").strip().lower()
+        ris_action = next((value for key, value in row.items() if key.lower() == "ris action"), "").strip().lower()
+        citation = next((value for key, value in row.items() if key.lower() == "recommended citation"), "").strip()
+        if verdict in unsafe_verdicts and ris_action == "include":
+            label = citation or f"row {index}"
+            findings.append(f"{label} ({verdict} -> Include)")
+    return findings
+
+
+def citation_support_ledger_search_snippet_routes(rows: list[dict[str, str]]) -> list[str]:
+    findings: list[str] = []
+    for index, row in enumerate(rows, start=1):
+        route = next((value for key, value in row.items() if key.lower() == "inspection route"), "").strip().lower()
+        citation = next((value for key, value in row.items() if key.lower() == "recommended citation"), "").strip()
+        if "search snippet" in route or "snippet only" in route:
+            findings.append(citation or f"row {index}")
+    return findings
+
+
 def table_header_has(text: str, heading_pattern: str, required_terms: tuple[str, ...]) -> bool:
     lines = extract_section_lines(text, heading_pattern)
     rows = split_markdown_table(lines)
@@ -312,10 +436,12 @@ def audit_package(input_dir: Path, folder: Path) -> PackageAudit | None:
     ris_files = sorted(folder.glob("*.ris"))
     ris_file = ris_files[0].name if ris_files else ""
     ris_text = read_text(ris_files[0]) if ris_files else ""
+    absolute_paths = sorted(set(re.findall(r"(?:/Users/|/home/|/var/folders/|/tmp/)[^\s`)]+", text)))
     declared_ris_paths = extract_declared_ris_paths(text)
     declared_existing = [resolve_declared_ris(input_dir, folder, path).exists() for path in declared_ris_paths]
     ris_exists = bool(ris_files) and (all(declared_existing) if declared_existing else True)
-    absolute_paths = sorted(set(re.findall(r"/Users/[^`\s)]+", text)))
+    numbered_citation_repair_expected = text_suggests_numbered_citation_repair(text)
+    ledger_rows, ledger_has_required_columns = citation_support_ledger_rows(text)
     return PackageAudit(
         folder=folder.name,
         md_file=md_path.name,
@@ -338,6 +464,13 @@ def audit_package(input_dir: Path, folder: Path) -> PackageAudit | None:
         evidence_logic_chain_present=section_contains(text, r"^##\s+.*Evidence Logic Chain.*$"),
         claims_to_revise_present=section_contains(text, r"^##\s+.*Claims to Revise or Remove.*$"),
         reference_canonicalization_present=section_contains(text, r"^#{2,3}\s+.*Reference Canonicalization Gate.*$"),
+        citation_support_ledger_present=section_contains(text, r"^#{2,3}\s+.*Citation Support Ledger.*$"),
+        citation_support_ledger_has_required_columns=ledger_has_required_columns,
+        citation_support_ledger_unsafe_inclusions=citation_support_ledger_unsafe_inclusions(ledger_rows),
+        citation_support_ledger_search_snippet_routes=citation_support_ledger_search_snippet_routes(ledger_rows),
+        numbered_citation_repair_expected=numbered_citation_repair_expected,
+        numbered_citation_repair_present=section_contains(text, r"^#{2,3}\s+.*Existing Numbered Citation Repair.*$"),
+        numbered_citation_repair_has_required_columns=numbered_citation_repair_columns_ok(text),
         phase10_section_order_ok=section_order_ok(text, PHASE10_SECTIONS),
         ris_markdown_artifacts=detect_ris_markdown_artifacts(ris_text),
         unresolved_mismatch_mentions=detect_unresolved_mismatch(text),
@@ -457,6 +590,24 @@ def collect_warnings(packages: list[PackageAudit]) -> list[str]:
             warnings.append(f"{package.folder}: missing Claims to Revise or Remove section")
         if not package.reference_canonicalization_present:
             warnings.append(f"{package.folder}: missing Reference Canonicalization Gate section")
+        if not package.citation_support_ledger_present:
+            warnings.append(f"{package.folder}: missing Citation Support Ledger section")
+        elif not package.citation_support_ledger_has_required_columns:
+            warnings.append(f"{package.folder}: Citation Support Ledger missing required audit columns")
+        if package.citation_support_ledger_unsafe_inclusions:
+            warnings.append(
+                f"{package.folder}: Citation Support Ledger has unsafe RIS Include rows: "
+                + ", ".join(package.citation_support_ledger_unsafe_inclusions)
+            )
+        if package.citation_support_ledger_search_snippet_routes:
+            warnings.append(
+                f"{package.folder}: Citation Support Ledger uses search-snippet-only inspection routes: "
+                + ", ".join(package.citation_support_ledger_search_snippet_routes)
+            )
+        if package.numbered_citation_repair_expected and not package.numbered_citation_repair_present:
+            warnings.append(f"{package.folder}: numbered citation repair cues found but Existing Numbered Citation Repair table is missing")
+        if package.numbered_citation_repair_present and not package.numbered_citation_repair_has_required_columns:
+            warnings.append(f"{package.folder}: Existing Numbered Citation Repair table missing required audit columns")
         if not package.phase10_section_order_ok:
             warnings.append(f"{package.folder}: report sections do not match Phase 10 order")
         if package.ris_markdown_artifacts:
@@ -494,17 +645,33 @@ def main() -> None:
     packages = discover_packages(input_dir)
     print_report(packages)
 
+    cutoff = parse_cutoff(args.ignore_before)
+    warnings = collect_warnings(packages)
+    if cutoff:
+        historical_folders = {package.folder for package in packages if is_historical_package(package, cutoff)}
+        active_warnings = [warning for warning in warnings if warning.split(":", 1)[0] not in historical_folders]
+        suppressed_count = len(warnings) - len(active_warnings)
+        print(f"\nHistorical warning cutoff: suppressing {suppressed_count} warning(s) from packages before {cutoff.isoformat()}.")
+    else:
+        active_warnings = warnings
+
     wrote: list[Path] = []
-    if args.write_summary or not (args.write_summary or args.write_claims or args.write_reference_qc):
+    if args.write_summary:
         wrote.append(write_summary(input_dir, packages))
-    if args.write_claims or not (args.write_summary or args.write_claims or args.write_reference_qc):
+    if args.write_claims:
         wrote.append(write_claims(input_dir, packages))
-    if args.write_reference_qc or not (args.write_summary or args.write_claims or args.write_reference_qc):
+    if args.write_reference_qc:
         wrote.append(write_reference_qc(input_dir, packages))
 
-    print("\nDraft outputs:")
-    for path in wrote:
-        print(f"- {path.relative_to(REPO_ROOT)}")
+    if wrote:
+        print("\nDraft outputs:")
+        for path in wrote:
+            print(f"- {path.relative_to(REPO_ROOT)}")
+    else:
+        print("\nRead-only audit: no draft outputs written. Use --write-summary, --write-claims, or --write-reference-qc to create draft files.")
+
+    if args.fail_on_warnings and active_warnings:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

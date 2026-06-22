@@ -1,0 +1,31 @@
+{
+  "pmid": "40345305",
+  "title": "Association between physical activity and sedentary behavior with cardiometabolic multimorbidity in the elderly hypertensive population: an observational and Mendelian randomization study.",
+  "authors": [
+    "Wang S",
+    "Wu J",
+    "Liu R",
+    "Zhao Q",
+    "Feng Y",
+    "Zhao L",
+    "Zhang Y",
+    "Jiao X",
+    "Tarimo CS",
+    "Wu J",
+    "Zhou Z"
+  ],
+  "journal": "Psychol Sport Exerc",
+  "publicationDate": "2025 Jul",
+  "volume": "79",
+  "issue": "",
+  "pages": "102869",
+  "abstract": "1. Psychol Sport Exerc. 2025 Jul;79:102869. doi:\n10.1016/j.psychsport.2025.102869.  Epub 2025 May 8.\n\nAssociation between physical activity and sedentary behavior with \ncardiometabolic multimorbidity in the elderly hypertensive population: an \nobservational and Mendelian randomization study.\n\nWang S(1), Wu J(2), Liu R(3), Zhao Q(3), Feng Y(1), Zhao L(1), Zhang Y(1), Jiao \nX(1), Tarimo CS(1), Wu J(1), Zhou Z(4).\n\nAuthor information:\n(1)Department of Health Management, College of Public Health, Zhengzhou \nUniversity, 100 Kexue Road, Gaoxin District, Zhengzhou, 450001, China.\n(2)School of Journalism and Communication, Wuhan University, 299 Bayi Road, \nWuchang District, Wuhan City, Hubei Province, 430072, China.\n(3)Henan Key Laboratory for Health Management of Chronic Diseases, Central China \nFuwai Hospital, Central China Fuwai Hospital of Zhengzhou University, Zhengzhou, \nHenan, 451450, China.\n(4)Department of Health Management, College of Public Health, Zhengzhou \nUniversity, 100 Kexue Road, Gaoxin District, Zhengzhou, 450001, China. \nElectronic address: zichenzhou@zzu.edu.cn.\n\nBACKGROUND: The causal relationships between physical activity (PA), sedentary \nbehavior (SB), and the risk of cardiometabolic disease (CMD) in hypertensive \npopulations remain unclear. We conducted a Mendelian randomization (MR) analysis \nto investigate these associations.\nMETHODS: We conducted an observational analysis using a sample of 18,963 \nhypertensive population. For the two-sample Mendelian Randomization (MR) \nanalysis, we used genome-wide association study (GWAS) summary data from \npopulation-wide cohorts obtained from the MRC Integrative Epidemiology Unit \n(MRC-IEU). The observational study was conducted from July 2023 to September \n2023. Genetic tools were selected from GWAS at genome-wide significance \n(P < 5 × 10-8). The summary statistics for CMD include type 2 diabetes (T2D), \nstroke, and coronary heart disease (CHD). Logistic regression models were \nemployed to estimate odds ratios (ORs) and 95% confidence intervals (CIs) for \nthe associations between PA and SB with CMD (T2D, stroke, and CHD) in the \nhypertensive population.\nRESULTS: A total of 17,234 elderly hypertensive population were included, with \nan average age of 73.0 years. Among them, 9888 (57.4 %) were women, and 9406 \n(54.5 %) had CMD. Compared to low physical activity (LPA), moderate physical \nactivity (MPA) was associated with a decreased risk of T2D [OR (95 % CI): 0.749 \n(0.682, 0.823)] and stroke [OR (95 % CI): 0.525 (0.480, 0.575)]. Vigorous \nphysical activity (VPA) was linked to a reduced risk of T2D, stroke, and CHD. In \ncontrast, prolonged SB was associated with an increased risk of T2D, stroke, and \nCHD. The MR analyses found that genetically predicted MPA was significantly \nassociated with a reduced risk of T2D in the general population, consistent with \nthe observational study results in hypertensive individuals. Similarly, VPA and \nSB were causally associated with T2D, stroke, and CHD, supporting the inverse \nrelationships observed in the observational study.\nCONCLUSIONS: This study suggests that a sedentary lifestyle and moderate to \nvigorous physical activity may play a significant role in the development of CMD \nin hypertensive populations.\n\nCopyright © 2025 Elsevier Ltd. All rights reserved.\n\nDOI: 10.1016/j.psychsport.2025.102869\nPMID: 40345305 [Indexed for MEDLINE]\n\nConflict of interest statement: Declaration of competing interest There's no \nconflict of interest.",
+  "doi": "doi: 10.1016/j.psychsport.2025.102869",
+  "url": "https://pubmed.ncbi.nlm.nih.gov/40345305/",
+  "publicationTypes": [
+    "Journal Article",
+    "Observational Study"
+  ],
+  "meshTerms": [],
+  "keywords": []
+}

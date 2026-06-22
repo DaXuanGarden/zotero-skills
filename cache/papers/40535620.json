@@ -1,0 +1,26 @@
+{
+  "pmid": "40535620",
+  "title": "Causal relationship between physical activity and common gynecologic conditions: a two-sample Mendelian randomization study.",
+  "authors": [
+    "Fu M",
+    "Zhu X",
+    "Chen J",
+    "Guan J",
+    "Ding H",
+    "Gao Q",
+    "Qin S"
+  ],
+  "journal": "Am J Transl Res",
+  "publicationDate": "2025",
+  "volume": "17",
+  "issue": "5",
+  "pages": "3753-3765",
+  "abstract": "1. Am J Transl Res. 2025 May 15;17(5):3753-3765. doi: 10.62347/PGYY9493. \neCollection 2025.\n\nCausal relationship between physical activity and common gynecologic conditions: \na two-sample Mendelian randomization study.\n\nFu M(1), Zhu X(2), Chen J(1), Guan J(1), Ding H(1), Gao Q(1), Qin S(1)(3).\n\nAuthor information:\n(1)Institute for Fetology & Department of Obstetrics and Gynecology, The First \nAffiliated Hospital of Soochow University Suzhou 215006, Jiangsu, P. R. China.\n(2)Department of Clinical Nutrition, Suzhou Municipal Hospital Suzhou 215000, \nJiangsu, P. R. China.\n(3)Department of Radiation Oncology, The First Affiliated Hospital of Soochow \nUniversity Suzhou 215006, Jiangsu, P. R. China.\n\nOBJECTIVE: While physical activity (PA) patterns are epidemiologically linked to \ngynecologic pathologies, establishing causality remains uncertain. This \nMendelian randomization (MR) study evaluated causal relationships between PA \nphenotypes and gynecologic disorders.\nMETHODS: Using European-ancestry female genome-wide association study (GWAS) \ndata, we analyzed eight gynecologic disorders and four PA instruments. Primary \ninverse-variance weighted (IVW) estimates were supplemented by sensitivity \nanalyses (MR-Egger, weighted median, MR-PRESSO) to address pleiotropy and \nheterogeneity.\nRESULTS: Our MR revealed subtype-specific effects: walking for pleasure [OR = \n0.63, 95% CI: 0.41-0.96], strenuous sports [OR = 0.34, 95% CI: 0.16-0.74], and \nother exercises [OR = 0.70, 95% CI: 0.49-0.99]) reduced ER+ breast cancer (BC) \nrisk, while leisure screen time increased risk (OR = 1.08, 95% CI: 1.004-1.163). \nOnly other exercises protected against ER- BC (OR = 0.60, 95% CI: 0.38-0.96). \nExercise frequency inversely correlated with endometrial cancer (EC) (walking: \nOR = 0.20; strenuous sports: OR = 0.06; other exercises: OR = 0.41) and \nendometriosis (ES) (strenuous sports: OR = 0.17; other exercises: OR = 0.26), \nbut was positively associated with sedentary behavior (EC: OR = 1.36). Ovarian \ncyst (OCS) risk decreased with walking (OR = 0.34) and other exercises (OR = \n0.28), yet increased with screen time (OR = 1.23). Paradoxically, walking showed \nstrong positive (OR = 31.48) and strenuous exercise inverse (OR = 0.004) \nassociations with polycystic ovary syndrome (PCOS). No causal links emerged for \ncervical cancer (CC), ovarian cancer (OC), or uterine fibroids (UF).\nCONCLUSION: This first MR evidence demonstrates PA's differential causal effects \non gynecologic disorders, particularly highlighting exercise modality-specific \nprotection against ER+ BC, EC, and ES. Paradoxical PCOS associations warrant \nmechanistic investigation. Findings underscore PA as a modifiable preventive \nfactor and advocate for subtype-tailored exercise guidelines in women's health.\n\nAJTR Copyright © 2025.\n\nDOI: 10.62347/PGYY9493\nPMCID: PMC12170402\nPMID: 40535620\n\nConflict of interest statement: The authors declare that the research was \nconducted in the absence of any commercial or financial relationships that could \nbe construed as a potential conflict of interest.",
+  "doi": "doi: 10.62347/PGYY9493",
+  "url": "https://pubmed.ncbi.nlm.nih.gov/40535620/",
+  "publicationTypes": [
+    "Journal Article"
+  ],
+  "meshTerms": [],
+  "keywords": []
+}

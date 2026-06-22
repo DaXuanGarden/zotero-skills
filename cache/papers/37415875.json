@@ -1,0 +1,26 @@
+{
+  "pmid": "37415875",
+  "title": "Physical Activity, Sedentary Behavior, and Type 2 Diabetes: Mendelian Randomization Analysis.",
+  "authors": [
+    "Yuan S",
+    "Li X",
+    "Liu Q",
+    "Wang Z",
+    "Jiang X",
+    "Burgess S",
+    "Larsson SC"
+  ],
+  "journal": "J Endocr Soc",
+  "publicationDate": "2023 Jul 3",
+  "volume": "7",
+  "issue": "8",
+  "pages": "bvad090",
+  "abstract": "1. J Endocr Soc. 2023 Jun 26;7(8):bvad090. doi: 10.1210/jendso/bvad090.\neCollection  2023 Jul 3.\n\nPhysical Activity, Sedentary Behavior, and Type 2 Diabetes: Mendelian \nRandomization Analysis.\n\nYuan S(1), Li X(2), Liu Q(3), Wang Z(4), Jiang X(3), Burgess S(5)(6), Larsson \nSC(1)(7).\n\nAuthor information:\n(1)Unit of Cardiovascular and Nutritional Epidemiology, Institute of \nEnvironmental Medicine, Karolinska Institutet, Stockholm, 17165, Sweden.\n(2)School of Public Health and the Second Affiliated Hospital, Zhejiang \nUniversity School of Medicine, Hangzhou 310000, China.\n(3)Department of Clinical Neuroscience, Karolinska Institutet, Stockholm, 17165, \nSweden.\n(4)Icahn School of Medicine at Mount Sinai, The Charles Bronfman Institute for \nPersonalized Medicine, New York, NY 10029, USA.\n(5)MRC Biostatistics Unit, University of Cambridge, Cambridge CB2 1TN, UK.\n(6)Department of Public Health and Primary Care, University of Cambridge, \nCambridge CB2 1TN, UK.\n(7)Unit of Medical Epidemiology, Department of Surgical Sciences, Uppsala \nUniversity, Uppsala, 75185, Sweden.\n\nCONTEXT: The causality and pathways of the associations between physical \nactivity and inactivity and the risk of type 2 diabetes remain inconclusive.\nOBJECTIVE: We conducted an updated mendelian randomization (MR) study to explore \nthe associations of moderate-to-vigorous physical activity (MVPA) and leisure \nscreen time (LST) with type 2 diabetes mellitus (T2DM).\nMETHODS: Genetic variants strongly associated with MVPA or LST with low linkage \ndisequilibrium were selected as instrumental variables from a genome-wide \nmeta-analysis including more than 600 000 individuals. Summary-level data on \nT2DM were obtained from the DIAbetes Genetics Replication And Meta-analysis \nconsortium including 898 130 individuals. Data on possible intermediates \n(adiposity indicators, lean mass, glycemic traits, and inflammatory biomarkers) \nwere extracted from large-scale genome-wide association studies (n = 21 758-681 \n275). Univariable and multivariable MR analyses were performed to estimate the \ntotal and direct effects of MVPA and LST on T2DM. Methylation MR analysis was \nperformed for MVPA in relation to diabetes.\nRESULTS: The odds ratio of T2DM was 0.70 (95% CI, 0.55-0.88; P = .002) per unit \nincrease in the log-odds ratio of having MVPA and 1.45 (95% CI, 1.30-1.62; P = \n7.62 × 10-11) per SD increase in genetically predicted LST. These associations \nattenuated in multivariable MR analyses adjusted for genetically predicted \nwaist-to-hip ratio, body mass index, lean mass, and circulating C-reactive \nprotein. The association between genetically predicted MVPA and T2DM attenuated \nafter adjusting for genetically predicted fasting insulin levels. Two physical \nactivity-related methylation biomarkers (cg17332422 in ADAMTS2 and cg09531019) \nwere associated with the risk of T2DM (P < .05).\nCONCLUSION: The study suggests causal associations of MVPA and LST with T2DM \nthat appear to be mediated by obesity, lean mass, and chronic low-grade \ninflammation.\n\n© The Author(s) 2023. Published by Oxford University Press on behalf of the \nEndocrine Society.\n\nDOI: 10.1210/jendso/bvad090\nPMCID: PMC10321115\nPMID: 37415875",
+  "doi": "doi: 10.1210/jendso/bvad090",
+  "url": "https://pubmed.ncbi.nlm.nih.gov/37415875/",
+  "publicationTypes": [
+    "Journal Article"
+  ],
+  "meshTerms": [],
+  "keywords": []
+}

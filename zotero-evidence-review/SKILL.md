@@ -16,7 +16,7 @@ metadata:
 
 Use Zotero MCP tools to search the user's Zotero library intelligently, and use PubMed MCP tools as a biomedical expansion and metadata-standardization layer whenever they are visible in the active Agent IDE session. This skill combines **semantic search** (concept matching via embeddings) with **keyword/structured search**, performs **paragraph evidence and citation analysis** from draft text, verifies **citations against full text**, and can generate a two-file **Evidence Package** for writing workflows: a Markdown evidence report plus an EndNote-compatible RIS reference file.
 
-For paragraph citation-support requests, the default is one complete **Paragraph Citation Package Workflow** rather than two separate workflows: paragraph → claim extraction → one Zotero local search pass → evidence matrix → citation placement → revised/diff paragraph → Zotero metadata + PDF links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown evidence report → EndNote RIS. Chat-only paragraph analysis is an explicit opt-out mode.
+For paragraph citation-support requests, the default is one complete **Paragraph Citation Package Workflow** rather than two separate workflows: paragraph → claim extraction → existing numbered citation repair when supplied references are present → one Zotero local search pass → evidence matrix → citation placement → revised/diff paragraph → Zotero metadata + PDF links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown evidence report → EndNote RIS. Chat-only paragraph analysis is an explicit opt-out mode.
 
 ---
 
@@ -29,6 +29,7 @@ Route the user's request before choosing tools. Use the input shape and explicit
 | `search` | Keywords, concepts, natural-language questions, broad topic discovery, or requests such as "search", "find papers", "what literature do I have about…" | **Module 1: Semantic + Structured Search** |
 | `paragraph` | A pasted manuscript paragraph, draft section, or multi-sentence passage that asks for chat-only evidence analysis, with no citation/export/full-workflow trigger | **Module 2: Paragraph Evidence & Citation Analysis** |
 | `package` | Requests using `/zotero-evidence-review`, saved files, EndNote/RIS export, evidence package, "使用技能", "完整工作流", "找证据", "找引文", "补引用", "推荐引用", "citation", "refs", "参考文献", "文献引用", "生成报告", "保存结果", "导出参考文献", or a paragraph/search request that asks for citation placement, reusable writing outputs, or file outputs | **Paragraph Citation Package Workflow (Module 2 + Module 2.5): analysis stage, then export stage with automatic PubMed expansion after Zotero local search when available** |
+| `reference_update` | A paragraph or manuscript passage with existing numbered citations/references, or requests such as "检查参考文献", "更新参考文献", "编号引用", "6不支持", "citation 6 does not support", "replace citation", "refresh RIS", "regenerate RIS" | **Module 2.2: Existing Numbered Citation Repair**, then **Module 2.5 Evidence Package Export** when files/RIS are requested or implied; treat this as a full reference-update workflow unless the user explicitly opts out |
 | `verify` | Words such as "verify", "核实", "check", "confirm" plus a specific citation/paper and a concrete claim, quote, statistic, or citation-supported statement | **Module 3: Citation Verification Protocol** |
 | `health` | "library status", "库状态", "health check", "健康检查", "preflight", "index status", or questions about Zotero database readiness | **Module 0.5: Library Health Check** |
 
@@ -36,11 +37,13 @@ Route the user's request before choosing tools. Use the input shape and explicit
 
 1. **Slash command and simple-request entry**: `/zotero-evidence-review` is the recommended user-facing entry point. Treat it as a request to run this skill and auto-route from the user's short request; do not require the user to name modules or repeat the full workflow. When the short request asks for evidence, citation support, reusable writing output, or an evidence package, default to the complete package workflow and write the report/RIS unless the user explicitly opts out.
 2. **Paragraph-first, package by default for citation work**: if the user provides a paragraph, run Module 2 first. If the same request includes `/zotero-evidence-review`, `使用技能`, `完整工作流`, "find evidence", "find/add/recommend citations", `找证据`, `找引文`, `补引用`, `推荐引用`, `citation`, `refs`, `参考文献`, `文献引用`, or any request for saved/reusable writing outputs, continue automatically to the Paragraph Citation Package Workflow / Module 2.5 and write the Markdown report plus RIS file.
-3. **Chat-only opt-out**: if the user explicitly says `只在聊天输出`, `不要生成文件`, `不导出`, `chat only`, or equivalent, stop after the relevant chat workflow and do not write package files.
-4. **Verification requires specificity**: only route to `verify` when both a cited source (or item key/DOI/title) and a claim/quote/statistic are present. Otherwise, route to `search` or ask a clarification.
-5. **Health check is read-only by default**: route health/status requests to Module 0.5 and do not run repair actions unless the user explicitly confirms them.
-6. **Evidence package request**: if the user asks for saved reports, EndNote/RIS, an evidence package, or the default citation-support workflow above, run the underlying search/paragraph workflow first, then route to the Paragraph Citation Package Workflow / Module 2.5 for file generation.
-7. **Ambiguous intent**: if the request cannot be confidently routed, output this numbered menu and ask the user to choose:
+3. **Existing numbered citation repair first**: if the user provides manuscript text plus a numbered reference list, or explicitly says an existing citation number does not support the claim, route to **Module 2.2: Existing Numbered Citation Repair** before ordinary package export. Preserve the user's supplied citation numbers in the audit tables, but do not promise to preserve final manuscript numbering after RIS import; EndNote/Word will renumber according to the final included reference list and citation style.
+4. **Reference-update requests default to the complete workflow**: requests containing `检查参考文献`, `更新参考文献`, `编号引用`, `replace citation`, `refresh RIS`, or `regenerate RIS` are not chat-only spot checks by default. Run claim mapping, support verification, replacement search when needed, metadata canonicalization, and final Markdown + RIS export unless the user explicitly opts out.
+5. **Chat-only opt-out**: if the user explicitly says `只在聊天输出`, `不要生成文件`, `不导出`, `chat only`, or equivalent, stop after the relevant chat workflow and do not write package files.
+6. **Verification requires specificity**: only route to `verify` when both a cited source (or item key/DOI/title) and a claim/quote/statistic are present. Otherwise, route to `search` or ask a clarification.
+7. **Health check is read-only by default**: route health/status requests to Module 0.5 and do not run repair actions unless the user explicitly confirms them.
+8. **Evidence package request**: if the user asks for saved reports, EndNote/RIS, an evidence package, or the default citation-support workflow above, run the underlying search/paragraph workflow first, then route to the Paragraph Citation Package Workflow / Module 2.5 for file generation.
+9. **Ambiguous intent**: if the request cannot be confidently routed, output this numbered menu and ask the user to choose:
 
 ```markdown
 我可以按以下哪种方式处理？
@@ -48,7 +51,8 @@ Route the user's request before choosing tools. Use the input shape and explicit
 2. 段落证据与引文分析（粘贴段落、找证据、补引用）
 3. Evidence Package 导出（Markdown 报告 + EndNote RIS）
 4. 精确核实（具体引用 + 具体主张/数据/引文）
-5. 库健康度检查（库状态、索引、PDF覆盖率）
+5. 已有编号引文修复（段落 + 6/18/19 等参考文献编号）
+6. 库健康度检查（库状态、索引、PDF覆盖率）
 ```
 
 ### End-to-End Workflow Map
@@ -56,7 +60,7 @@ Route the user's request before choosing tools. Use the input shape and explicit
 Use this map as the default execution path so the workflow remains continuous and auditable:
 
 ```text
-intent routing → optional read-only library readiness check → Module 1 search or Module 2 paragraph analysis → Zotero canonical metadata + PDF links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown evidence report + EndNote RIS → final path-only summary
+intent routing → optional read-only library readiness check → Module 1 search, Module 2 paragraph analysis, or Module 2.2 existing numbered citation repair → Zotero canonical metadata + PDF links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown evidence report + EndNote RIS → final path-only summary
 ```
 
 Operational checkpoints:
@@ -65,10 +69,11 @@ Operational checkpoints:
 2. **Before MCP-dependent work**: apply **0.25 MCP Readiness and Runtime Availability**. Zotero MCP is required for local evidence work; PubMed MCP is optional and can only be used when a PubMed/NCBI-capable callable tool is visible in the active session.
 3. **During Zotero work**: search Zotero first, deduplicate candidate evidence, and retrieve inspected metadata before using an item in a report or RIS record.
 4. **During PubMed work**: when PubMed tools are visible, use `pubmed_search` for expansion, `pubmed_get_details` or `pubmed_extract_info` for selected PMIDs, `pubmed_find_related` for key-paper expansion, and `pubmed_detect_fulltext` / `pubmed_download_fulltext` only for OA full text when enabled and useful.
-5. **Before PubMed claims**: only mark PubMed as `Completed` if a PubMed-capable tool is configured and visible, the PubMed search actually ran, and selected PMID metadata was inspected. Otherwise report the query with `⚠️ Tool unavailable; search not executed`, `Failed; query reported`, or `Not executed` with reason.
-6. **Before PubMed-only RIS**: include PubMed-only records only when PubMed status is `Completed` and metadata has been inspected with `pubmed_get_details`, `pubmed_extract_info`, or an equivalent visible PubMed metadata tool.
-7. **Before writing files**: run metadata quality checks for missing fields, possible Zotero/PubMed mismatch, duplicate warning, and RIS inclusion/exclusion action.
-8. **Before final response**: confirm the Markdown report follows `EVIDENCE_REVIEW_REPORT`, the RIS is plain RIS records only, and the chat response lists only generated paths plus critical warnings.
+5. **Existing numbered citations**: when the user supplies numbered citations or a reference list, preserve `Original citation number` in all audit/report tables; check whether each numbered source supports the mapped claim; mark unsupported numbered citation cases explicitly as `Replace`, `Remove`, or `Verify` rather than silently carrying them into the final RIS.
+6. **Before PubMed claims**: only mark PubMed as `Completed` if a PubMed-capable tool is configured and visible, the PubMed search actually ran, and selected PMID metadata was inspected. Otherwise report the query with `⚠️ Tool unavailable; search not executed`, `Failed; query reported`, or `Not executed` with reason.
+7. **Before PubMed-only RIS**: include PubMed-only records only when PubMed status is `Completed` and metadata has been inspected with `pubmed_get_details`, `pubmed_extract_info`, or an equivalent visible PubMed metadata tool.
+8. **Before writing files**: run metadata quality checks for missing fields, possible Zotero/PubMed mismatch, duplicate warning, and RIS inclusion/exclusion action.
+9. **Before final response**: confirm the Markdown report follows `EVIDENCE_REVIEW_REPORT`, the RIS is plain RIS records only, and the chat response lists only generated paths plus critical warnings.
 
 ---
 
@@ -126,6 +131,16 @@ Use these status values consistently in reports and final warnings:
 | PubMed search actually ran and selected PMID metadata was inspected with `pubmed_get_details` or `pubmed_extract_info` | `Completed` | PubMed-only RIS records are allowed only for selected records with sufficient inspected metadata. |
 
 Only actual PubMed execution plus inspected metadata can justify `Completed` or PubMed-only RIS inclusion. Tool visibility alone is not enough.
+
+### PubMed Sequential Execution Guardrail
+
+Treat Zotero local search and PubMed expansion as separate evidence phases. PubMed expansion is a dependency chain, not a batch job: do not schedule `pubmed_search` in the same tool-call batch as downstream tools that require returned PMIDs, including `pubmed_get_details`, `pubmed_extract_info`, `pubmed_find_related`, `pubmed_detect_fulltext`, or `pubmed_download_fulltext`.
+
+Run one PubMed step, inspect its result, and only then decide whether the next PubMed step has valid inputs. If `pubmed_system_status`, `pubmed_search`, or any required upstream PubMed call fails, stop the PubMed chain immediately, mark the PubMed section as `Failed; query reported`, report the attempted query/error briefly, and do not schedule dependent details, related, full-text, export, or PubMed-only RIS steps.
+
+When Zotero local search succeeds but PubMed expansion fails, keep and report the inspected Zotero evidence normally. The PubMed expansion block must remain `Failed; query reported`, and PubMed-only records must not be added to RIS unless PubMed status is `Completed` with inspected metadata.
+
+If a PubMed search returns zero usable PMIDs, revise and retry the query at most once when broadening is appropriate. If no usable PMIDs are returned after that, report zero hits and do not fabricate PMIDs or continue to PubMed metadata inspection.
 
 ---
 
@@ -510,6 +525,74 @@ Use this output shape:
 - Use the same Zotero result pool for both Layer A and Layer B; only search again if the user explicitly requests deeper follow-up.
 - Do not fabricate missing support. Mark gaps clearly. In chat-only mode, hand off to external search only after asking; in the full Paragraph Citation Package Workflow, continue to Module 2.5 and report PubMed expansion status honestly.
 
+## 2.2 Existing Numbered Citation Repair
+
+Use when the user provides a manuscript paragraph or section with existing numbered citations plus a reference list, or when they say a citation number does not support the claim, e.g. `6不支持`, `citation 6 does not support`, `检查参考文献`, `更新参考文献`, `编号引用`, `replace citation`, `refresh RIS`, or `regenerate RIS`. This module is a focused reference-update workflow: it checks whether supplied numbered references support the exact mapped claims, improves manuscript wording, and prepares clean Markdown/RIS export decisions.
+
+### Core Principle
+
+Do not treat a supplied citation number as valid merely because it appears in the draft. Map `citation number → supplied reference metadata → claim`, inspect the source through Zotero/PubMed/metadata tools when available, and assign a concrete action: `Keep`, `Replace`, `Remove`, `Verify`, or `Add supporting citation`.
+
+### Process
+
+1. **Parse numbered citations and references**
+   - Extract in-text numbered citations such as `6`, `6,18`, `[6,18]`, superscript-like digits, and ranges when present.
+   - Extract the supplied numbered reference list and preserve each `Original citation number` exactly as the user provided it.
+   - Normalize citation numbers only for matching; do not silently renumber the user's manuscript text.
+2. **Map citations to claims**
+   - Split the manuscript text into sentences and claims as in Module 2.
+   - For every cited sentence, record `citation number → supplied reference metadata → claim` and carry it into `Claim supported by this number` in the repair table.
+   - If one citation group supports different parts of a sentence, split the sentence or clause so each citation is judged against the specific claim it is meant to support.
+3. **Handle explicit unsupported-number reports**
+   - When the user says a specific marker is unsupported, such as `6不支持`, `#6 unsupported`, or `citation 6 does not support`, first locate every sentence or clause carrying that exact marker.
+   - Parse the supplied reference for that original number before searching for replacements; do not assume the number points to the correct paper.
+   - Inspect metadata, abstract, notes, annotations, or full text when available, and decide whether the paper supports the exact mapped claim rather than only a related topic.
+   - Produce an explicit verdict row for that number even if no replacement is found.
+   - If the number belongs to a citation group such as `6,18`, judge each number separately and state which part of the claim, if any, each source supports.
+4. **Check support and choose an action**
+   - Retrieve Zotero metadata for each supplied reference when possible by title, DOI, PMID, author/year, or citation key.
+   - Use PubMed metadata as an external standardization layer only when PubMed tools are visible and actually executed.
+   - Judge each supplied numbered citation as `Supported claim? = yes / partial / no / unverified / contradictory`.
+   - Map those labels to verification verdicts when reporting: `yes = fully supported`, `partial = partially supported`, `no = not addressed for this claim`, `unverified = not inspected or metadata unresolved`, and `contradictory = contradicted`.
+   - Mark unsupported numbered citation rows explicitly as `Replace`, `Remove`, or `Verify`; do not carry unsupported references into RIS by default.
+   - Mark background-only sources as `partial` when they support context but not the exact directional, causal, BMI-independent, or horizontal-pleiotropy claim.
+5. **Find replacements only when needed**
+   - If a supplied citation is `partial`, `no`, `unverified`, or `contradictory`, search Zotero first for a better source.
+   - If package mode is active and PubMed tools are visible, run PubMed expansion after Zotero search to identify replacement candidates.
+   - Record `Replacement candidate` and `Replacement reason`; if no replacement is found, recommend wording changes or removal.
+   - For `6 = Wang et al. 2022 Nat Genet physical activity/sedentary behavior GWAS`, treat the paper as background for sedentary-behavior GWAS unless inspection shows direct PCOS evidence. If it is mapped to `LST directionally contributes to PCOS susceptibility`, normally mark `Supported claim? = partial / no`, search for a more direct PCOS-sedentary, MR, or reproductive-health genetics source, and set the original `RIS action = Exclude / Optional` depending on whether the revised text keeps it as background.
+6. **Repair the manuscript wording**
+   - Preserve the manuscript language.
+   - Avoid awkward, weak, or overconfident openings such as `Several genetic observations were consistent with...` when the evidence is mainly current-study genetic analyses.
+   - Treat weak openings, overconfident framing, and current-study findings presented as external evidence as explicit writing issues; include them in the annotated text table and in `Claims to Revise or Remove`.
+   - Prefer clearer current-study framing such as `Our genetic analyses provided convergent but not definitive evidence that longer leisure screen time may contribute to PCOS susceptibility.`, `Together, these analyses suggest a putative directional relationship between sedentary behavior and PCOS risk, while remaining compatible with residual pleiotropy and phenotype heterogeneity.`, `Together, these genetic analyses suggest...`, or `In our analysis, ...`, followed by external evidence only as background, method, or interpretive bridge.
+   - For MR, LST, PCOS, BMI-independent, horizontal pleiotropy, winner's curse, sample overlap, phenotype heterogeneity, ancestry-specific effects, and related causal or directional wording, require hedge wording unless a directly inspected source supports the stronger claim.
+7. **Export decisions**
+   - Preserve `Original citation number` in the Markdown audit tables, and explicitly state `Original citation number preserved for audit` plus `Final numbering handled by EndNote/Word` in the numbering notes or table rows.
+   - The final RIS represents the recommended final included references, not necessarily the original numbering. EndNote/Word will renumber citations according to the imported RIS and citation style.
+   - `RIS action` must be one of `Include`, `Exclude`, `Verify`, or `Optional`. Unsupported or unresolved references should be `Exclude` or `Verify`, not `Include`, unless the user explicitly requests retention.
+   - Include a replaced or partially supported original numbered citation in RIS only if the revised manuscript text still uses it as background/context and the report marks that limited role clearly.
+   - If supplied numbered citations are present, their `Original citation number`, mapped claim, `Support verdict`, action, and `RIS action` must propagate into the Citation Support Ledger so the final citation chain remains auditable from the user's original numbering to the recommended RIS decision.
+
+### Output Format
+
+Use this table in chat and in the Markdown evidence report whenever supplied numbered references are inspected:
+
+```markdown
+### Existing Numbered Citation Repair
+| Original citation number | Supplied reference | Claim supported by this number | Support verdict | Verification verdict | Evidence level | Action: Keep / Replace / Remove / Verify / Add supporting citation | Replacement candidate | Original citation number preserved for audit | Final numbering handled by EndNote/Word | RIS action | Reason |
+|--------------------------|--------------------|--------------------------------|-----------------|----------------------|----------------|--------------------------------------------------------------------|-----------------------|----------------------------------------|----------------------------------------|------------|--------|
+| 6 | Wang 2022 Nat Genet sedentary-behavior GWAS | sedentary behavior contributes directionally to PCOS susceptibility | partial / no | partially supported / not addressed for this claim | C / E | Replace / reframe as background | Shao 2026 / other direct PCOS-sedentary or MR reproductive-health genetics source | yes | yes | Exclude / Optional | Supports sedentary-behavior GWAS/background, not the specific PCOS directional claim unless text is reframed |
+```
+
+Rules:
+- `Support verdict` must use `yes / partial / no / unverified / contradictory` and must map to the human-readable `Verification verdict`.
+- `Original citation number preserved for audit = yes` records the user's original numbering for traceability only; `Final numbering handled by EndNote/Word = yes` warns that imported RIS records will be renumbered by the citation processor.
+- `Supplied reference` should be concise, e.g. `Wang 2022`, with full metadata appearing only in the reference table or Refs block.
+- `Supported claim? = no`, `Support verdict = no`, or `contradictory` requires `Action = Replace`, `Remove`, or `Verify` and normally `RIS action = Exclude`.
+- `Supported claim? = partial` may be kept only as background/context if the manuscript wording is changed so the citation no longer appears to directly support an unsupported claim.
+- Add a Critical Warning for every central unsupported numbered citation, unresolved citation metadata problem, or citation-number/reference mismatch.
+
 ---
 
 ## 2.5 Evidence Package Export
@@ -519,7 +602,7 @@ Use when the user asks to save results, generate an evidence package, export End
 Visible default pipeline for paragraph citation/export work:
 
 ```text
-paragraph → claim extraction → one Zotero local search pass → evidence matrix → citation placement → revised/diff paragraph → Zotero metadata + PDF links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown evidence report → EndNote RIS
+paragraph → claim extraction → existing numbered citation repair when supplied references are present → one Zotero local search pass → evidence matrix → citation placement → citation support ledger → revised/diff paragraph → Zotero metadata + PDF links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown evidence report → EndNote RIS
 ```
 
 The default deliverable is exactly two files inside a skill-named, topic-specific output folder:
@@ -547,6 +630,7 @@ Do not route to this module when the user explicitly opts out with `只在聊天
 
 1. **Run or reuse the evidence workflow**
    - For paragraph input, run **Module 2** first as the analysis stage of the **Paragraph Citation Package Workflow (Module 2 + Module 2.5)**.
+   - For paragraph input with supplied numbered citations or reference lists, run **Module 2.2 Existing Numbered Citation Repair** after claim extraction and before final citation placement/export; preserve `Original citation number`, mark unsupported numbered citation cases, and carry `Original citation number`, `Support verdict`, `Action`, and `RIS action` into the Citation Support Ledger, the report, and RIS QC tables.
    - For paragraph citation-support requests such as `/zotero-evidence-review`, `使用技能`, `找证据`, `找引文`, `补引用`, `推荐引用`, `citation`, `refs`, `参考文献`, or `文献引用`, default to the full workflow and write both `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_evidence_review.md` and `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris` unless the user explicitly opts out of file generation.
    - For topic/search input, run **Module 1** first and convert the final included papers into a reference table.
    - For biomedical paragraph/search requests, the package workflow attempts automatic PubMed expansion after Zotero local search when a PubMed-capable tool is configured and visible.
@@ -573,6 +657,10 @@ Do not route to this module when the user explicitly opts out with `只在聊天
    - When the same article appears in both Zotero and PubMed, mark source as `Zotero + PubMed` and retain Zotero item/PDF/collection links in the report.
    - When a PubMed record is not present in Zotero and is relevant, mark source as `PubMed` and recommendation as `consider importing` or `recommend citing`.
    - If DOI/PMID/title conflicts suggest two records may not be the same article, mark `Possible metadata mismatch` and keep them unresolved until checked.
+   - Include a Citation Support Ledger linking each claim/sentence to its recommended citation, source layer, evidence level, inspection route, evidence location, support verdict, RIS action, and required wording/action.
+   - For every recommended citation, record whether the source was inspected through `Zotero metadata`, `Zotero full text`, `Zotero abstract`, `PubMed details`, `PubMed abstract`, or `Not inspected`; search-result snippets alone are insufficient.
+   - Use support verdicts exactly from `supports`, `partly supports`, `background only`, `contradicts`, `not addressed`, or `not inspected`.
+   - Do not include `not inspected`, `contradicts`, or `not addressed` citations in RIS by default; set `RIS action = Exclude` or `Verify`. Use `Optional` for `background only` unless copy-ready wording explicitly frames it as background/context.
 5. **Standardize RIS references at export time by PMID/DOI**
    - After selecting final recommended references, standardize the RIS metadata using identifiers rather than relying only on local Zotero fields.
    - If a selected reference has a PMID and PubMed metadata can be retrieved, use the PMID/PubMed record as the preferred source for RIS citation fields.
@@ -854,6 +942,17 @@ Reference canonicalization report rules:
 - PubMed-vs-Zotero conflicts must be marked `Possible metadata mismatch` and unresolved mismatch must not enter RIS.
 - RIS action must be exactly one of `Include`, `Exclude`, `Verify`, or `Optional`, with a reason for each action.
 
+Citation support ledger rules:
+
+- `Citation Support Ledger` must appear in every evidence package report that recommends citations, updates numbered citations, or writes RIS.
+- The ledger must contain `Claim / sentence`, `Recommended citation`, `Source layer`, `Evidence level`, `Inspection route`, `Evidence location`, `Support verdict`, `RIS action`, and `Required wording/action` columns.
+- Allowed `Inspection route` values are `Zotero metadata`, `Zotero full text`, `Zotero abstract`, `PubMed details`, `PubMed abstract`, or `Not inspected`.
+- Allowed `Support verdict` values are `supports`, `partly supports`, `background only`, `contradicts`, `not addressed`, and `not inspected`.
+- All citations in Copy-ready Manuscript Text, Annotated Recommended Text, Citation Placement, Reference Table, Reference Canonicalization Gate, or RIS must have a matching ledger row.
+- `not inspected`, `contradicts`, and `not addressed` rows must not enter RIS by default and must use `RIS action = Exclude` or `Verify` unless the user explicitly overrides after seeing the warning.
+- `background only` rows may use `RIS action = Optional`, or `Include` only when the recommended wording makes the background role explicit.
+- Existing Numbered Citation Repair rows must propagate `Original citation number`, mapped claim, `Support verdict`, action, replacement candidate, and `RIS action` into Citation Support Ledger rows. Unsupported numbered citations must also appear in Critical Warnings or Claims to Revise or Remove.
+
 Copy-ready and annotated text rules:
 
 - `Copy-ready Manuscript Text` must be directly copyable into the manuscript and must not contain internal review notes, workflow explanations, tool-status comments, or `citation should be verified` wording.
@@ -970,10 +1069,11 @@ RIS tag compatibility rules:
 
 Before reporting success, check:
 
-- Markdown report exists and includes metadata/use status, critical warnings immediately after metadata/use status, copy-ready manuscript text, annotated recommended text, Zotero search summary, a PubMed Expansion section with query and execution status, Search Reproducibility with Zotero semantic search, Zotero keyword/structured search, PubMed search, attempted/planned PubMed query when unavailable or failed, included PMIDs, excluded records and reasons, `full_text_inspected: yes/no/partial`, claim–evidence matrix, integrated writing advice, reviewer-risk assessment, Reference Canonicalization Gate, metadata quality-control section, and export file section.
+- Markdown report exists and includes metadata/use status, critical warnings immediately after metadata/use status, copy-ready manuscript text, annotated recommended text, Zotero search summary, a PubMed Expansion section with query and execution status, Search Reproducibility with Zotero semantic search, Zotero keyword/structured search, PubMed search, attempted/planned PubMed query when unavailable or failed, included PMIDs, excluded records and reasons, `full_text_inspected: yes/no/partial`, claim–evidence matrix, Citation Support Ledger, integrated writing advice, reviewer-risk assessment, Reference Canonicalization Gate, metadata quality-control section, and export file section.
 - Metadata and Use Status records `Related prior packages` and `Run relationship rationale`; new reports may say `Potentially supersedes`, `Complementary to`, or `Related; supersession unclear`, but old reports are not automatically modified and project-level summary files are generated only when the user requests consolidation.
 - Reference Canonicalization Gate checks DOI, PMID, title, first author, and year for every selected reference; records canonical identifier, canonical Zotero key, duplicate keys, duplicate check result, metadata source of truth, RIS action, and reason; merges same DOI/PMID records; blocks unresolved mismatch from RIS.
 - Critical Warnings contains every high-risk issue that meets the trigger conditions and uses `Affected claim`, `Risk`, and `Required action`; if there are no critical warnings, it says exactly `No critical warnings`.
+- Citation Support Ledger contains every recommended citation and every RIS candidate, records inspection route and evidence location, uses allowed support verdicts, and blocks `not inspected`, `contradicts`, and `not addressed` rows from RIS by default.
 - Copy-ready Manuscript Text is directly copyable, preserves the manuscript language, and contains no internal review notes, workflow explanations, tool-status comments, or `citation should be verified` wording.
 - Annotated Recommended Text explains citation placement, source layer, evidence level, caveats, and reviewer risk separately from the copy-ready prose.
 - Metadata/use status includes exactly one package status: `Ready`, `Caution`, `Partial`, `Superseded`, or `Unknown`.
@@ -1000,14 +1100,16 @@ The skill must run this internal QA prompt immediately before writing Markdown/R
 检查：
 1. Report 是否包含 Status、Critical Warnings、Copy-ready Manuscript Text；
 2. Claim–Evidence Matrix 是否包含 Evidence level 和 Source layer；
-3. 是否把 current-study finding 错写成 external evidence；
-4. 是否存在 direct causality、BMI independence、horizontal pleiotropy 等过度表述；
-5. PubMed status 是否真实反映工具执行情况；
-6. PubMed-only RIS 是否只来自 completed PubMed search；
-7. unresolved metadata mismatch 是否被排除出 RIS；
-8. RIS 是否无 Markdown heading/code fence；
-9. 所有路径是否为相对路径；
-10. 若发现问题，先修正报告再宣布生成完成。
+3. Citation Support Ledger 是否覆盖所有推荐引文/RIS候选，并记录 Inspection route、Evidence location、Support verdict、RIS action；
+4. 是否把 current-study finding 错写成 external evidence；
+5. 是否存在 direct causality、BMI independence、horizontal pleiotropy 等过度表述；
+6. PubMed status 是否真实反映工具执行情况；
+7. PubMed-only RIS 是否只来自 completed PubMed search；
+8. unresolved metadata mismatch 是否被排除出 RIS；
+9. not inspected / contradicts / not addressed 的 citation ledger 行是否被排除出 RIS 或标记 Verify；
+10. RIS 是否无 Markdown heading/code fence；
+11. 所有路径是否为相对路径；
+12. 若发现问题，先修正报告再宣布生成完成。
 输出：内部自检清单，不必完整暴露给用户；最终 chat 只显示 status、paths 和 critical warnings。
 ```
 
@@ -1017,6 +1119,7 @@ Pre-write QA gate checklist:
 - `Critical Warnings`: the section exists immediately after metadata/use status; it either contains a table with `Affected claim`, `Risk`, `Required action`, or exactly `No critical warnings`; warnings are consistent with package status.
 - `Copy-ready Manuscript Text`: copy-ready text exists, preserves manuscript language, contains no internal QA/tool notes, and excludes unverifiable or unsupported assertions.
 - `Claim evidence level`: every Claim–Evidence Matrix row has `Evidence level` using `A`, `B`, `C`, `D`, or `E`; Citation Placement and Reviewer-risk Assessment preserve the same level.
+- `Citation Support Ledger`: every citation in copy-ready/annotated text, Citation Placement, Reference Table, Reference Canonicalization Gate, and RIS has a ledger row with inspection route, evidence location, support verdict, RIS action, and required wording/action; `not inspected`, `contradicts`, and `not addressed` rows are excluded from RIS or marked `Verify`.
 - `Source layer`: every claim-level row distinguishes `Current study`, `Zotero external evidence`, `PubMed external evidence`, `Interpretive bridge`, or `Unsupported gap`; current-study findings are not described as proved by external literature.
 - `Overclaim control`: direct causality, BMI independence, horizontal pleiotropy, mediation/mechanism, and genetic-prioritization claims are hedged unless directly supported; E-level claims are removed, marked for verification, or strongly hedged rather than written as established facts.
 - `PubMed status`: `Completed` is used only when PubMed search actually executed and relevant metadata was inspected; unavailable/failed/not-executed cases use the exact allowed status and include the planned or attempted query.
@@ -1363,9 +1466,9 @@ No critical warnings
 > {manuscript-ready text only; preserve the manuscript's original language unless translation is requested; hedge according to A-E evidence level; do not include workflow notes, internal caveats, or verification reminders}
 
 ## 5. 注释版推荐文本（Annotated Recommended Text）
-| Sentence / clause | Recommended text | Source layer | Evidence level | Citation rationale | Caveat / reviewer risk |
-|-------------------|------------------|--------------|----------------|--------------------|------------------------|
-| ... | ... | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | A / B / C / D / E | ... | ... |
+| Sentence / clause | Recommended text | Issue type / writing issue | Source layer | Evidence level | Citation rationale | Caveat / reviewer risk |
+|-------------------|------------------|----------------------------|--------------|----------------|--------------------|------------------------|
+| ... | ... | weak opening / overconfident framing / current-study vs external-evidence confusion / unsupported numbered citation / none | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | A / B / C / D / E | ... | ... |
 
 ## 6. 主张—证据矩阵（Claim–Evidence Matrix）
 | # | Claim | Source layer | Evidence level | Zotero evidence | PubMed evidence | Evidence status | Confidence | Risk | Recommended action | Recommended citation |
@@ -1373,9 +1476,27 @@ No critical warnings
 | 1 | ... | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | A / B / C / D / E | Author Year / none | PubMed confirms / not searched / no direct evidence | supported / partly supported / current-study only / bridge only / gap / needs verification | High / Medium / Low | Low / Medium / High | keep / hedge / move to annotated text / remove / verify / mark as knowledge gap | Author Year / none |
 
 ## 7. 引文放置建议（Citation Placement）
-| 句子 / 位置 | 推荐引文 | 用途 | Source layer | Evidence level | 措辞建议 |
-|-------------|----------|------|--------------|----------------|----------|
-| ... | Author Year | background / direct / method / caveat / bridge | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | A / B / C / D / E | ... |
+| 句子 / 位置 | Original citation number | 推荐引文 | 用途 | Source layer | Evidence level | 措辞建议 |
+|-------------|--------------------------|----------|------|--------------|----------------|----------|
+| ... | 6 / 18 / none | Author Year | background / direct / method / caveat / bridge | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | A / B / C / D / E | ... |
+
+### Citation Support Ledger
+| Claim / sentence | Recommended citation | Source layer | Evidence level | Inspection route | Evidence location | Support verdict | RIS action | Required wording/action |
+|------------------|----------------------|--------------|----------------|------------------|-------------------|-----------------|------------|-------------------------|
+| ... | Author Year / none | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | A / B / C / D / E | Zotero metadata / Zotero full text / Zotero abstract / PubMed details / PubMed abstract / Not inspected | Zotero note/PDF page/annotation; PMID abstract; DOI metadata; or none | supports / partly supports / background only / contradicts / not addressed / not inspected | Include / Exclude / Verify / Optional | keep / hedge / reframe as background / remove / replace citation / complete inspection |
+
+Ledger rules:
+- Every citation appearing in Copy-ready Manuscript Text, Annotated Recommended Text, Citation Placement, Reference Table, Reference Canonicalization Gate, or RIS must appear in this ledger.
+- `Inspection route` must name the inspected evidence path; search-result snippets alone are not an inspection route.
+- `Support verdict` must be one of `supports`, `partly supports`, `background only`, `contradicts`, `not addressed`, or `not inspected`.
+- `not inspected`, `contradicts`, and `not addressed` must not enter RIS by default; use `RIS action = Exclude` or `Verify`.
+- `background only` may be `Optional` or included only when the manuscript wording explicitly frames the source as background/context rather than direct support.
+- If Existing Numbered Citation Repair is present, propagate `Original citation number`, `Support verdict`, action, replacement candidate, and `RIS action` into the relevant ledger rows.
+
+### Existing Numbered Citation Repair
+| Original citation number | Supplied reference | Claim supported by this number | Support verdict | Verification verdict | Evidence level | Action: Keep / Replace / Remove / Verify / Add supporting citation | Replacement candidate | Original citation number preserved for audit | Final numbering handled by EndNote/Word | RIS action | Reason |
+|--------------------------|--------------------|--------------------------------|-----------------|----------------------|----------------|--------------------------------------------------------------------|-----------------------|----------------------------------------|----------------------------------------|------------|--------|
+| 6 | Wang 2022 Nat Genet sedentary-behavior GWAS | sedentary behavior contributes directionally to PCOS susceptibility | partial / no | partially supported / not addressed for this claim | C / E | Replace / reframe as background | Shao 2026 / other direct PCOS-sedentary or MR reproductive-health genetics source | yes | yes | Exclude / Optional | Supports sedentary-behavior GWAS/background, not the specific PCOS directional claim unless text is reframed |
 
 ## 8. Evidence Logic Chain
 | Step | Current-study element | External evidence link | Source layer | Evidence level | Inference limit |
@@ -1429,7 +1550,7 @@ No critical warnings
 ## 14. Claims to Revise or Remove
 | Claim | Problem | Evidence level | Source layer | Required revision |
 |-------|---------|----------------|--------------|-------------------|
-| ... | unsupported / overconfident / current-study miscast as external evidence / metadata unresolved | A / B / C / D / E | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | hedge / remove / verify / move to gap statement |
+| ... | unsupported / overconfident / weak opening / current-study miscast as external evidence / unsupported numbered citation / metadata unresolved | A / B / C / D / E | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | hedge / remove / verify / replace citation / reframe as background / move to gap statement |
 
 ## 15. 证据缺口与审稿风险（Gaps and Reviewer-risk Assessment）
 | Affected claim / sentence | Risk | Severity | Evidence basis | Suggested fix |
@@ -1439,14 +1560,14 @@ No critical warnings
 ## 16. 元数据质量控制（Metadata Quality Control）
 
 ### Reference Canonicalization Gate
-| Selected reference | Canonical identifier | DOI | PMID | Title check | First author check | Year check | Canonical Zotero key | Duplicate keys | Duplicate check result | Metadata source of truth | RIS action | Reason |
-|--------------------|----------------------|-----|------|-------------|--------------------|------------|----------------------|----------------|------------------------|--------------------------|------------|--------|
-| Author Year | DOI / PMID / Zotero key: ... | matched / missing / conflict | matched / missing / conflict | matched / conflict | matched / conflict | matched / conflict | KEY | KEY2; KEY3 / none | unique / merged by DOI / merged by PMID / possible duplicate / duplicate excluded / unresolved duplicate | PMID/PubMed / DOI metadata / Zotero metadata / manual verification required | Include / Exclude / Verify / Optional | Canonical identifier chosen after DOI, PMID, title, first author, and year checks; Possible metadata mismatch if conflicts remain |
+| Selected reference | Original citation number | Canonical identifier | DOI | PMID | Title check | First author check | Year check | Canonical Zotero key | Duplicate keys | Duplicate check result | Metadata source of truth | RIS action | Reason |
+|--------------------|--------------------------|----------------------|-----|------|-------------|--------------------|------------|----------------------|----------------|------------------------|--------------------------|------------|--------|
+| Author Year | 6 / none | DOI / PMID / Zotero key: ... | matched / missing / conflict | matched / missing / conflict | matched / conflict | matched / conflict | matched / conflict | KEY | KEY2; KEY3 / none | unique / merged by DOI / merged by PMID / possible duplicate / duplicate excluded / unresolved duplicate | PMID/PubMed / DOI metadata / Zotero metadata / manual verification required | Include / Exclude / Verify / Optional | Canonical identifier chosen after DOI, PMID, title, first author, and year checks; Possible metadata mismatch if conflicts remain; unsupported numbered citation rows are excluded or marked Verify |
 
 ### Metadata QC Table
-| Citation | Missing metadata | Metadata mismatch | Duplicate warning | Evidence source | RIS standardization source | RIS action |
-|----------|------------------|-------------------|-------------------|-----------------|----------------------------|------------|
-| Author Year | DOI / PMID / pages / none | Possible metadata mismatch: Zotero DOI ... vs PubMed DOI ... / none | Possible duplicate with Author Year / none | Zotero / PubMed / Zotero + PubMed | PMID/PubMed / DOI / Zotero metadata / PubMed metadata | Include / exclude / needs manual check |
+| Citation | Original citation number | Missing metadata | Metadata mismatch | Duplicate warning | Evidence source | RIS standardization source | RIS action |
+|----------|--------------------------|------------------|-------------------|-------------------|-----------------|----------------------------|------------|
+| Author Year | 6 / none | DOI / PMID / pages / none | Possible metadata mismatch: Zotero DOI ... vs PubMed DOI ... / none | Possible duplicate with Author Year / none | Zotero / PubMed / Zotero + PubMed | PMID/PubMed / DOI / Zotero metadata / PubMed metadata | Include / exclude / needs manual check |
 
 ## 17. 导出文件（Export File）
 - Markdown report: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_evidence_review.md`
@@ -1455,11 +1576,14 @@ No critical warnings
 - Package status: Ready / Caution / Partial / Superseded / Unknown.
 - Status rationale: {main trigger for the assigned status}.
 - RIS standardization source: PMID/PubMed metadata when available and retrieved; DOI metadata when PMID is unavailable and DOI lookup succeeded; otherwise inspected Zotero or PubMed source metadata.
-- RIS inclusion rule: final recommended citations only; low-relevance hits excluded.
+- RIS inclusion rule: final recommended citations only; low-relevance hits and unsupported numbered citation rows excluded.
+- Numbering rule: `Original citation number` is retained for auditability only; final EndNote numbering is controlled by the manuscript citation processor after RIS import.
 - Metadata warnings: {missing fields, mismatches, duplicate warnings, or none}
 ```
 
 Rules:
+- If supplied numbered citations are present, include the Existing Numbered Citation Repair table and carry `Original citation number`, `Claim supported by this number`, `Support verdict`, `Verification verdict`, `Action: Keep / Replace / Remove / Verify / Add supporting citation`, `Replacement candidate`, `Original citation number preserved for audit`, `Final numbering handled by EndNote/Word`, and `RIS action` into Citation Placement, Reference Canonicalization Gate, and Metadata QC.
+- If the manuscript has a weak opening, overconfident framing, or current-study findings that could be mistaken for external evidence support, flag the issue in Annotated Recommended Text and Claims to Revise or Remove before presenting the copy-ready text.
 - Keep Zotero item keys hidden in links or notes, not as primary citation labels.
 - If a PDF attachment is unavailable, use `—` in the PDF column.
 - If collection membership is unknown, use `Not available`.
@@ -1491,15 +1615,16 @@ ER  -
 ```
 
 Rules:
-- The RIS file must contain RIS records only; no Markdown headings, prose, code fences, or comments.
+- The RIS file must contain RIS records only; no Markdown headings, prose, code fences, or comments. It also must not contain audit tables, citation-repair notes, or original-number annotations.
 - Every record starts with `TY  -` and ends with `ER  -`.
 - Use one `AU  -` line per author and one `KW  -` line per retained scholarly keyword/tag.
 - Filter out personal/workflow tags before writing `KW`, including emoji-only tags, pure-symbol tags, tags beginning with `/`, and local reading-status tags.
 - Split page ranges into `SP` and `EP` when possible; if not possible, write the original page string to `SP` and omit `EP`.
 - Omit unknown fields rather than guessing.
 - Add `N1  - Zotero key: XXXXXXXX` for Zotero items only.
-- PubMed-only records require metadata from an actually completed PubMed search; when PubMed is unavailable, do not create PubMed-only RIS records.
+- PubMed-only records require metadata from an actually completed PubMed search and completed metadata inspection; when PubMed is unavailable or metadata has not been inspected, do not create PubMed-only RIS records.
 - Exclude unresolved metadata mismatch and unresolved duplicate warning records unless the user explicitly selects the canonical record.
+- Include final recommended citations only. Original numbered references marked `no`, `contradictory`, or `unverified` must be excluded by default; references marked `partial` may enter RIS only when the revised manuscript keeps them as background/context and the Markdown report marks that limited role with `RIS action = Optional` or `Include`.
 
 ### VERIFICATION_REPORT
 

@@ -1,0 +1,30 @@
+{
+  "pmid": "37479783",
+  "title": "Testing the causal relationships of physical activity and sedentary behaviour with mental health and substance use disorders: a Mendelian randomisation study.",
+  "authors": [
+    "Iob E",
+    "Pingault JB",
+    "Munafò MR",
+    "Stubbs B",
+    "Gilthorpe MS",
+    "Maihofer AX",
+    "Psychiatric Genomics Consortium Posttraumatic Stress Disorder Working Group",
+    "Danese A"
+  ],
+  "journal": "Mol Psychiatry",
+  "publicationDate": "2023 Aug",
+  "volume": "28",
+  "issue": "8",
+  "pages": "3429-3443",
+  "abstract": "1. Mol Psychiatry. 2023 Aug;28(8):3429-3443. doi: 10.1038/s41380-023-02133-9.\nEpub  2023 Jul 21.\n\nTesting the causal relationships of physical activity and sedentary behaviour \nwith mental health and substance use disorders: a Mendelian randomisation study.\n\nIob E(1)(2), Pingault JB(3)(4), Munafò MR(5)(6), Stubbs B(7)(8), Gilthorpe \nMS(9)(10)(11), Maihofer AX(12); Psychiatric Genomics Consortium Posttraumatic \nStress Disorder Working Group; Danese A(3)(13)(14).\n\nAuthor information:\n(1)Social, Genetic & Developmental Psychiatry (SGDP) Centre, Institute of \nPsychiatry, Psychology & Neuroscience, King's College London, London, UK. \neleonora.iob@kcl.ac.uk.\n(2)Department of Epidemiology and Public Health, Institute of Epidemiology and \nPublic Health, University College London, London, UK. eleonora.iob@kcl.ac.uk.\n(3)Social, Genetic & Developmental Psychiatry (SGDP) Centre, Institute of \nPsychiatry, Psychology & Neuroscience, King's College London, London, UK.\n(4)Department of Clinical, Educational, and Health Psychology, Division of \nPsychology & Language Sciences, University College London, London, UK.\n(5)Medical Research Council (MRC) Integrative Epidemiology Unit, University of \nBristol, Bristol, UK.\n(6)School of Psychological Science, University of Bristol, Bristol, UK.\n(7)Physiotherapy Department, South London and Maudsley NHS Foundation Trust, \nLondon, UK.\n(8)Health Service and Population Research Department, Institute of Psychiatry, \nPsychology and Neuroscience, King's College London, London, UK.\n(9)Leeds Institute for Data Analytics, University of Leeds, Leeds, UK.\n(10)Obesity Institute, Leeds Beckett University, Leeds, UK.\n(11)Alan Turing Institute, British Library, London, UK.\n(12)Department of Psychiatry, University of California San Diego, San Diego, CA, \nUSA.\n(13)Department of Child and Adolescent Psychiatry, Institute of Psychiatry, \nPsychology & Neuroscience, King's College London, London, UK.\n(14)National and Specialist CAMHS Clinic for Trauma, Anxiety, and Depression, \nSouth London and Maudsley NHS Foundation Trust, London, UK.\n\nObservational studies suggest that physical activity can reduce the risk of \nmental health and substance use disorders. However, it is unclear whether this \nrelationship is causal or explained by confounding bias (e.g., common underlying \ncauses or reverse causality). We investigated the bidirectional causal \nrelationship of physical activity (PA) and sedentary behaviour (SB) with ten \nmental health and substance use disorders, applying two-sample Mendelian \nRandomisation (MR). Genetic instruments for the exposures and outcomes were \nderived from the largest available, non-overlapping genome-wide association \nstudies (GWAS). Summary-level data for objectively assessed PA \n(accelerometer-based average activity, moderate activity, and walking) and SB \nand self-reported moderate-to-vigorous PA were obtained from the UK Biobank. \nData for mental health/substance use disorders were obtained from the \nPsychiatric Genomics Consortium and the GWAS and Sequencing Consortium of \nAlcohol and Nicotine Use. MR estimates were combined using inverse variance \nweighted meta-analysis (IVW). Sensitivity analyses were conducted to assess the \nrobustness of the results. Accelerometer-based average PA was associated with a \nlower risk of depression (b = -0.043, 95% CI: -0.071 to -0.016, effect \nsize[OR] = 0.957) and cigarette smoking (b = -0.026; 95% CI: -0.035 to -0.017, \neffect size[β] = -0.022). Accelerometer-based SB decreased the risk of anorexia \n(b = -0.341, 95% CI: -0.530 to -0.152, effect size[OR] = 0.711) and \nschizophrenia (b = -0.230; 95% CI: -0.285 to -0.175, effect size[OR] = 0.795). \nHowever, we found evidence of reverse causality in the relationship between SB \nand schizophrenia. Further, PTSD, bipolar disorder, anorexia, and ADHD were all \nassociated with increased PA. This study provides evidence consistent with a \ncausal protective effect of objectively assessed but not self-reported PA on \nreduced depression and cigarette smoking. Objectively assessed SB had a \nprotective relationship with anorexia. Enhancing PA may be an effective \nintervention strategy to reduce depressive symptoms and addictive behaviours, \nwhile promoting sedentary or light physical activities may help to reduce the \nrisk of anorexia in at-risk individuals.\n\n© 2023. The Author(s).\n\nDOI: 10.1038/s41380-023-02133-9\nPMCID: PMC10618087\nPMID: 37479783 [Indexed for MEDLINE]\n\nConflict of interest statement: BS is on the Editorial Board of Ageing Research \nReviews, Mental Health and Physical Activity, The Journal of Evidence Based \nMedicine, and The Brazilian Journal of Psychiatry. BS has received honorarium \nfrom a co-edited book on exercise and mental illness and advisory work from \nASICS Europe BV for unrelated work.",
+  "doi": "doi: 10.1038/s41380-023-02133-9",
+  "url": "https://pubmed.ncbi.nlm.nih.gov/37479783/",
+  "publicationTypes": [
+    "Meta-Analysis",
+    "Journal Article",
+    "Research Support, N.I.H., Extramural",
+    "Research Support, Non-U.S. Gov't"
+  ],
+  "meshTerms": [],
+  "keywords": []
+}

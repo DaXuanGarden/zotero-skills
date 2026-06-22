@@ -116,6 +116,15 @@ DEFAULT_EXPORT_REQUIREMENTS = [
     "Slash command and simple-request entry",
     "/zotero-evidence-review",
     "Paragraph-first, package by default for citation work",
+    "reference_update",
+    "检查参考文献",
+    "更新参考文献",
+    "编号引用",
+    "6不支持",
+    "citation 6 does not support",
+    "replace citation",
+    "refresh RIS",
+    "regenerate RIS",
     "使用技能",
     "完整工作流",
     "找引文",
@@ -131,6 +140,30 @@ DEFAULT_EXPORT_REQUIREMENTS = [
     "不导出",
     "chat only",
     "Module 2 → Module 2.5",
+]
+NUMBERED_CITATION_REPAIR_REQUIREMENTS = [
+    "Existing numbered citation repair first",
+    "Module 2.2: Existing Numbered Citation Repair",
+    "citation number → supplied reference metadata → claim",
+    "Keep",
+    "Replace",
+    "Remove",
+    "Verify",
+    "Add supporting citation",
+    "reference-update workflow",
+    "Claim supported by this number",
+    "Support verdict",
+    "Original citation number preserved for audit",
+    "Final numbering handled by EndNote/Word",
+    "Replacement candidate",
+    "RIS action",
+    "unsupported numbered citation",
+    "EndNote/Word will renumber",
+    "6 = Wang et al. 2022 Nat Genet physical activity/sedentary behavior GWAS",
+    "LST directionally contributes to PCOS susceptibility",
+    "Several genetic observations were consistent with",
+    "weak opening",
+    "current-study framing",
 ]
 UNIFIED_WORKFLOW_REQUIREMENTS = [
     "Paragraph Citation Package Workflow",
@@ -166,6 +199,19 @@ PUBMED_GUARDRAIL_REQUIREMENTS = [
     "Tool visibility alone is not enough",
     "PubMed-only records only when PubMed status is `Completed`",
 ]
+
+PUBMED_SEQUENTIAL_GUARDRAIL_REQUIREMENTS = [
+    "PubMed Sequential Execution Guardrail",
+    "Zotero local search and PubMed expansion as separate evidence phases",
+    "dependency chain, not a batch job",
+    "do not schedule `pubmed_search` in the same tool-call batch as downstream tools",
+    "Run one PubMed step, inspect its result",
+    "stop the PubMed chain immediately",
+    "PubMed-only records must not be added to RIS unless PubMed status is `Completed`",
+    "retry the query at most once",
+    "do not fabricate PMIDs or continue to PubMed metadata inspection",
+]
+
 PHASE10_REQUIREMENTS = [
     "### Evidence Package Status",
     "Ready",
@@ -187,6 +233,42 @@ CLAIM_EVIDENCE_MATRIX_HEADER = (
     "| # | Claim | Source layer | Evidence level | Zotero evidence | PubMed evidence | "
     "Evidence status | Confidence | Risk | Recommended action | Recommended citation |"
 )
+NUMBERED_CITATION_REPAIR_HEADER = (
+    "| Original citation number | Supplied reference | Claim supported by this number | "
+    "Support verdict | Verification verdict | Evidence level | "
+    "Action: Keep / Replace / Remove / Verify / Add supporting citation | Replacement candidate | "
+    "Original citation number preserved for audit | Final numbering handled by EndNote/Word | RIS action | Reason |"
+)
+CITATION_SUPPORT_LEDGER_REQUIREMENTS = [
+    "Citation Support Ledger",
+    "Claim / sentence",
+    "Recommended citation",
+    "Source layer",
+    "Evidence level",
+    "Inspection route",
+    "Evidence location",
+    "Support verdict",
+    "RIS action",
+    "Required wording/action",
+    "Zotero metadata",
+    "Zotero full text",
+    "Zotero abstract",
+    "PubMed details",
+    "PubMed abstract",
+    "Not inspected",
+    "supports",
+    "partly supports",
+    "background only",
+    "contradicts",
+    "not addressed",
+    "not inspected",
+    "not inspected`, `contradicts`, and `not addressed` must not enter RIS by default",
+    "Existing Numbered Citation Repair rows must propagate",
+]
+CITATION_SUPPORT_LEDGER_HEADER = (
+    "| Claim / sentence | Recommended citation | Source layer | Evidence level | "
+    "Inspection route | Evidence location | Support verdict | RIS action | Required wording/action |"
+)
 QA_SELF_CHECK_REQUIREMENTS = [
     "Evidence Package QA Self-Check Prompt",
     "Run pre-write QA self-check, then write the two files",
@@ -194,6 +276,8 @@ QA_SELF_CHECK_REQUIREMENTS = [
     "Post-write QA gate",
     "Report 是否包含 Status、Critical Warnings、Copy-ready Manuscript Text",
     "Claim–Evidence Matrix 是否包含 Evidence level 和 Source layer",
+    "Citation Support Ledger 是否覆盖所有推荐引文/RIS候选",
+    "not inspected / contradicts / not addressed 的 citation ledger 行是否被排除出 RIS 或标记 Verify",
     "current-study finding 错写成 external evidence",
     "direct causality、BMI independence、horizontal pleiotropy",
     "PubMed status 是否真实反映工具执行情况",
@@ -353,7 +437,9 @@ def main() -> None:
     ok("evidence package export requirements present")
 
     require_all(text, DEFAULT_EXPORT_REQUIREMENTS, "default export routing requirement")
-    ok("default citation-support export routing requirements present")
+    require_all(text, NUMBERED_CITATION_REPAIR_REQUIREMENTS, "numbered citation repair requirement")
+    require_all(text, CITATION_SUPPORT_LEDGER_REQUIREMENTS, "Citation Support Ledger requirement")
+    ok("default citation-support, numbered-citation repair, and Citation Support Ledger routing requirements present")
 
     require_all(text, UNIFIED_WORKFLOW_REQUIREMENTS, "unified paragraph citation workflow requirement")
     ok("unified paragraph citation workflow requirements present")
@@ -361,6 +447,7 @@ def main() -> None:
     require_all(text, MCP_READINESS_REQUIREMENTS, "MCP readiness requirement")
     require_all(text, PUBMED_TOOL_REQUIREMENTS, "PubMed tool requirement")
     require_all(text, PUBMED_GUARDRAIL_REQUIREMENTS, "PubMed guardrail requirement")
+    require_all(text, PUBMED_SEQUENTIAL_GUARDRAIL_REQUIREMENTS, "PubMed sequential execution guardrail")
     ok("MCP readiness and PubMed guardrail requirements present")
 
     require_all(text, PHASE10_REQUIREMENTS, "Phase 10 evidence package format requirement")
@@ -406,8 +493,8 @@ def main() -> None:
     )
     require_table_header(
         evidence_report_template,
-        r"\| Sentence / clause \| Recommended text \| Source layer \| Evidence level \| Citation rationale \| Caveat / reviewer risk \|",
-        ["Sentence / clause", "Recommended text", "Source layer", "Evidence level", "Citation rationale", "Caveat / reviewer risk"],
+        r"\| Sentence / clause \| Recommended text \| Issue type / writing issue \| Source layer \| Evidence level \| Citation rationale \| Caveat / reviewer risk \|",
+        ["Sentence / clause", "Recommended text", "Issue type / writing issue", "Source layer", "Evidence level", "Citation rationale", "Caveat / reviewer risk"],
         "Annotated Recommended Text",
     )
     require_table_header(
@@ -430,9 +517,10 @@ def main() -> None:
     )
     require_table_header(
         evidence_report_template,
-        r"\| Selected reference \| Canonical identifier \| DOI \| PMID \| Title check \| First author check \| Year check \| Canonical Zotero key \| Duplicate keys \| Duplicate check result \| Metadata source of truth \| RIS action \| Reason \|",
+        r"\| Selected reference \| Original citation number \| Canonical identifier \| DOI \| PMID \| Title check \| First author check \| Year check \| Canonical Zotero key \| Duplicate keys \| Duplicate check result \| Metadata source of truth \| RIS action \| Reason \|",
         [
             "Selected reference",
+            "Original citation number",
             "Canonical identifier",
             "DOI",
             "PMID",
@@ -450,8 +538,43 @@ def main() -> None:
     )
     require_table_header(
         evidence_report_template,
-        r"\| Citation \| Missing metadata \| Metadata mismatch \| Duplicate warning \| Evidence source \| RIS standardization source \| RIS action \|",
-        ["Missing metadata", "Metadata mismatch", "Duplicate warning", "Evidence source", "RIS standardization source", "RIS action"],
+        re.escape(CITATION_SUPPORT_LEDGER_HEADER),
+        [
+            "Claim / sentence",
+            "Recommended citation",
+            "Source layer",
+            "Evidence level",
+            "Inspection route",
+            "Evidence location",
+            "Support verdict",
+            "RIS action",
+            "Required wording/action",
+        ],
+        "Citation Support Ledger",
+    )
+    require_table_header(
+        evidence_report_template,
+        re.escape(NUMBERED_CITATION_REPAIR_HEADER),
+        [
+            "Original citation number",
+            "Supplied reference",
+            "Claim supported by this number",
+            "Support verdict",
+            "Verification verdict",
+            "Evidence level",
+            "Action: Keep / Replace / Remove / Verify / Add supporting citation",
+            "Replacement candidate",
+            "Original citation number preserved for audit",
+            "Final numbering handled by EndNote/Word",
+            "RIS action",
+            "Reason",
+        ],
+        "Existing Numbered Citation Repair",
+    )
+    require_table_header(
+        evidence_report_template,
+        r"\| Citation \| Original citation number \| Missing metadata \| Metadata mismatch \| Duplicate warning \| Evidence source \| RIS standardization source \| RIS action \|",
+        ["Citation", "Original citation number", "Missing metadata", "Metadata mismatch", "Duplicate warning", "Evidence source", "RIS standardization source", "RIS action"],
         "Metadata Quality Control",
     )
     if "## 2. 推荐稿件文本（Recommended Manuscript Text）" in evidence_report_template:
@@ -489,6 +612,14 @@ def main() -> None:
     ]
     require_all(text, search_reproducibility_requirements, "search reproducibility requirement")
     reference_canonicalization_requirements = [
+        "Existing Numbered Citation Repair",
+        "Original citation number",
+        "Claim supported by this number",
+        "Support verdict",
+        "Verification verdict",
+        "Original citation number preserved for audit",
+        "Final numbering handled by EndNote/Word",
+        "unsupported numbered citation",
         "Reference Canonicalization Gate",
         "canonical identifier",
         "DOI, PMID, title, first author, and year",

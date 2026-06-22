@@ -1,0 +1,24 @@
+{
+  "pmid": "39828767",
+  "title": "Evaluating the association between lipidome and female reproductive diseases through comprehensive Mendelian randomization analyses.",
+  "authors": [
+    "Ma Y",
+    "Wu F",
+    "Yu Z",
+    "Yang L"
+  ],
+  "journal": "Sci Rep",
+  "publicationDate": "2025 Jan 19",
+  "volume": "15",
+  "issue": "1",
+  "pages": "2448",
+  "abstract": "1. Sci Rep. 2025 Jan 19;15(1):2448. doi: 10.1038/s41598-025-86794-2.\n\nEvaluating the association between lipidome and female reproductive diseases \nthrough comprehensive Mendelian randomization analyses.\n\nMa Y(#)(1), Wu F(#)(2), Yu Z(1), Yang L(3).\n\nAuthor information:\n(1)Department of Anesthesiology, The Sixth Medical Center of PLA General \nHospital, Beijing, 100048, China.\n(2)Senior Department of Otolaryngology-Head & Neck Surgery, The Sixth Medical \nCenter of PLA General Hospital, Beijing, 100048, China.\n(3)Department of Anesthesiology, The Sixth Medical Center of PLA General \nHospital, Beijing, 100048, China. ylyla@hotmail.com.\n(#)Contributed equally\n\nThis study aimed to assess the causal relationship between lipidome and female \nreproductive diseases (FRDs) using an advanced series of Mendelian randomization \n(MR) methods. This study utilized genome-wide association study (GWAS) summary \nstatistics encompassing 179 lipidomes and six prevalent FRDs, namely polycystic \novary syndrome (PCOS), endometriosis, uterine fibroid, female infertility, \nuterine endometrial cancer, and ovarian cancer. The two-sample MR (TSMR) \napproach was employed to investigate the causal relationships, with further \nvalidation using false discovery rate (FDR) and multivariable MR (MVMR) methods. \nSubsequently, a range of comprehensive evaluations were performed, including \nsensitivity analysis, mediation MR analysis, reverse MR analysis, and steiger \ntest. Examining 179 lipidome traits as exposures and 6 FRDs as outcomes, this \nstudy identified significant causal effects of 56 lipids on FRDs. Following \nmultiple testing correction and MVMR validation, sphingomyelin (d38:2) was found \nto have a protective effect against PCOS (β = -0.104, 95% CI: -0.199 ~ -0.010, \nP = 0.031). Phosphatidylcholine (18:0_22:6) was associated with a decreased risk \nof developing uterine fibroid (β = -0.111, 95% CI: -0.201~ -0.021, P = 0.016), \nand sterol ester (27:1/20:3) showed significance in uterine endometrial cancer \n(β = -0.248, 95% CI: -0.443 ~ -0.053, P = 0.013). Conversely, \nphosphatidylethanolamine (18:2_0:0) was associated with increased risk of \nendometriosis (β = 0.183, 95% CI: 0.015 ~ 0.350, P = 0.033), while sterol ester \n(27:1/18:1) posed a risk influence on uterine fibroid (β = 1.007, 95% CI: \n0.925 ~ 1.089, P < 0.001), and phosphatidylcholine (16:0_22:6) on uterine \nendometrial cancer (β = 0.229, 95% CI: 0.039 ~ 0.420, P = 0.018). Furthermore, \nit was determined that the causal associations between these lipidome profiles \nand FRDs were independent of BMI, obesity, diabetes, smoking, alcohol use, \nphysical activity, inflammation, depression, waist-hip ratio, vitamin D, \ndehydroepiandrosterone sulphate, sex hormone binding globulin, and testosterone \nlevels. Most outcomes passed consistent tests without evidence of heterogeneity, \npleiotropy, or reverse causality. The results indicated a close association \nbetween specific lipidomes, particularly sphingomyelin, \nlysophosphatidylethanolamine, cholesterol ester, and phosphatidylcholines, with \nFRDs. These lipid species may potentially serve as biomarkers and future drug \ntargets for the treatment of FRDs.\n\n© 2025. The Author(s).\n\nDOI: 10.1038/s41598-025-86794-2\nPMCID: PMC11743779\nPMID: 39828767 [Indexed for MEDLINE]\n\nConflict of interest statement: Declarations. Competing interests: The authors \ndeclare no competing interests. Ethical approval and consent to participate: The \ndata used in this study were sourced from publicly available datasets, \noriginally collected from studies that had received prior approval from an \nethics committee for human experimentation. Therefore, our study did not require \nadditional ethical approval.",
+  "doi": "doi: 10.1038/s41598-025-86794-2",
+  "url": "https://pubmed.ncbi.nlm.nih.gov/39828767/",
+  "publicationTypes": [
+    "Journal Article",
+    "Research Support, Non-U.S. Gov't"
+  ],
+  "meshTerms": [],
+  "keywords": []
+}

@@ -1,0 +1,24 @@
+{
+  "pmid": "38808604",
+  "title": "Physical activity, sedentary behavior, and the risk of functional gastrointestinal disorders: A two-sample Mendelian randomization study.",
+  "authors": [
+    "Wu YR",
+    "Tan ZB",
+    "Lu Y",
+    "Liu C",
+    "Dong WG"
+  ],
+  "journal": "J Dig Dis",
+  "publicationDate": "2024 Apr",
+  "volume": "25",
+  "issue": "4",
+  "pages": "248-254",
+  "abstract": "1. J Dig Dis. 2024 Apr;25(4):248-254. doi: 10.1111/1751-2980.13274. Epub 2024 May\n 29.\n\nPhysical activity, sedentary behavior, and the risk of functional \ngastrointestinal disorders: A two-sample Mendelian randomization study.\n\nWu YR(1), Tan ZB(1), Lu Y(2), Liu C(1), Dong WG(1).\n\nAuthor information:\n(1)Department of Gastroenterology, Renmin Hospital of Wuhan University, Wuhan, \nHubei Province, China.\n(2)Department of Ophthalmology, Renmin Hospital of Wuhan University, Wuhan, \nHubei Province, China.\n\nOBJECTIVES: Functional dyspepsia (FD) and irritable bowel syndrome (IBS) are \nprevalent functional gastrointestinal disorders (FGIDs). In this study we aimed \nto explore the causal association between physical activity or sedentary \nbehavior and the risk of FD and IBS.\nMETHODS: Mendelian randomization (MR) analysis was employed. Candidate genetic \ninstruments for physical activity and sedentary behavior were retrieved from the \nlatest published Genome-Wide Association Study (GWAS), which included up to 703 \n901 participants. Summary-level GWAS data for FD (8 875 cases and 320 387 \ncontrols) and IBS (9 323 cases and 301 931 controls) were obtained from the \nFinnGen study. The causal effects were mainly estimated by inverse variance \nweighted (IVW) method. Sensitivity analyses were implemented with Cochran's Q \ntest, MR-Egger intercept test, leave-one-out analysis, and the funnel plot.\nRESULTS: No significant association of moderate-to-vigorous intensity physical \nactivity (MVPA), leisure screen time (LST), sedentary behavior at work (SDW), \nand sedentary commuting (SDC) with the risk of FD was found. However, there was \na suggestive correlation between MVPA and the decreased risk of FD (odds ratio \n[OR] 0.63, 95% confidence interval [CI] 0.39-0.99, P = 0.047). Genetically \npredicted MVPA decreased the risk of IBS (OR 0.58, 95% CI 0.40-0.84, P = 0.004), \nwhile increased LST was positively associated with IBS risk (OR 1.33, 95% \nCI 1.15-1.53, P < 0.001). No causal effects of SDW or SDC on IBS risk were \nobserved.\nCONCLUSION: MVPA and LST are causally linked to the development of IBS, which \nwill facilitate primary prevention of IBS.\n\n© 2024 Chinese Medical Association Shanghai Branch, Chinese Society of \nGastroenterology, Renji Hospital Affiliated to Shanghai Jiaotong University \nSchool of Medicine and John Wiley & Sons Australia, Ltd.\n\nDOI: 10.1111/1751-2980.13274\nPMID: 38808604 [Indexed for MEDLINE]",
+  "doi": "doi: 10.1111/1751-2980.13274",
+  "url": "https://pubmed.ncbi.nlm.nih.gov/38808604/",
+  "publicationTypes": [
+    "Journal Article"
+  ],
+  "meshTerms": [],
+  "keywords": []
+}

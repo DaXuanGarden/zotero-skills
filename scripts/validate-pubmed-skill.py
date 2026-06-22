@@ -54,6 +54,17 @@ PUBMED_GUARDRAIL_REQUIREMENTS = [
     "Do not treat Zotero MCP as PubMed MCP",
 ]
 
+PUBMED_SEQUENTIAL_GUARDRAIL_REQUIREMENTS = [
+    "Sequential Execution Guardrail",
+    "dependency chains, not batch jobs",
+    "Do not schedule `pubmed_search` in the same tool-call batch as downstream tools",
+    "Run one PubMed step, inspect its result",
+    "stop the PubMed chain immediately",
+    "do not schedule dependent details, related, full-text, export, or PubMed-only RIS steps",
+    "retry the query at most once",
+    "do not fabricate PMIDs or continue to metadata inspection",
+]
+
 OUTPUT_REQUIREMENTS = [
     "pubmed-literature-output/",
     "{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}",
@@ -73,6 +84,32 @@ REPORT_SECTIONS = [
     "## 5. Related and Review Expansion",
     "## 6. Metadata Quality Control",
     "## 7. Export Files",
+]
+
+PMID_INSPECTION_LEDGER_HEADER = (
+    "| PMID | Citation | Inspection status | Inspection tool / route | Inspected fields | "
+    "DOI | Abstract status | Retraction / metadata warning | Evidence use | RIS action |"
+)
+PMID_INSPECTION_LEDGER_REQUIREMENTS = [
+    "PMID Inspection Ledger",
+    "Inspection status",
+    "Inspection tool / route",
+    "Inspected fields",
+    "Abstract status",
+    "Retraction / metadata warning",
+    "Evidence use",
+    "RIS action",
+    "completed",
+    "partial",
+    "not inspected",
+    "failed",
+    "pubmed_get_details",
+    "pubmed_extract_info",
+    "equivalent visible PubMed metadata tooling",
+    "search snippets alone are insufficient",
+    "Only PMIDs with `Inspection status = completed`",
+    "may use `RIS action = include`",
+    "not inspected`, `partial`, `failed`",
 ]
 
 RIS_REQUIREMENTS = [
@@ -202,10 +239,12 @@ def main() -> None:
 
     require_all(text, PUBMED_TOOL_REQUIREMENTS, "PubMed tool requirement")
     require_all(text, PUBMED_GUARDRAIL_REQUIREMENTS, "PubMed guardrail requirement")
+    require_all(text, PUBMED_SEQUENTIAL_GUARDRAIL_REQUIREMENTS, "PubMed sequential execution guardrail")
     ok("PubMed tool and guardrail requirements present")
 
     require_all(text, OUTPUT_REQUIREMENTS, "output requirement")
-    ok("PubMed package output requirements present")
+    require_all(text, PMID_INSPECTION_LEDGER_REQUIREMENTS, "PMID Inspection Ledger requirement")
+    ok("PubMed package output and PMID Inspection Ledger requirements present")
 
     report_template = extract_template(text, "PUBMED_REVIEW_REPORT")
     require_ordered(report_template, REPORT_SECTIONS, "PubMed review report section")
@@ -214,6 +253,7 @@ def main() -> None:
         [
             "| Source | Query | Sort | Max results | Status | Hits reviewed | Selected PMIDs |",
             "| Priority | Citation | PMID | DOI | Study type | Main finding/use | Caveat |",
+            PMID_INSPECTION_LEDGER_HEADER,
             "| PMID | DOI | Title check | Authors check | Year check | Metadata warning | RIS action |",
         ],
         "PubMed report table schema",
