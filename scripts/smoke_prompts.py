@@ -29,6 +29,26 @@ PROMPTS = [
         f"""/zotero-evidence-review 只在聊天输出，不要生成文件：检索 Zotero 本地库中关于 PCOS sedentary behavior cardiometabolic risk 的相关文献，最多列 5 篇，并说明每篇适合支持什么 claim。\n{COMMON_GUARDRAIL}\n先单独执行 Zotero search；检查返回结果后，再决定是否需要 metadata/fulltext。""",
     ),
     SmokePrompt(
+        "zotero-search-export-dry-run",
+        "Zotero ordinary search auto-export route dry run",
+        f"""/zotero-evidence-review 只读路由验证，不要生成文件：如果用户请求“搜 Zotero 库中关于肠道菌群和抑郁症的文献”，请说明当前默认应先 Zotero semantic/keyword search，再在 PubMed MCP 可见时自动 PubMed expansion，最后生成 Search Report + RIS。\n{COMMON_GUARDRAIL}\n请只输出预期路由、Dual-MCP Auto Search and Export Defaults、Search Report + RIS 输出类型、PubMed unavailable 时的状态、以及预期相对路径格式 `zotero-evidence-output/{{brief_topic_slug}}_{{YYYY-MM-DD_HHMMSS}}/{{brief_topic_slug}}_{{YYYY-MM-DD_HHMMSS}}_literature_search.md` 和 `_references.ris`；不要实际写入 Markdown/RIS。""",
+    ),
+    SmokePrompt(
+        "zotero-target-search",
+        "Zotero target literature search",
+        f"""/zotero-evidence-review 只在聊天输出，不要生成文件：哪些文献使用了大脑相关 GWAS 数据？最多列 8 篇。\n{COMMON_GUARDRAIL}\n请按 target_literature_search 处理：先做 topic decomposition，再给出 semantic query、keyword query、exact phrase query、noise-control concepts；结果必须分成 Core / Strong Related / Method Background / Disease GWAS Only / Noise / Verify，并为排除项写 Exclusion reason code。先单独执行 Zotero search；检查返回结果后，再决定是否需要 metadata/fulltext。""",
+    ),
+    SmokePrompt(
+        "zotero-target-export-dry-run",
+        "Zotero target search export route dry run",
+        f"""/zotero-evidence-review 只读路由验证，不要生成文件：如果用户请求“哪些文献使用了大脑相关 GWAS 数据？”，请说明当前默认应走 target_literature_search 的 Search Report + RIS，而不是 Paragraph Citation Package Workflow，并在 PubMed MCP 可见时自动 PubMed expansion。\n{COMMON_GUARDRAIL}\n请只输出预期路由、Topic Decomposition、Query Expansion Plan、分类与排除原因表结构、Search RIS 纳入规则、PubMed unavailable 时的状态、以及预期相对路径格式 `zotero-evidence-output/{{brief_topic_slug}}_{{YYYY-MM-DD_HHMMSS}}/{{brief_topic_slug}}_{{YYYY-MM-DD_HHMMSS}}_literature_search.md` 和 `_references.ris`；不要实际写入 Markdown/RIS。""",
+    ),
+    SmokePrompt(
+        "zotero-paragraph-package-export-dry-run",
+        "Zotero paragraph polish/citation package route dry run",
+        f"""/zotero-evidence-review 只读路由验证，不要生成文件：如果用户请求“帮我给这段话补引用并润色：慢性炎症通过激活 JAK-STAT 信号通路促进动脉粥样硬化斑块形成，而 IL-6 受体阻断剂可显著降低心血管事件风险。”，请说明应走 Paragraph Citation Package Workflow，默认生成 EVIDENCE_REVIEW_REPORT + Citation RIS。\n{COMMON_GUARDRAIL}\n请只输出预期路由、claim extraction、Zotero-first search、PubMed expansion、Citation Support Ledger、Copy-ready Manuscript Text、diff paragraph、Citation RIS 纳入规则、以及预期相对路径格式 `zotero-evidence-output/{{brief_topic_slug}}_{{YYYY-MM-DD_HHMMSS}}/{{brief_topic_slug}}_{{YYYY-MM-DD_HHMMSS}}_evidence_review.md` 和 `_references.ris`；不要实际写入 Markdown/RIS。""",
+    ),
+    SmokePrompt(
         "pubmed-readiness",
         "PubMed MCP readiness/status check",
         f"""/pubmed-literature-search 做一次 PubMed MCP readiness check。\n{COMMON_GUARDRAIL}\n请只报告当前会话是否能看到 PubMed MCP tools，例如 search、details、extract、related、fulltext detection/download；不要执行下载；如果没有 status 工具，就用最小只读能力检查说明。""",
@@ -37,6 +57,11 @@ PROMPTS = [
         "pubmed-search",
         "PubMed chat-only search",
         f"""/pubmed-literature-search 只在聊天输出，不要生成文件：检索近 5 年 PCOS sedentary behavior 的 PubMed 文献，最多返回 5 条候选。\n{COMMON_GUARDRAIL}\n先单独执行 PubMed search；检查 PMID 列表后，再单独对候选 PMID 调用 details/extract。只有实际完成 PMID metadata inspection 的文献才能标记为 inspected。""",
+    ),
+    SmokePrompt(
+        "pubmed-export-crosscheck-dry-run",
+        "PubMed default export with Zotero cross-check route dry run",
+        f"""/pubmed-literature-search 只读路由验证，不要生成文件：如果用户请求“检索 PubMed 近 5 年 PCOS sedentary behavior 文献”，请说明当前默认应执行 PubMed search、PMID metadata inspection、Zotero optional cross-check，并生成 PubMed Markdown report + RIS。\n{COMMON_GUARDRAIL}\n请只输出预期路由、PMID Inspection Ledger、Zotero Local Library Cross-Check 表、PubMed-only RIS 纳入规则、以及预期相对路径格式 `pubmed-literature-output/{{brief_topic_slug}}_{{YYYY-MM-DD_HHMMSS}}/{{brief_topic_slug}}_{{YYYY-MM-DD_HHMMSS}}_pubmed_review.md` 和 `_references.ris`；不要实际写入 Markdown/RIS。""",
     ),
     SmokePrompt(
         "zotero-pubmed-fallback",

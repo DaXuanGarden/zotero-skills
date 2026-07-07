@@ -8,6 +8,7 @@ search workflows.
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -19,11 +20,25 @@ except ImportError:  # pragma: no cover - fallback for minimal environments
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SKILL_PATH = REPO_ROOT / "zotero-evidence-review" / "SKILL.md"
+LITERATURE_SEARCH_WRITER_PATH = REPO_ROOT / "scripts" / "write_literature_search_package.py"
+LITERATURE_SEARCH_WRITER_FIXTURE_PATH = REPO_ROOT / "scripts" / "fixtures" / "literature_search_package_sample.json"
+LITERATURE_SEARCH_WRITER_REQUIRED_TOP_LEVEL_KEYS = (
+    "run",
+    "topic_decomposition",
+    "query_expansion",
+    "criteria",
+    "findings",
+    "candidates",
+    "reading_order",
+    "reproducibility",
+    "critical_warnings",
+)
 REQUIRED_TEMPLATES = (
     "REFS_BLOCK",
     "CLAIM_EVIDENCE_MATRIX",
     "WRITING_SUGGESTIONS_TABLE",
     "DIFF_REVISED_PARAGRAPH",
+    "LITERATURE_SEARCH_REPORT",
     "EVIDENCE_REVIEW_REPORT",
     "RIS_REFERENCE_FILE",
     "VERIFICATION_REPORT",
@@ -37,6 +52,7 @@ REQUIRED_HEADINGS = [
     "## Safety Rules",
     "## 1. Semantic + Structured Search",
     "## 1.5 Collection and Tag Search",
+    "## 1.8 Target Literature Search and Export",
     "## 2. Paragraph Evidence & Citation Analysis",
     "## 2.5 Evidence Package Export",
     "## 3. Citation Verification Protocol",
@@ -62,6 +78,155 @@ EVIDENCE_REPORT_SECTIONS = [
     "## 15. 证据缺口与审稿风险（Gaps and Reviewer-risk Assessment）",
     "## 16. 元数据质量控制（Metadata Quality Control）",
     "## 17. 导出文件（Export File）",
+]
+LITERATURE_SEARCH_REPORT_SECTIONS = [
+    "## 1. 检索任务",
+    "## 2. Topic Decomposition",
+    "## 3. Query Expansion Plan",
+    "## 4. 纳入与排除标准",
+    "## 5. 结果分类标准",
+    "## 6. 核心发现",
+    "## 7. 检索结果总表",
+    "## 8. 分类结果",
+    "## 9. 噪音与排除原因",
+    "## 10. 推荐阅读顺序",
+    "## 11. Search Reproducibility",
+    "## 12. Metadata QC",
+    "## 13. Export Files",
+]
+TARGET_LITERATURE_SEARCH_REQUIREMENTS = [
+    "target_literature_search",
+    "Module 1.8: Target Literature Search and Export",
+    "Target literature search separation",
+    "Target search export request",
+    "which papers use X",
+    "search Zotero for X",
+    "export a literature list/report/RIS",
+    "Copy-ready Manuscript Text",
+    "sentence-level citation placement",
+    "paragraph diff",
+    "Core output is a literature search report, not a paragraph evidence package",
+    "Zotero readiness smoke test",
+    "semantic search for broad recall",
+    "keyword searches for precise concepts",
+    "candidate pooling",
+    "deduplicate by DOI / title / Zotero key",
+    "classify candidates into Core / Strong Related / Method Background / Disease GWAS Only / Noise / Verify",
+    "LITERATURE_SEARCH_REPORT",
+    "Generated Literature Search Package:",
+    "{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_literature_search.md",
+    "Search Report + RIS",
+    "Chat Search",
+    "Search Report",
+]
+TARGET_LITERATURE_CLASSIFICATION_REQUIREMENTS = [
+    "Core",
+    "Strong Related",
+    "Method Background",
+    "Disease GWAS Only",
+    "Noise",
+    "Verify",
+    "Literature Classification",
+    "Default RIS action",
+    "Category = Core",
+]
+SEARCH_RIS_REQUIREMENTS = [
+    "Search RIS",
+    "Citation RIS",
+    "selected literature set",
+    "not manuscript citation placement",
+    "Do not require Copy-ready Manuscript Text or sentence-level citation recommendations before writing RIS",
+    "Core included by default",
+    "Strong Related",
+    "Method Background",
+    "Disease GWAS Only",
+    "Noise",
+    "Verify",
+    "RIS action = Verify",
+]
+PHASE2_TARGET_SEARCH_REQUIREMENTS = [
+    "Topic Decomposition Rules",
+    "target object",
+    "data/method/phenotype/cohort",
+    "must-have concepts",
+    "adjacent concepts",
+    "exclusion concepts",
+    "time/source constraints",
+    "Query Expansion Matrix",
+    "semantic query",
+    "keyword query",
+    "exact phrase query",
+    "Negative / noise-control query",
+    "Classification Decision Rubric",
+    "Tie-breaker rules",
+    "Noise / Exclusion Reasons",
+    "wrong data layer",
+    "disease-only GWAS",
+    "method-only",
+    "generic catalog",
+    "metadata insufficient",
+    "duplicate",
+    "off-topic",
+    "wrong population",
+    "no inspected metadata",
+]
+PHASE3_LITERATURE_SEARCH_WRITER_REQUIREMENTS = [
+    "scripts/write_literature_search_package.py",
+    "--input candidates.json",
+    "--output-root",
+    "--slug",
+    "--timestamp",
+    "--include-optional",
+    "--no-ris",
+    "--dry-run",
+    "--self-test",
+    "JSON is required",
+    "YAML is accepted only when PyYAML is already installed",
+    "does not call Zotero or PubMed",
+    "run",
+    "topic_decomposition",
+    "query_expansion",
+    "criteria",
+    "findings",
+    "candidates",
+    "reading_order",
+    "reproducibility",
+    "critical_warnings",
+    "PubMed-only records require `pubmed_status = Completed` and `metadata_inspected = true`",
+    "RIS default writes only `RIS action = Include`",
+    "never writes `Exclude` or `Verify` records to Search RIS",
+    "scripts/fixtures/literature_search_package_sample.json",
+]
+PHASE3_WRITER_SCRIPT_REQUIREMENTS = [
+    "REQUIRED_TOP_LEVEL_KEYS",
+    "ALLOWED_CATEGORIES",
+    "ALLOWED_RIS_ACTIONS",
+    "ALLOWED_EXCLUSION_CODES",
+    "RIS_INCLUDE_CATEGORIES",
+    "RIS_OPTIONAL_CATEGORIES",
+    "write_literature_search_package.py",
+    "--input",
+    "--output-root",
+    "--slug",
+    "--timestamp",
+    "--include-optional",
+    "--no-ris",
+    "--dry-run",
+    "--self-test",
+    "YAML input requires PyYAML",
+    "does not search Zotero or PubMed",
+    "metadata_inspected",
+    "pubmed_status",
+    "Completed",
+    "ris_action",
+    "Include",
+    "Optional",
+    "Exclude",
+    "Verify",
+    "generated RIS contains no records",
+    "does not start with TY  -",
+    "does not end with ER  -",
+    "Self-test passed.",
 ]
 EVIDENCE_PACKAGE_REQUIREMENTS = [
     "zotero-evidence-output/",
@@ -140,6 +305,19 @@ DEFAULT_EXPORT_REQUIREMENTS = [
     "不导出",
     "chat only",
     "Module 2 → Module 2.5",
+]
+DUAL_MCP_AUTO_EXPORT_REQUIREMENTS = [
+    "Dual-MCP Auto Search and Export Defaults",
+    "Dual-MCP auto search",
+    "Automatic export by default",
+    "ordinary `search`, `target_literature_search`, paragraph citation matching, paragraph polishing",
+    "Module 1 ordinary Zotero search default output is **Search Report + RIS**",
+    "Ordinary search auto-exports Search Report + RIS",
+    "automatic PubMed expansion for biomedical topics when visible",
+    "PubMed truth boundary",
+    "never create PubMed-only RIS records from planned, failed, or uninspected PubMed results",
+    "Search mode | target_literature_search / search",
+    "Use `LITERATURE_SEARCH_REPORT` for target_literature_search and ordinary Module 1 search exports",
 ]
 NUMBERED_CITATION_REPAIR_REQUIREMENTS = [
     "Existing numbered citation repair first",
@@ -450,13 +628,43 @@ def main() -> None:
 
     if "## 2.5 Evidence Package Export" not in no_code:
         fail("missing evidence package export module")
+    module_15_pos = no_code.find("## 1.5 Collection and Tag Search")
+    module_18_pos = no_code.find("## 1.8 Target Literature Search and Export")
+    module_2_pos = no_code.find("## 2. Paragraph Evidence & Citation Analysis")
+    if not (module_15_pos != -1 and module_15_pos < module_18_pos < module_2_pos):
+        fail("Module 1.8 must appear after Module 1.5 and before Module 2")
+    require_all(text, TARGET_LITERATURE_SEARCH_REQUIREMENTS, "target literature search requirement")
+    require_all(text, TARGET_LITERATURE_CLASSIFICATION_REQUIREMENTS, "target literature classification requirement")
+    require_all(text, SEARCH_RIS_REQUIREMENTS, "Search RIS requirement")
+    require_all(text, PHASE2_TARGET_SEARCH_REQUIREMENTS, "Phase 2 target literature search quality requirement")
+    require_all(text, PHASE3_LITERATURE_SEARCH_WRITER_REQUIREMENTS, "Phase 3 literature search writer requirement")
+    ok("target literature search routing, classification, Search RIS, and Phase 2/3 quality requirements present")
+
+    if not LITERATURE_SEARCH_WRITER_PATH.exists():
+        fail(f"missing Phase 3 writer script: {LITERATURE_SEARCH_WRITER_PATH.relative_to(REPO_ROOT)}")
+    writer_text = LITERATURE_SEARCH_WRITER_PATH.read_text(encoding="utf-8")
+    require_all(writer_text, PHASE3_WRITER_SCRIPT_REQUIREMENTS, "Phase 3 writer script requirement")
+    if not LITERATURE_SEARCH_WRITER_FIXTURE_PATH.exists():
+        fail(f"missing Phase 3 writer fixture: {LITERATURE_SEARCH_WRITER_FIXTURE_PATH.relative_to(REPO_ROOT)}")
+    try:
+        fixture_data = json.loads(LITERATURE_SEARCH_WRITER_FIXTURE_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        fail(f"Phase 3 writer fixture is not valid JSON: {exc}")
+    if not isinstance(fixture_data, dict):
+        fail("Phase 3 writer fixture must be a JSON object")
+    missing_fixture_keys = [key for key in LITERATURE_SEARCH_WRITER_REQUIRED_TOP_LEVEL_KEYS if key not in fixture_data]
+    if missing_fixture_keys:
+        fail("Phase 3 writer fixture missing top-level key(s): " + ", ".join(missing_fixture_keys))
+    ok("Phase 3 literature search writer script and fixture present")
+
     require_all(text, EVIDENCE_PACKAGE_REQUIREMENTS, "evidence package requirement")
     ok("evidence package export requirements present")
 
     require_all(text, DEFAULT_EXPORT_REQUIREMENTS, "default export routing requirement")
+    require_all(text, DUAL_MCP_AUTO_EXPORT_REQUIREMENTS, "Dual-MCP auto search/export default requirement")
     require_all(text, NUMBERED_CITATION_REPAIR_REQUIREMENTS, "numbered citation repair requirement")
     require_all(text, CITATION_SUPPORT_LEDGER_REQUIREMENTS, "Citation Support Ledger requirement")
-    ok("default citation-support, numbered-citation repair, and Citation Support Ledger routing requirements present")
+    ok("default citation-support, Dual-MCP auto export, numbered-citation repair, and Citation Support Ledger routing requirements present")
 
     require_all(text, UNIFIED_WORKFLOW_REQUIREMENTS, "unified paragraph citation workflow requirement")
     ok("unified paragraph citation workflow requirements present")
@@ -487,6 +695,91 @@ def main() -> None:
         if f"### {template}" not in no_code:
             fail(f"missing appendix template definition: {template}")
     ok("appendix template definitions present")
+
+    literature_search_template = extract_template(text, "LITERATURE_SEARCH_REPORT")
+    require_ordered(literature_search_template, LITERATURE_SEARCH_REPORT_SECTIONS, "Literature Search report section")
+    require_table_header(
+        literature_search_template,
+        r"\| Field \| Value \|",
+        ["Field", "Value"],
+        "Literature Search task metadata",
+    )
+    require_table_header(
+        literature_search_template,
+        r"\| Decision \| Criteria \|",
+        ["Decision", "Criteria"],
+        "Literature Search inclusion/exclusion criteria",
+    )
+    require_table_header(
+        literature_search_template,
+        r"\| Component \| Value \|",
+        ["Component", "Value"],
+        "Literature Search topic decomposition",
+    )
+    require_table_header(
+        literature_search_template,
+        r"\| Query type \| Query \| Purpose \| Expected signal \| Noise-control note \|",
+        ["Query type", "Query", "Purpose", "Expected signal", "Noise-control note"],
+        "Literature Search query expansion plan",
+    )
+    require_table_header(
+        literature_search_template,
+        r"\| Category \| Include rule \| Exclude rule \| Default RIS action \|",
+        ["Category", "Include rule", "Exclude rule", "Default RIS action"],
+        "Literature Search classification standards",
+    )
+    require_table_header(
+        literature_search_template,
+        r"\| # \| Citation \| Year \| Category \| Role \| Zotero key \| DOI/PMID \| Why included \| Exclusion reason code \| RIS action \|",
+        ["Citation", "Year", "Category", "Role", "Zotero key", "DOI/PMID", "Why included", "Exclusion reason code", "RIS action"],
+        "Literature Search result table",
+    )
+    require_table_header(
+        literature_search_template,
+        r"\| Citation \| Category \| Exclusion reason code \| Human-readable reason \| RIS action \|",
+        ["Citation", "Category", "Exclusion reason code", "Human-readable reason", "RIS action"],
+        "Literature Search noise and exclusion reasons",
+    )
+    require_table_header(
+        literature_search_template,
+        r"\| Source \| Query \| Mode \| Max results \| Status \| Hits \| Included \| Notes \|",
+        ["Source", "Query", "Mode", "Max results", "Status", "Hits", "Included", "Notes"],
+        "Literature Search reproducibility",
+    )
+    require_table_header(
+        literature_search_template,
+        r"\| Citation \| DOI \| PMID \| PDF \| Missing metadata \| Duplicate / mismatch \| Evidence source \| RIS standardization source \| RIS action \|",
+        ["Citation", "DOI", "PMID", "PDF", "Missing metadata", "Duplicate / mismatch", "Evidence source", "RIS standardization source", "RIS action"],
+        "Literature Search metadata QC",
+    )
+    require_all(
+        literature_search_template,
+        [
+            "Search mode | target_literature_search",
+            "Status | Ready / Caution / Partial / Unknown",
+            "Target object | {target object}",
+            "Must-have concepts | {concepts required for Core classification}",
+            "Negative / noise-control query",
+            "Category` must use only `Core`, `Strong Related`, `Method Background`, `Disease GWAS Only`, `Noise`, or `Verify`",
+            "Exclusion reason code` must use one of",
+            "Search Reproducibility should include exact phrase or noise-control searches",
+            "plain RIS only",
+            "inspected metadata only",
+            "PubMed status is `Completed` with inspected metadata",
+            "relative paths only",
+        ],
+        "Literature Search report rule",
+    )
+    forbidden_literature_sections = [
+        "## 4. 可直接使用的稿件文本（Copy-ready Manuscript Text）",
+        "## 5. 注释版推荐文本（Annotated Recommended Text）",
+        "Claim–Evidence Matrix）",
+        "Citation Placement",
+    ]
+    found_forbidden = [section for section in forbidden_literature_sections if section in literature_search_template]
+    if found_forbidden:
+        fail("Literature Search report template contains paragraph evidence package section(s): " + ", ".join(found_forbidden))
+    ok("Literature Search report template sections and tables present")
 
     evidence_report_template = extract_template(text, "EVIDENCE_REVIEW_REPORT")
     require_ordered(evidence_report_template, EVIDENCE_REPORT_SECTIONS, "Evidence Review report section")

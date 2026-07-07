@@ -1,0 +1,275 @@
+{
+  "run": {
+    "topic": "brain-related GWAS data",
+    "slug": "brain_gwas",
+    "user_question": "哪些文献使用了大脑相关 GWAS 数据？导出 MD 和 RIS。",
+    "search_date": "2026-07-07",
+    "zotero_status": "Connected",
+    "pubmed_status": "Not executed",
+    "output": "Search Report + RIS",
+    "status": "Caution",
+    "status_rationale": "Fixture uses inspected synthetic Zotero candidate metadata; PubMed expansion was not executed."
+  },
+  "topic_decomposition": {
+    "target_object": "brain-related GWAS data",
+    "data_method_phenotype_cohort": [
+      "brain imaging-derived phenotypes",
+      "neuroimaging GWAS",
+      "cortical thickness",
+      "subcortical brain volumes"
+    ],
+    "must_have_concepts": [
+      "direct use of brain imaging or brain structure GWAS",
+      "GWAS-derived brain phenotype data"
+    ],
+    "adjacent_concepts": [
+      "brain cell eQTL",
+      "brain TWAS",
+      "Mendelian randomization with brain GWAS"
+    ],
+    "exclusion_concepts": [
+      "disease-only GWAS",
+      "generic GWAS Catalog",
+      "methods-only GWAS"
+    ],
+    "time_source_constraints": "Zotero local library first; no year restriction; PubMed not executed in fixture."
+  },
+  "query_expansion": [
+    {
+      "query_type": "Semantic query",
+      "query": "studies using brain-related GWAS data, brain imaging-derived phenotypes, neuroimaging GWAS, cortical thickness, cortical surface area, subcortical brain volumes",
+      "purpose": "broad recall",
+      "expected_signal": "Core / Strong Related candidates",
+      "noise_control_note": "screen disease-only GWAS and generic catalog hits"
+    },
+    {
+      "query_type": "Keyword query",
+      "query": "\"brain imaging-derived phenotypes GWAS\"",
+      "purpose": "precise metadata/title/abstract retrieval",
+      "expected_signal": "direct target data mentions",
+      "noise_control_note": "may retrieve reviews without direct data use"
+    },
+    {
+      "query_type": "Exact phrase query",
+      "query": "\"cortical thickness\" \"GWAS\"",
+      "purpose": "confirm named phenotype use",
+      "expected_signal": "direct brain phenotype GWAS use",
+      "noise_control_note": "exclude disease-only genetic studies"
+    },
+    {
+      "query_type": "Negative / noise-control query",
+      "query": "\"GWAS Catalog\" OR \"schizophrenia GWAS\"",
+      "purpose": "identify false positives for exclusion",
+      "expected_signal": "Disease GWAS Only / Noise",
+      "noise_control_note": "record exclusion reasons rather than hiding results"
+    }
+  ],
+  "criteria": [
+    {
+      "decision": "Include",
+      "criteria": "Core records and Strong Related records with explicit brain GWAS or adjacent brain-genetic data use."
+    },
+    {
+      "decision": "Exclude",
+      "criteria": "Disease-only GWAS, method-only background, generic catalogs, duplicates, and off-topic records."
+    },
+    {
+      "decision": "Verify",
+      "criteria": "Records whose title or metadata suggests possible relevance but inspected metadata is insufficient."
+    }
+  ],
+  "findings": [
+    "核心集合应优先纳入直接使用脑影像或脑结构 GWAS 数据的研究。",
+    "相邻证据可以包括 brain eQTL、TWAS 或 MR 研究，但需要明确说明与目标数据层的关系。",
+    "疾病 GWAS 如果没有脑影像、脑结构或目标表型数据层，默认不进入 Search RIS。"
+  ],
+  "candidates": [
+    {
+      "citation": "Example Core 2024",
+      "year": "2024",
+      "category": "Core",
+      "role": "brain imaging-derived phenotype GWAS",
+      "zotero_key": "ABCD1234",
+      "doi": "10.5555/brain-gwas-core",
+      "pmid": "",
+      "title": "Synthetic study of brain imaging-derived phenotype GWAS",
+      "authors": [
+        "Example, Core",
+        "Researcher, Alice"
+      ],
+      "journal": "Journal of Synthetic Neurogenetics",
+      "volume": "12",
+      "issue": "3",
+      "pages": "101-112",
+      "url": "https://example.org/brain-gwas-core",
+      "keywords": [
+        "brain imaging-derived phenotype",
+        "GWAS"
+      ],
+      "why_included": "Directly uses brain imaging-derived phenotype GWAS data.",
+      "data_method_used": "brain imaging-derived phenotype GWAS",
+      "why_core": "The inspected metadata explicitly names brain imaging-derived phenotype GWAS.",
+      "exclusion_reason_code": "none",
+      "ris_action": "Include",
+      "metadata_inspected": true,
+      "pdf": "-",
+      "missing_metadata": "none",
+      "duplicate_mismatch": "none",
+      "evidence_source": "Zotero",
+      "ris_standardization_source": "Zotero metadata",
+      "item_type": "journalArticle"
+    },
+    {
+      "citation": "Example Related 2023",
+      "year": "2023",
+      "category": "Strong Related",
+      "role": "brain eQTL linked to GWAS interpretation",
+      "zotero_key": "EFGH5678",
+      "doi": "10.5555/brain-gwas-related",
+      "pmid": "",
+      "title": "Synthetic brain eQTL resource for interpreting genetic association studies",
+      "authors": [
+        "Example, Related"
+      ],
+      "journal": "Synthetic Genetics Reports",
+      "pages": "55-70",
+      "url": "https://example.org/brain-gwas-related",
+      "why_included": "Adjacent brain-genetic data layer useful for interpreting target GWAS.",
+      "relation": "brain eQTL as adjacent data layer",
+      "why_related": "The inspected metadata links brain eQTL to GWAS interpretation.",
+      "exclusion_reason_code": "none",
+      "ris_action": "Optional",
+      "metadata_inspected": true,
+      "pdf": "-",
+      "missing_metadata": "none",
+      "duplicate_mismatch": "none",
+      "evidence_source": "Zotero",
+      "ris_standardization_source": "Zotero metadata",
+      "item_type": "journalArticle"
+    },
+    {
+      "citation": "Example Method 2022",
+      "year": "2022",
+      "category": "Method Background",
+      "role": "general GWAS method background",
+      "zotero_key": "IJKL9012",
+      "doi": "",
+      "pmid": "",
+      "title": "Synthetic method note for genome-wide association workflows",
+      "authors": [
+        "Example, Method"
+      ],
+      "journal": "Synthetic Methods",
+      "why_included": "Useful method background but does not use brain-related GWAS data.",
+      "method_role": "general GWAS method background",
+      "reason": "Method-only paper without target brain data use.",
+      "exclusion_reason_code": "method-only",
+      "ris_action": "Optional",
+      "metadata_inspected": true,
+      "pdf": "-",
+      "missing_metadata": "pages",
+      "duplicate_mismatch": "none",
+      "evidence_source": "Zotero",
+      "ris_standardization_source": "Zotero metadata",
+      "item_type": "journalArticle"
+    },
+    {
+      "citation": "Example Disease GWAS 2021",
+      "year": "2021",
+      "category": "Disease GWAS Only",
+      "role": "psychiatric disease GWAS without brain imaging phenotype",
+      "zotero_key": "MNOP3456",
+      "doi": "",
+      "pmid": "",
+      "title": "Synthetic psychiatric disease GWAS without brain imaging phenotypes",
+      "authors": [
+        "Example, Disease"
+      ],
+      "journal": "Synthetic Psychiatry Genetics",
+      "why_included": "Excluded because it studies disease GWAS without the requested brain imaging data layer.",
+      "reason": "Disease-only GWAS without brain imaging or brain structure phenotype.",
+      "exclusion_reason_code": "disease-only GWAS",
+      "ris_action": "Exclude",
+      "metadata_inspected": true,
+      "pdf": "-",
+      "missing_metadata": "doi; pages",
+      "duplicate_mismatch": "none",
+      "evidence_source": "Zotero",
+      "ris_standardization_source": "Zotero metadata",
+      "item_type": "journalArticle"
+    },
+    {
+      "citation": "Example Ambiguous 2020",
+      "year": "2020",
+      "category": "Verify",
+      "role": "ambiguous brain genetics title",
+      "zotero_key": "QRST7890",
+      "doi": "",
+      "pmid": "",
+      "title": "Synthetic ambiguous brain genetics record",
+      "authors": [
+        "Example, Ambiguous"
+      ],
+      "journal": "Synthetic Unverified Records",
+      "why_included": "Possible relevance, but inspected metadata is too sparse to confirm target use.",
+      "reason": "Metadata is insufficient to confirm direct use of target brain GWAS data.",
+      "exclusion_reason_code": "metadata insufficient",
+      "ris_action": "Verify",
+      "metadata_inspected": false,
+      "pdf": "-",
+      "missing_metadata": "abstract; doi; pages",
+      "duplicate_mismatch": "none",
+      "evidence_source": "Zotero",
+      "ris_standardization_source": "manual verification required",
+      "item_type": "journalArticle"
+    }
+  ],
+  "reading_order": [
+    {
+      "priority": "1",
+      "citation": "Example Core 2024",
+      "why_read_first": "Defines the target brain imaging-derived phenotype GWAS layer."
+    },
+    {
+      "priority": "2",
+      "citation": "Example Related 2023",
+      "why_read_first": "Useful adjacent data layer for interpreting brain GWAS findings."
+    }
+  ],
+  "reproducibility": [
+    {
+      "source": "Zotero",
+      "query": "studies using brain-related GWAS data, brain imaging-derived phenotypes, neuroimaging GWAS",
+      "mode": "semantic",
+      "max_results": 20,
+      "status": "Completed",
+      "hits": 5,
+      "included": 2,
+      "notes": "full_text_inspected: partial; included: ABCD1234, EFGH5678; excluded: disease-only GWAS and metadata insufficient records"
+    },
+    {
+      "source": "Zotero",
+      "query": "\"brain imaging-derived phenotypes GWAS\"",
+      "mode": "keyword",
+      "max_results": 20,
+      "status": "Completed",
+      "hits": 3,
+      "included": 1,
+      "notes": "full_text_inspected: partial; included: ABCD1234; excluded: method-only"
+    },
+    {
+      "source": "PubMed",
+      "query": "(brain imaging-derived phenotype) AND GWAS",
+      "mode": "PubMed",
+      "max_results": 20,
+      "status": "Not executed",
+      "hits": 0,
+      "included": 0,
+      "notes": "included PMIDs: none; full_text_inspected: no; fixture does not execute PubMed"
+    }
+  ],
+  "critical_warnings": [
+    "PubMed expansion was not executed in this fixture.",
+    "Verify candidates were excluded from Search RIS."
+  ]
+}

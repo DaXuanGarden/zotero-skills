@@ -14,7 +14,7 @@ metadata:
 
 ## Overview
 
-Use Zotero MCP tools to search the user's Zotero library intelligently, and use PubMed MCP tools as a biomedical expansion and metadata-standardization layer whenever they are visible in the active Agent IDE session. This skill combines **semantic search** (concept matching via embeddings) with **keyword/structured search**, performs **paragraph evidence and citation analysis** from draft text, verifies **citations against full text**, and can generate a two-file **Evidence Package** for writing workflows: a Markdown evidence report plus an EndNote-compatible RIS reference file.
+Use Zotero MCP tools to search the user's Zotero library intelligently, and use PubMed MCP tools as a biomedical expansion and metadata-standardization layer whenever they are visible in the active Agent IDE session. This skill combines **semantic search** (concept matching via embeddings) with **keyword/structured search**, performs **paragraph evidence and citation analysis** from draft text, verifies **citations against full text**, and generates Markdown + EndNote-compatible RIS outputs for ordinary literature search, target literature search, paragraph citation matching, and paragraph polishing workflows unless the user explicitly chooses chat-only/no-export mode.
 
 For paragraph citation-support requests, the default is one complete **Paragraph Citation Package Workflow** rather than two separate workflows: paragraph → claim extraction → existing numbered citation repair when supplied references are present → one Zotero local search pass → evidence matrix → citation placement → revised/diff paragraph → Zotero metadata + PDF links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown evidence report → EndNote RIS. Chat-only paragraph analysis is an explicit opt-out mode.
 
@@ -26,7 +26,8 @@ Route the user's request before choosing tools. Use the input shape and explicit
 
 | Intent | User input features | Route to |
 |--------|---------------------|----------|
-| `search` | Keywords, concepts, natural-language questions, broad topic discovery, or requests such as "search", "find papers", "what literature do I have about…" | **Module 1: Semantic + Structured Search** |
+| `search` | Keywords, concepts, natural-language questions, broad topic discovery, or requests such as "search", "find papers", "what literature do I have about…" | **Module 1: Semantic + Structured Search**, then auto-export Search Report + RIS unless chat-only/no-export is explicit |
+| `target_literature_search` | Topic/question asks which papers use a data source, method, phenotype, cohort, disease area, or research direction; user wants literature discovery, screening, search report, MD, RIS, or EndNote export, and no manuscript paragraph is supplied | **Module 1.8: Target Literature Search and Export** |
 | `paragraph` | A pasted manuscript paragraph, draft section, or multi-sentence passage that asks for chat-only evidence analysis, with no citation/export/full-workflow trigger | **Module 2: Paragraph Evidence & Citation Analysis** |
 | `package` | Requests using `/zotero-evidence-review`, saved files, EndNote/RIS export, evidence package, "使用技能", "完整工作流", "找证据", "找引文", "补引用", "推荐引用", "citation", "refs", "参考文献", "文献引用", "生成报告", "保存结果", "导出参考文献", or a paragraph/search request that asks for citation placement, reusable writing outputs, or file outputs | **Paragraph Citation Package Workflow (Module 2 + Module 2.5): analysis stage, then export stage with automatic PubMed expansion after Zotero local search when available** |
 | `reference_update` | A paragraph or manuscript passage with existing numbered citations/references, or requests such as "检查参考文献", "更新参考文献", "编号引用", "6不支持", "citation 6 does not support", "replace citation", "refresh RIS", "regenerate RIS" | **Module 2.2: Existing Numbered Citation Repair**, then **Module 2.5 Evidence Package Export** when files/RIS are requested or implied; treat this as a full reference-update workflow unless the user explicitly opts out |
@@ -35,37 +36,52 @@ Route the user's request before choosing tools. Use the input shape and explicit
 
 ### Routing Rules
 
-1. **Slash command and simple-request entry**: `/zotero-evidence-review` is the recommended user-facing entry point. Treat it as a request to run this skill and auto-route from the user's short request; do not require the user to name modules or repeat the full workflow. When the short request asks for evidence, citation support, reusable writing output, or an evidence package, default to the complete package workflow and write the report/RIS unless the user explicitly opts out.
+1. **Slash command and simple-request entry**: `/zotero-evidence-review` is the recommended user-facing entry point. Treat it as a request to run this skill and auto-route from the user's short request; do not require the user to name modules or repeat the full workflow. When the short request asks for ordinary literature search, target literature search, evidence, citation support, paragraph polishing, reusable writing output, or an evidence package, default to the appropriate export workflow and write the Markdown report plus RIS unless the user explicitly opts out.
 2. **Paragraph-first, package by default for citation work**: if the user provides a paragraph, run Module 2 first. If the same request includes `/zotero-evidence-review`, `使用技能`, `完整工作流`, "find evidence", "find/add/recommend citations", `找证据`, `找引文`, `补引用`, `推荐引用`, `citation`, `refs`, `参考文献`, `文献引用`, or any request for saved/reusable writing outputs, continue automatically to the Paragraph Citation Package Workflow / Module 2.5 and write the Markdown report plus RIS file.
 3. **Existing numbered citation repair first**: if the user provides manuscript text plus a numbered reference list, or explicitly says an existing citation number does not support the claim, route to **Module 2.2: Existing Numbered Citation Repair** before ordinary package export. Preserve the user's supplied citation numbers in the audit tables, but do not promise to preserve final manuscript numbering after RIS import; EndNote/Word will renumber according to the final included reference list and citation style.
 4. **Reference-update requests default to the complete workflow**: requests containing `检查参考文献`, `更新参考文献`, `编号引用`, `replace citation`, `refresh RIS`, or `regenerate RIS` are not chat-only spot checks by default. Run claim mapping, support verification, replacement search when needed, metadata canonicalization, and final Markdown + RIS export unless the user explicitly opts out.
-5. **Chat-only opt-out**: if the user explicitly says `只在聊天输出`, `不要生成文件`, `不导出`, `chat only`, or equivalent, stop after the relevant chat workflow and do not write package files.
-6. **Verification requires specificity**: only route to `verify` when both a cited source (or item key/DOI/title) and a claim/quote/statistic are present. Otherwise, route to `search` or ask a clarification.
-7. **Health check is read-only by default**: route health/status requests to Module 0.5 and do not run repair actions unless the user explicitly confirms them.
-8. **Evidence package request**: if the user asks for saved reports, EndNote/RIS, an evidence package, or the default citation-support workflow above, run the underlying search/paragraph workflow first, then route to the Paragraph Citation Package Workflow / Module 2.5 for file generation.
-9. **Ambiguous intent**: if the request cannot be confidently routed, output this numbered menu and ask the user to choose:
+5. **Target literature search separation**: if the user asks "which papers use X", "find papers about X", "search Zotero for X", "export a literature list/report/RIS", or equivalent, and does not provide a manuscript paragraph to revise, route to `target_literature_search`, not the Paragraph Citation Package Workflow. This mode writes a Markdown search report and Search RIS by default, but it must not require Copy-ready Manuscript Text, sentence-level citation placement, or paragraph diff output.
+6. **Search and target search export default / Target search export request**: if the user provides an ordinary topic/search question, route to **Module 1 Semantic + Structured Search** and write a Search Report + RIS by default. If the question asks for a data source, method, phenotype, cohort, disease area, research direction, `导出 MD`, `生成报告`, `保存报告`, `RIS`, `EndNote`, `文献清单`, `literature list`, or equivalent, route to **Module 1.8 Target Literature Search and Export** and write `LITERATURE_SEARCH_REPORT` + Search RIS by default. Only explicit `只在聊天输出`, `不要生成文件`, `不导出`, or `chat only` keeps search results in chat.
+7. **Chat-only opt-out**: if the user explicitly says `只在聊天输出`, `不要生成文件`, `不导出`, `chat only`, or equivalent, stop after the relevant chat workflow and do not write package files.
+8. **Verification requires specificity**: only route to `verify` when both a cited source (or item key/DOI/title) and a claim/quote/statistic are present. Otherwise, route to `search` or ask a clarification.
+9. **Health check is read-only by default**: route health/status requests to Module 0.5 and do not run repair actions unless the user explicitly confirms them.
+10. **Evidence package request**: if the user asks for saved reports, EndNote/RIS, an evidence package, or the default citation-support workflow above, run the underlying search/paragraph workflow first, then route to the Paragraph Citation Package Workflow / Module 2.5 for file generation. For topic-only search and target literature search exports, use Module 1 / Module 1.8 and `LITERATURE_SEARCH_REPORT` instead of `EVIDENCE_REVIEW_REPORT`.
+11. **Ambiguous intent**: if the request cannot be confidently routed, output this numbered menu and ask the user to choose:
 
 ```markdown
 我可以按以下哪种方式处理？
 1. 语义+结构搜索（关键词/概念/问句）
-2. 段落证据与引文分析（粘贴段落、找证据、补引用）
-3. Evidence Package 导出（Markdown 报告 + EndNote RIS）
-4. 精确核实（具体引用 + 具体主张/数据/引文）
-5. 已有编号引文修复（段落 + 6/18/19 等参考文献编号）
-6. 库健康度检查（库状态、索引、PDF覆盖率）
+2. 目标文献检索与文献清单导出（主题/方法/数据集/表型）
+3. 段落证据与引文分析（粘贴段落、找证据、补引用）
+4. Evidence Package 导出（Markdown 报告 + EndNote RIS）
+5. 精确核实（具体引用 + 具体主张/数据/引文）
+6. 已有编号引文修复（段落 + 6/18/19 等参考文献编号）
+7. 库健康度检查（库状态、索引、PDF覆盖率）
 ```
+
+### Dual-MCP Auto Search and Export Defaults
+
+Use these defaults for every non-health, non-verify workflow:
+
+1. **Dual-MCP auto search**: run Zotero first for local-library evidence, then automatically attempt PubMed expansion for biomedical ordinary search, target literature search, paragraph citation matching, paragraph polishing, and reference-update workflows when a PubMed-capable MCP tool is visible.
+2. **Automatic export by default**: ordinary `search`, `target_literature_search`, paragraph citation matching, paragraph polishing, `package`, and `reference_update` workflows write Markdown + RIS outputs by default. The only general opt-out is explicit `只在聊天输出`, `不要生成文件`, `不导出`, or `chat only`.
+3. **Ordinary search output**: Module 1 ordinary Zotero search default output is **Search Report + RIS**. Use a `LITERATURE_SEARCH_REPORT`-compatible search report without paragraph-only sections, and write Search RIS from inspected included records.
+4. **Target search output**: Module 1.8 target literature search default output is `LITERATURE_SEARCH_REPORT` + Search RIS, with Core / Strong Related / Method Background / Disease GWAS Only / Noise / Verify classification and exclusion reasons.
+5. **Paragraph output**: Module 2 + Module 2.5 paragraph citation matching, paragraph polishing, and citation insertion default output is `EVIDENCE_REVIEW_REPORT` + Citation RIS, including Copy-ready Manuscript Text, Annotated Recommended Text, Citation Support Ledger, and diff/wording changes.
+6. **PubMed truth boundary**: PubMed expansion can be recorded as `Completed` only after an actual PubMed search ran and selected PMID metadata was inspected. If PubMed tools are absent or fail, record the planned/attempted query and use `⚠️ Tool unavailable; search not executed` or `Failed; query reported`; never create PubMed-only RIS records from planned, failed, or uninspected PubMed results.
+7. **No route mixing**: search reports and target literature search reports never include Copy-ready Manuscript Text, sentence-level citation placement, or paragraph diff unless the user supplies a manuscript paragraph. Paragraph evidence packages never use Search RIS as a substitute for claim-level Citation RIS.
 
 ### End-to-End Workflow Map
 
 Use this map as the default execution path so the workflow remains continuous and auditable:
 
 ```text
-intent routing → optional read-only library readiness check → Module 1 search, Module 2 paragraph analysis, or Module 2.2 existing numbered citation repair → Zotero canonical metadata + PDF links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown evidence report + EndNote RIS → final path-only summary
+intent routing → optional read-only library readiness check → Module 1 search, Module 1.8 target literature search/export, Module 2 paragraph analysis, or Module 2.2 existing numbered citation repair → Zotero canonical metadata + PDF links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown report + EndNote RIS unless chat-only/no-export is explicit → final path-only summary
 ```
 
 Operational checkpoints:
 
-1. **Before searching**: identify scope, language, explicit opt-out, and whether the request is chat-only or the full **Paragraph Citation Package Workflow (Module 2 + Module 2.5)**.
+1. **Before searching**: identify scope, language, explicit opt-out, and whether the request is ordinary `search`, `target_literature_search`, or the full **Paragraph Citation Package Workflow (Module 2 + Module 2.5)**. If there is no chat-only/no-export opt-out, plan Markdown + RIS output from the start.
 2. **Before MCP-dependent work**: apply **0.25 MCP Readiness and Runtime Availability**. Zotero MCP is required for local evidence work; PubMed MCP is optional and can only be used when a PubMed/NCBI-capable callable tool is visible in the active session.
 3. **During Zotero work**: search Zotero first, deduplicate candidate evidence, and retrieve inspected metadata before using an item in a report or RIS record.
 4. **During PubMed work**: when PubMed tools are visible, use `pubmed_search` for expansion, `pubmed_get_details` or `pubmed_extract_info` for selected PMIDs, `pubmed_find_related` for key-paper expansion, and `pubmed_detect_fulltext` / `pubmed_download_fulltext` only for OA full text when enabled and useful.
@@ -73,7 +89,7 @@ Operational checkpoints:
 6. **Before PubMed claims**: only mark PubMed as `Completed` if a PubMed-capable tool is configured and visible, the PubMed search actually ran, and selected PMID metadata was inspected. Otherwise report the query with `⚠️ Tool unavailable; search not executed`, `Failed; query reported`, or `Not executed` with reason.
 7. **Before PubMed-only RIS**: include PubMed-only records only when PubMed status is `Completed` and metadata has been inspected with `pubmed_get_details`, `pubmed_extract_info`, or an equivalent visible PubMed metadata tool.
 8. **Before writing files**: run metadata quality checks for missing fields, possible Zotero/PubMed mismatch, duplicate warning, and RIS inclusion/exclusion action.
-9. **Before final response**: confirm the Markdown report follows `EVIDENCE_REVIEW_REPORT`, the RIS is plain RIS records only, and the chat response lists only generated paths plus critical warnings.
+9. **Before final response**: confirm the Markdown report follows `EVIDENCE_REVIEW_REPORT` for paragraph citation packages or `LITERATURE_SEARCH_REPORT` for target literature search exports, the RIS is plain RIS records only, and the chat response lists only generated paths plus critical warnings.
 
 ---
 
@@ -278,7 +294,25 @@ If no relevant source is found in Zotero, say so clearly and suggest an external
 1. If the user asks in natural language, first expand their query into structured search terms.
 2. Run **semantic search** first (concept matching, finds conceptually related papers even without keyword overlap).
 3. If results are insufficient, fall back to **keyword search** with relevant filters (tags, authors, year range, item type).
-4. Present results with the standardized format below.
+4. For biomedical topics, automatically attempt PubMed expansion after the Zotero search when a PubMed-capable MCP tool is visible; inspect selected PMID metadata before citing or exporting PubMed-only records.
+5. Unless the user explicitly says chat-only/no-export, write a Search Report + RIS after the chat summary. Ordinary search auto-exports Search Report + RIS; only `只在聊天输出`, `不要生成文件`, `不导出`, or `chat only` keeps the result in chat.
+6. Present chat results with the standardized format below while the saved report uses the `LITERATURE_SEARCH_REPORT`-compatible search report structure.
+
+### Auto-Export Default for Ordinary Search
+
+Module 1 ordinary Zotero search default output is **Search Report + RIS**. Treat ordinary topic discovery as a lightweight literature-search export path unless the user explicitly opts out. Use the same output root as target literature search:
+
+```text
+zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_literature_search.md
+zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris
+```
+
+Rules:
+
+- Ordinary search reports must stay search-focused: include query decomposition, Zotero and PubMed search reproducibility, included records, metadata QC, and export files; do not include Copy-ready Manuscript Text, Annotated Recommended Text, sentence-level citation placement, or paragraph diff.
+- Search RIS contains inspected included records only. PubMed-only records require actual completed PubMed search plus inspected PMID metadata.
+- If PubMed is unavailable, still write the Zotero-based report/RIS when Zotero evidence was inspected, and record the planned PubMed query with `⚠️ Tool unavailable; search not executed`.
+- If Zotero MCP is visible but not connected, stop without search or export and report `Zotero MCP visible but not connected`.
 
 ### Query Expansion Examples
 
@@ -345,6 +379,270 @@ Use collection or tag filters when:
 - In search result tables, use `Type = collection` or `tag` when the hit is included because of Zotero organization.
 - Add collection/tag context in `Why relevant`, e.g. `in PCOS-review collection; tagged included`.
 - Do not move items between collections or batch-update tags without explicit user confirmation.
+
+---
+
+## 1.8 Target Literature Search and Export
+
+Use this module when the user wants to discover, screen, classify, or export papers around a topic, method, dataset, phenotype, cohort, disease area, or question, without asking to revise a manuscript paragraph.
+
+Core output is a literature search report, not a paragraph evidence package. Target literature search must not require Copy-ready Manuscript Text, sentence-level citation recommendations, Claim–Evidence Matrix, or a paragraph diff unless the user separately provides a manuscript paragraph.
+
+### Input Decomposition
+
+Before searching, split the user request into these fields:
+
+| Field | Example |
+|---|---|
+| Topic | brain-related GWAS data |
+| Core concept | brain imaging-derived phenotypes; neuroimaging GWAS; cortical thickness; subcortical volume |
+| Target relation | which papers use these data / methods / phenotypes |
+| Search scope | Zotero local library first; automatic PubMed expansion for biomedical topics when visible |
+| Output request | Search Report + RIS by default / chat table only when explicit opt-out |
+| Inclusion boundary | uses target data, method, cohort, phenotype, or closely adjacent evidence layer |
+| Exclusion boundary | pure disease GWAS, generic GWAS Catalog, or methods papers that do not use the target data |
+
+### Topic Decomposition Rules
+
+For target_literature_search, decompose the request before building queries. Record the decomposition in saved reports so the user can see the search boundary.
+
+| Component | What to extract | Search use |
+|---|---|---|
+| Target object | The thing the user wants papers about, such as `brain-related GWAS data`, `IL-6 MR`, or `gut microbiota and depression` | Main topic label and semantic search anchor |
+| Data / method / phenotype / cohort | Specific data resources, methods, phenotypes, cohorts, exposures, or outcomes | Keyword and exact-phrase search terms |
+| Must-have concepts | Concepts that must be present for `Core`, such as brain imaging-derived phenotypes for brain GWAS searches | Inclusion rule and Core classification |
+| Adjacent concepts | Related concepts that may be `Strong Related`, such as brain cell eQTL, TWAS, pQTL, or Mendelian randomization | Recall expansion and optional RIS inclusion |
+| Exclusion concepts | Common false positives, such as generic GWAS Catalog, disease-only GWAS, methods-only GWAS, animal-only studies, or wrong population | Noise-control queries and exclusion reasons |
+| Time / source constraints | Year range, Zotero collection/tag, PubMed expansion, review vs primary studies, language, or study type | Structured filters and reproducibility notes |
+
+Decomposition rules:
+
+- If the user says "哪些文献使用了 X 数据/方法/表型/队列/GWAS", treat `X` as the must-have target relation. A paper is `Core` only when metadata, abstract, notes, or inspected full text indicates it uses that data/method/phenotype/cohort directly.
+- If the request is broad, generate 3-6 must-have and adjacent concepts before searching. Do not rely on one generic keyword.
+- Preserve user constraints such as collection/tag, year range, study type, species, language, or "Zotero only" in the search plan.
+- If no boundary is specified, default to Zotero local library first, automatic PubMed expansion for biomedical topics when visible, Search Report + RIS output, and no year restriction.
+- When the user asks for `核心文献`, privilege direct target use and primary source papers over broad reviews or generic methods.
+- Record `exclusion concepts` and `time/source constraints` explicitly in `LITERATURE_SEARCH_REPORT` so later reruns can reproduce both inclusion and exclusion boundaries.
+
+### Output Modes
+
+| Mode | Trigger | Output |
+|---|---|---|
+| Chat Search | Explicit `只在聊天输出`, `不要生成文件`, `不导出`, or `chat only` | Chat table + Refs only |
+| Search Report | Explicit report-only request with no RIS/EndNote/literature-list wording | `LITERATURE_SEARCH_REPORT` Markdown file |
+| Search Report + RIS | Default for target literature search and ordinary search unless chat-only/no-export is explicit | `LITERATURE_SEARCH_REPORT` Markdown file + Search RIS |
+
+If the user says `导出 MD`, `生成报告`, `保存报告`, `RIS`, `EndNote`, `文献清单`, `literature list`, or equivalent, use Search Report + RIS when RIS/EndNote is mentioned, otherwise Search Report. If the user only asks to search/find papers, still write Search Report + RIS by default; use Chat Search only when the prompt explicitly opts out of files.
+
+### Search Workflow
+
+```text
+Zotero readiness smoke test
+→ semantic search for broad recall
+→ keyword searches for precise concepts
+→ candidate pooling
+→ deduplicate by DOI / title / Zotero key
+→ classify candidates into Core / Strong Related / Method Background / Disease GWAS Only / Noise / Verify
+→ inspect Zotero metadata for selected candidates
+→ automatic PubMed expansion for biomedical topics when visible
+→ generate search report
+→ generate Search RIS for selected Included records
+```
+
+Workflow rules:
+
+1. Run the Zotero MCP smoke test from **0.25 MCP Readiness and Runtime Availability** before local target literature search. If Zotero MCP is visible but not connected, stop without search or export.
+2. Run `zotero_semantic_search` first for broad recall, then one or more separate `zotero_search_items` / `zotero_advanced_search` keyword passes for precise terms when needed. Keep Zotero sequential execution rules: search first, inspect results, then retrieve metadata for selected keys.
+3. Pool candidates from semantic, keyword, collection, and tag searches. Deduplicate by DOI first, then PMID, normalized title, then Zotero key.
+4. Classify every candidate before export. Do not treat "related" as enough for inclusion; explain the data, method, phenotype, cohort, or topic relation.
+5. Retrieve `zotero_get_item_metadata` for every included, optional, or verify candidate before writing it to a report or RIS.
+6. PubMed expansion is automatic for target literature search when a PubMed-capable tool is visible and the topic is biomedical or the user requested external expansion. PubMed-only RIS records still require `Completed` PubMed status and inspected PMID metadata.
+7. If the target search is chat-only, do not write files. Otherwise, write the default two deliverables: one literature search Markdown report and one Search RIS file. If the user explicitly requests report-only with no RIS/EndNote/literature-list output, omit the RIS line and state why in Export Files.
+
+### Scripted Package Writer (Phase 3 Handoff)
+
+When target literature search candidates have already been searched, classified, and metadata-inspected, the workflow may hand them to the repository writer:
+
+```text
+python3 scripts/write_literature_search_package.py --input candidates.json
+```
+
+Supported CLI options:
+
+- `--input candidates.json`: input file containing inspected candidate metadata.
+- `--output-root zotero-evidence-output`: output root; default package folder is `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/`.
+- `--slug brain_gwas`: explicit brief topic slug; otherwise infer from the run topic when possible.
+- `--timestamp YYYY-MM-DD_HHMMSS`: deterministic timestamp for reproducible package tests.
+- `--include-optional`: include eligible `RIS action = Optional` records in Search RIS.
+- `--no-ris`: write only the Markdown literature search report.
+- `--dry-run`: validate and print planned paths without writing files.
+- `--self-test`: run the local fixture-based writer self-test.
+
+Input contract:
+
+- JSON is required; YAML is accepted only when PyYAML is already installed. Do not add a new dependency just to parse YAML.
+- Top-level input keys are `run`, `topic_decomposition`, `query_expansion`, `criteria`, `findings`, `candidates`, `reading_order`, `reproducibility`, and `critical_warnings`.
+- The writer does not call Zotero or PubMed; it only formats data supplied by the already executed workflow.
+- Candidate `category` values must remain exactly `Core`, `Strong Related`, `Method Background`, `Disease GWAS Only`, `Noise`, or `Verify`.
+- Candidate `RIS action` values must remain exactly `Include`, `Optional`, `Exclude`, or `Verify`.
+- PubMed-only records require `pubmed_status = Completed` and `metadata_inspected = true` before entering Search RIS.
+- RIS default writes only `RIS action = Include`; `--include-optional` is required for eligible optional records.
+- The writer never writes `Exclude` or `Verify` records to Search RIS.
+- Use `scripts/fixtures/literature_search_package_sample.json` as the minimal local schema example and smoke-test fixture.
+
+### Query Expansion Matrix
+
+Build a small search plan before executing Zotero searches. Use semantic search for recall, then keyword and exact-phrase searches for precision, and finally noise-control terms to explain exclusions.
+
+| Query type | Purpose | Construction rule | Example |
+|---|---|---|---|
+| Semantic query | Broad recall of conceptually related papers | Combine target object + must-have concepts + adjacent concepts in one natural-language query | `studies using brain-related GWAS data, brain imaging-derived phenotypes, neuroimaging GWAS` |
+| Keyword query | Precise retrieval by title/abstract/metadata terms | Use 3-8 short queries from data/method/phenotype/cohort concepts | `"brain imaging-derived phenotypes GWAS"` |
+| Exact phrase query | Confirm named resources, cohorts, genes, methods, or phrases | Quote exact terms, dataset names, phenotype labels, DOI/PMID/title fragments, or method names | `"cortical thickness" "GWAS"` |
+| Negative / noise-control query | Identify common false positives and exclusion buckets | Search or screen for likely noise terms, then mark why they were excluded rather than silently dropping them | `"GWAS Catalog"`, `"schizophrenia GWAS"` when the target is brain imaging GWAS |
+
+Query expansion examples:
+
+| User question | Semantic query focus | Keyword / exact phrase queries | Noise-control concepts |
+|---|---|---|---|
+| 哪些文献使用了大脑相关 GWAS 数据？ | brain-related GWAS data; brain imaging-derived phenotypes; neuroimaging GWAS | `"brain imaging-derived phenotypes GWAS"`; `"cortical thickness surface area GWAS"`; `"subcortical brain morphometry GWAS"`; `"basal ganglia GWAS"` | disease-only GWAS; generic GWAS Catalog; methods-only GWAS; psychiatric GWAS without brain imaging |
+| 导出关于 IL-6 MR 的文献 MD 和 RIS | IL-6 Mendelian randomization; IL6R; inflammatory biomarkers; causal inference | `"IL-6" "Mendelian randomization"`; `"IL6R" "Mendelian randomization"`; `"interleukin-6 receptor" "MR"` | non-MR observational IL-6 studies; cytokine reviews without MR; unrelated inflammatory markers |
+| 检索 Zotero 中关于肠道菌群和抑郁症的文献 | gut microbiota depression mechanism; microbiome depression; gut-brain axis | `"gut microbiota" depression`; `"microbiome" depression`; `"gut-brain axis" depression`; `"Mendelian randomization" microbiota depression` | non-human-only if user asked clinical; unrelated gut disease; depression-only papers without microbiota |
+
+Rules:
+
+- Every saved `LITERATURE_SEARCH_REPORT` must include the generated semantic query and at least one keyword/structured query, or explain why one search mode was not executed.
+- Exact phrase queries are especially important for named datasets, cohorts, phenotypes, genes, methods, or abbreviations.
+- Do not use negative/noise-control terms to hide results. Use them to make exclusion reasons auditable.
+- Retry a failed or zero-hit query at most once by broadening terms; record both the original and revised query in Search Reproducibility.
+
+### Query Expansion Example
+
+For the user question `哪些文献使用了大脑相关 GWAS 数据？`, use a broad semantic query plus precise keyword queries:
+
+```markdown
+Semantic query:
+studies using brain-related GWAS data, brain imaging-derived phenotypes, neuroimaging GWAS,
+cortical thickness, cortical surface area, subcortical brain volumes, basal ganglia GWAS,
+MRI-derived brain phenotypes
+
+Keyword queries:
+- "brain imaging-derived phenotypes GWAS"
+- "neuroimaging GWAS"
+- "cortical thickness surface area GWAS"
+- "subcortical brain morphometry GWAS"
+- "basal ganglia GWAS"
+- "brain MRI GWAS Mendelian randomization"
+- "brain cell type GWAS eQTL"
+```
+
+### Literature Classification
+
+Use these categories in chat tables, `LITERATURE_SEARCH_REPORT`, metadata QC, and Search RIS decisions:
+
+| Category | Definition | Default RIS action |
+|---|---|---|
+| Core | Directly uses the target data, method, phenotype, cohort, or topic-defining resource, such as brain IDPs GWAS or cortical thickness GWAS | Include |
+| Strong Related | Uses adjacent but relevant evidence, such as brain cell eQTL plus GWAS or NIDP TWAS | Include / Optional |
+| Method Background | Important method paper, but does not directly use the target topic data | Optional / Exclude |
+| Disease GWAS Only | Studies only disease or psychiatric GWAS without the requested brain imaging, brain structure, target phenotype, or method layer | Exclude |
+| Noise | False positive or retrieval noise | Exclude |
+| Verify | Metadata, abstract, or relation is insufficient; full text or manual check is needed | Verify |
+
+### Classification Decision Rubric
+
+Apply this rubric after metadata or abstract inspection. When evidence is insufficient, choose `Verify` rather than guessing.
+
+| Category | Include evidence | Boundary examples | Tie-breaker |
+|---|---|---|---|
+| Core | The paper directly uses the target data, method, phenotype, cohort, or resource named in the request | A brain IDP GWAS paper for "brain-related GWAS"; an IL-6 MR paper for "IL-6 MR" | If direct target use is visible in title/abstract/metadata, choose `Core` even if it also has a broad disease outcome |
+| Strong Related | The paper uses a nearby data layer or method that helps interpret the target set but is not the exact target | brain cell eQTL + GWAS for brain GWAS; microbiome MR adjacent to gut-brain-axis search | Choose `Strong Related` only when the relation is explicit enough to explain in one clause |
+| Method Background | The method is important for understanding the search topic, but the paper does not use the requested target data | general MR method paper in an IL-6 MR search; GWAS method paper without brain phenotype | Include in RIS only if the user asks for background/method papers |
+| Disease GWAS Only | The paper studies disease/psychiatric GWAS but lacks the requested data layer, phenotype, or method relation | schizophrenia GWAS without brain imaging for brain IDP search | Exclude unless the user broadens the scope to disease GWAS |
+| Noise | The result is off-topic, wrong organism/population, wrong data layer, generic catalog, duplicate, or unrelated retrieval noise | GWAS Catalog entry; unrelated cytokine paper; gut disease without depression/microbiome relation | Exclude and record the concrete reason |
+| Verify | Metadata, abstract, or available snippets suggest possible relevance but cannot prove target use | title is vague; missing abstract; no PDF; ambiguous abbreviation | Do not include in Search RIS by default |
+
+Tie-breaker rules:
+
+- Prefer `Verify` over `Core` when target use is only inferred from a vague title.
+- Prefer `Method Background` over `Core` when a paper teaches or benchmarks a method but does not apply it to the requested target.
+- Prefer `Disease GWAS Only` over `Strong Related` when the only overlap is a disease label and the requested data/method layer is absent.
+- Prefer `Noise` over `Verify` when metadata clearly indicates the wrong topic, wrong data layer, duplicate, or generic catalog record.
+
+Include a classification criteria table in saved reports:
+
+```markdown
+## 2. 纳入与排除标准
+| Decision | Criteria |
+|---|---|
+| Include | Core; Strong Related when relation is explicit and useful for the user's target set |
+| Exclude | Disease GWAS Only, Noise, and Method Background when it does not use the target data/method |
+| Verify | Candidate appears relevant but relation or metadata remains unconfirmed |
+```
+
+### Noise / Exclusion Reasons
+
+Every excluded or verify candidate in a saved report must carry one short reason code plus a human-readable reason.
+
+| Reason code | Use when | Typical RIS action |
+|---|---|---|
+| `wrong data layer` | The paper uses a different omics, phenotype, exposure, or measurement layer than requested | Exclude |
+| `disease-only GWAS` | The paper is disease/psychiatric GWAS without the requested data/method/phenotype relation | Exclude |
+| `method-only` | The paper is methodological background without direct target use | Optional / Exclude |
+| `generic catalog` | The result is a catalog/database/index entry rather than a target-use study | Exclude |
+| `metadata insufficient` | Metadata/abstract is too sparse to confirm target use | Verify |
+| `duplicate` | The candidate duplicates another selected DOI/PMID/title/Zotero record | Exclude |
+| `off-topic` | The candidate does not match the topic after metadata inspection | Exclude |
+| `wrong population` | The study population/species/context violates the user boundary | Exclude |
+| `no inspected metadata` | The candidate was returned by search but metadata was not inspected | Verify / Exclude |
+
+Report excluded candidates in a table, not only in prose:
+
+```markdown
+| Citation | Category | Exclusion reason code | Human-readable reason | RIS action |
+|----------|----------|-----------------------|-----------------------|------------|
+| Author Year | Noise | wrong data layer | Uses disease GWAS only; no brain imaging phenotype | Exclude |
+```
+
+### Search RIS Rules
+
+Target literature search uses **Search RIS**, separate from paragraph **Citation RIS**.
+
+- **Citation RIS** is for paragraph citation-support workflows. It contains final recommended manuscript citations, depends on Citation Support Ledger, and excludes sources that do not support the mapped claim.
+- **Search RIS** is for target literature search. It represents the selected literature set, not manuscript citation placement.
+- In target_literature_search mode, RIS represents the selected literature set, not manuscript citation placement. Do not require Copy-ready Manuscript Text or sentence-level citation recommendations before writing RIS.
+- Search RIS includes `Category = Core` by default.
+- Search RIS may include `Strong Related` when the report marks the relation and `RIS action = Include` or `Optional`.
+- Search RIS excludes `Method Background`, `Disease GWAS Only`, and `Noise` by default.
+- `Verify` candidates are excluded from Search RIS unless the user explicitly asks to export unverified candidates; if exported by override, mark them clearly in the Markdown report with `RIS action = Verify`.
+- All RIS metadata rules from `RIS_REFERENCE_FILE` still apply: records must use inspected metadata, unresolved metadata mismatch is excluded, and PubMed-only records require completed PubMed metadata inspection.
+
+### Output Requirements
+
+For chat-only target literature search, output a compact table:
+
+```markdown
+| # | Citation | Year | Category | Role | Zotero key | DOI/PMID | Why included | RIS action |
+|---|----------|------|----------|------|------------|----------|--------------|------------|
+| 1 | Author Year | 2024 | Core | brain IDPs GWAS | KEY | DOI / PMID | directly uses target data | Include |
+```
+
+Then include `Refs` once, using **Appendix: Output Templates → REFS_BLOCK**.
+
+For saved target literature search outputs, use **Appendix: Output Templates → LITERATURE_SEARCH_REPORT** and this final chat format:
+
+```markdown
+Generated Literature Search Package:
+- Status: Ready / Caution / Partial / Unknown
+- Markdown report: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_literature_search.md`
+- EndNote RIS: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris`
+- Included records: {N}
+
+Critical Warnings:
+- {warning or No critical warnings}
+```
+
+If the user requested only a Markdown report and no RIS, omit the EndNote RIS line and state `Included records: {N}` for the report table.
 
 ---
 
@@ -634,7 +932,7 @@ Rules:
 
 ## 2.5 Evidence Package Export
 
-Use when the user asks to save results, generate an evidence package, export EndNote references, or produce durable files after a search or paragraph evidence review. For paragraph citation-support requests, this module is the export stage of the unified **Paragraph Citation Package Workflow (Module 2 + Module 2.5)**: **Module 2 → Module 2.5** means analysis first, then export.
+Use when the user asks to save results, generate an evidence package, export EndNote references, or produce durable files after a search or paragraph evidence review. In the current default, ordinary search, target literature search, paragraph citation matching, paragraph polishing, and reference-update workflows all produce durable Markdown + RIS outputs unless the prompt explicitly says chat-only/no-export. For paragraph citation-support requests, this module is the export stage of the unified **Paragraph Citation Package Workflow (Module 2 + Module 2.5)**: **Module 2 → Module 2.5** means analysis first, then export.
 
 Visible default pipeline for paragraph citation/export work:
 
@@ -651,15 +949,25 @@ zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}
 
 Do not create extra JSON, BibTeX, EndNote XML, DOI lists, or log files unless the user explicitly requests them. The Markdown report is the human-readable evidence workspace; the RIS file is the EndNote import file.
 
+Target literature search exports are handled by **Module 1.8 Target Literature Search and Export** and use a different Markdown suffix:
+
+```text
+zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_literature_search.md
+zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris
+```
+
+The RIS filename may be shared, but its meaning differs by route: paragraph workflows write **Citation RIS**; target literature search workflows write **Search RIS**.
+
 ### Trigger Conditions
 
 Route to this module when the user asks for any of the following:
 
 - `/zotero-evidence-review` plus a short request to find evidence, add citations, export a report, or create reusable writing outputs; this simple-request entry defaults to the complete workflow unless there is an explicit chat-only opt-out.
-- `Evidence Package`, `Markdown report`, `EndNote`, `RIS`, `保存报告`, `导出参考文献`, `生成文件`, or `输出文件`.
+- Ordinary literature search or topic discovery that does not supply a manuscript paragraph; run Module 1 first, then write a search-focused Markdown report plus Search RIS unless chat-only/no-export is explicit.
+- `Evidence Package`, `Markdown report`, `EndNote`, `RIS`, `保存报告`, `导出参考文献`, `生成文件`, or `输出文件` attached to a paragraph, manuscript passage, citation-support request, or non-target evidence workflow.
 - Default citation-support workflow triggers: `使用技能`, `完整工作流`, `找引文`, `补引用`, `推荐引用`, `citation`, `refs`, `reference`, `参考文献`, or `文献引用` when attached to a paragraph, manuscript passage, or literature-search request.
 - A paragraph evidence review plus a request to save or export results.
-- A literature search where the user wants a reusable report rather than chat-only results.
+- A literature search where the user wants a reusable evidence report rather than a target literature search report. Topic-only requests for "which papers use X", "search Zotero for X", "export a literature list/report/RIS", or equivalent route to Module 1.8.
 
 Do not route to this module when the user explicitly opts out with `只在聊天输出`, `不要生成文件`, `不导出`, `chat only`, or equivalent.
 
@@ -669,7 +977,8 @@ Do not route to this module when the user explicitly opts out with `只在聊天
    - For paragraph input, run **Module 2** first as the analysis stage of the **Paragraph Citation Package Workflow (Module 2 + Module 2.5)**.
    - For paragraph input with supplied numbered citations or reference lists, run **Module 2.2 Existing Numbered Citation Repair** after claim extraction and before final citation placement/export; preserve `Original citation number`, mark unsupported numbered citation cases, and carry `Original citation number`, `Support verdict`, `Action`, and `RIS action` into the Citation Support Ledger, the report, and RIS QC tables.
    - For paragraph citation-support requests such as `/zotero-evidence-review`, `使用技能`, `找证据`, `找引文`, `补引用`, `推荐引用`, `citation`, `refs`, `参考文献`, or `文献引用`, default to the full workflow and write both `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_evidence_review.md` and `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris` unless the user explicitly opts out of file generation.
-   - For topic/search input, run **Module 1** first and convert the final included papers into a reference table.
+   - For target_literature_search topic input, run **Module 1.8** and save `LITERATURE_SEARCH_REPORT` plus Search RIS by default; do not run paragraph claim extraction, Copy-ready Manuscript Text, sentence-level citation placement, or paragraph diff.
+   - For other topic/search input, run **Module 1** first, produce a search-focused report, and convert the final inspected included papers into Search RIS unless the user explicitly opts out.
    - For biomedical paragraph/search requests, the package workflow attempts automatic PubMed expansion after Zotero local search when a PubMed-capable tool is configured and visible.
    - Other external source fallback beyond this built-in PubMed expansion still follows **Module 5: External Source Fallback** and requires availability checks and user confirmation where specified.
 2. **Collect canonical metadata**
@@ -678,7 +987,7 @@ Do not route to this module when the user explicitly opts out with `只在聊天
    - Use Zotero metadata as the authority for Zotero items. Do not fill missing authors, titles, journals, pages, DOI, PMID, or years from memory.
 3. **Run automatic PubMed expansion as a second evidence source when available**
    - After Zotero local search, construct a PubMed query from the topic, extracted claims, and core biomedical concepts.
-   - Execute PubMed search automatically in the full package workflow only if a PubMed-capable tool is configured and visible in the current MCP tool list.
+   - Execute PubMed search automatically in ordinary search, target literature search, and full paragraph package workflows when the topic is biomedical and a PubMed-capable tool is configured and visible in the current MCP tool list.
    - Treat a PubMed-capable tool as visible only when the active session exposes a callable tool whose name or description clearly indicates PubMed / NCBI E-utilities search, such as `pubmed`, `simple-pubmed`, `pubmed-data-server`, `ncbi`, `esearch`, `efetch`, `search-pubmed`, `get_paper_fulltext`, or equivalent biomedical database search capability.
    - Do not assume Zotero MCP itself can search PubMed. Zotero MCP may contain Zotero records with PMID links, but PubMed expansion requires a separate visible PubMed/NCBI-capable tool.
    - Treat Zotero and PubMed as two evidence-source steps: Zotero local evidence first, then PubMed expansion for additional or confirming evidence.
@@ -712,7 +1021,8 @@ Do not route to this module when the user explicitly opts out with `只在聊天
    - Report missing metadata, metadata mismatch, and duplicate warning rows in the Markdown report.
    - Exclude unresolved metadata conflicts from RIS by default; do not silently write questionable records.
 7. **Select RIS references**
-   - Include final recommended Zotero citations.
+   - For paragraph workflows, write **Citation RIS**: include final recommended Zotero citations and any eligible PubMed-only recommended citations that support the manuscript wording.
+   - For target_literature_search workflows, write **Search RIS**: include the selected literature set from `LITERATURE_SEARCH_REPORT`, including `Core` by default and `Strong Related` only when marked Include/Optional; exclude `Method Background`, `Disease GWAS Only`, `Noise`, and unresolved `Verify` by default.
    - Include PubMed-only papers only when they are marked `recommend citing` or `consider importing`, and only when PubMed metadata is sufficient and comes from an actually completed PubMed search.
    - Exclude low-relevance hits, duplicate records, and unresolved metadata conflicts by default.
 8. **Run pre-write QA self-check, then write the two files**
@@ -1339,7 +1649,8 @@ Use short prompts. `/zotero-evidence-review` is the easiest way to call this ski
 
 The skill will:
 1. Expand to: `semantic_search("gut microbiota depression Mendelian randomization")` + `search_library(q="gut microbiota depression MR", tags=["Mendelian Randomization", "depression"])`
-2. Return combined results with similarity scores and Zotero links
+2. Attempt PubMed expansion when a PubMed-capable MCP tool is visible because this is a biomedical topic.
+3. Write a search-focused Markdown report plus Search RIS by default, and return a compact path summary. If the prompt says `只在聊天输出`, `不要生成文件`, `不导出`, or `chat only`, stop at the chat table + Refs.
 
 ### Paragraph Evidence & Citation Analysis
 
@@ -1395,7 +1706,7 @@ Chat-only example:
 
 ## Appendix: Output Templates
 
-Use these named templates whenever a module references an appendix template. For chat-only outputs, keep full bibliographic metadata in `REFS_BLOCK` only; elsewhere cite papers as `Author Year (KEY)`. For evidence packages, use `EVIDENCE_REVIEW_REPORT` plus `RIS_REFERENCE_FILE`.
+Use these named templates whenever a module references an appendix template. For chat-only outputs, keep full bibliographic metadata in `REFS_BLOCK` only; elsewhere cite papers as `Author Year (KEY)`. For ordinary search and target literature search reports, use `LITERATURE_SEARCH_REPORT` plus `RIS_REFERENCE_FILE` unless chat-only/no-export is explicit. For paragraph evidence packages, use `EVIDENCE_REVIEW_REPORT` plus `RIS_REFERENCE_FILE`.
 
 ### REFS_BLOCK
 
@@ -1466,6 +1777,132 @@ Rules:
 - Use `~~删除~~` only for text that should be removed or weakened.
 - Use `**新增**` for inserted citations, hedges, qualifiers, or terminology changes.
 - Leave unchanged text unmarked.
+
+### LITERATURE_SEARCH_REPORT
+
+```markdown
+# 文献检索报告：{topic}
+
+## 1. 检索任务
+| Field | Value |
+|---|---|
+| Topic | {topic} |
+| User question | {original user question} |
+| Search date | {YYYY-MM-DD} |
+| Search mode | target_literature_search / search |
+| Zotero status | Connected / Failed / Zotero MCP visible but not connected |
+| PubMed status | Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported / Not executed |
+| Output | Chat Search / Search Report / Search Report + RIS |
+| Status | Ready / Caution / Partial / Unknown |
+| Status rationale | {one sentence explaining search completeness and major caveat} |
+
+## 2. Topic Decomposition
+| Component | Value |
+|---|---|
+| Target object | {target object} |
+| Data / method / phenotype / cohort | {data, methods, phenotypes, cohorts, exposures, outcomes} |
+| Must-have concepts | {concepts required for Core classification} |
+| Adjacent concepts | {concepts allowed for Strong Related classification} |
+| Exclusion concepts | {false-positive concepts to screen and report} |
+| Time / source constraints | {year range, collection/tag, Zotero-only, PubMed expansion, study type, language, or none} |
+
+## 3. Query Expansion Plan
+| Query type | Query | Purpose | Expected signal | Noise-control note |
+|---|---|---|---|---|
+| Semantic query | {semantic query} | broad recall | Core / Strong Related candidates | {noise concepts to watch} |
+| Keyword query | {keyword query} | precise metadata/title/abstract retrieval | target data/method/phenotype mentions | {expected false positives} |
+| Exact phrase query | {exact phrase query or Not used} | named dataset/cohort/method/phenotype confirmation | direct target use | {why exact phrase matters} |
+| Negative / noise-control query | {noise-control query or screening terms} | identify false positives for exclusion | Disease GWAS Only / Noise / Method Background | {how exclusions are reported} |
+
+## 4. 纳入与排除标准
+| Decision | Criteria |
+|---|---|
+| Include | Core; Strong Related when the relation to the target data/method/phenotype/cohort is explicit |
+| Exclude | Method Background without target use; Disease GWAS Only; Noise; unresolved duplicates or metadata mismatch |
+| Verify | Candidate appears relevant but metadata, abstract, or full-text relation remains insufficient |
+
+## 5. 结果分类标准
+| Category | Include rule | Exclude rule | Default RIS action |
+|---|---|---|---|
+| Core | Directly uses the requested target data/method/phenotype/cohort/resource | Exclude if target use is only inferred from a vague title | Include |
+| Strong Related | Explicitly uses adjacent evidence useful for the target set | Exclude if relation is only a shared disease label or generic method | Include / Optional |
+| Method Background | Important method/context paper without direct target use | Exclude from Search RIS unless background methods were requested | Optional / Exclude |
+| Disease GWAS Only | Disease or psychiatric GWAS without requested data/method/phenotype layer | Exclude from target data/method literature set | Exclude |
+| Noise | Off-topic, wrong data layer, generic catalog, duplicate, wrong population, or unrelated retrieval | Exclude and record reason code | Exclude |
+| Verify | Possible relevance but metadata/abstract/full text is insufficient | Exclude from RIS until verified unless user overrides | Verify |
+
+## 6. 核心发现
+- {3-5 concise Chinese findings about the literature set, categories, and evidence gaps}
+
+## 7. 检索结果总表
+| # | Citation | Year | Category | Role | Zotero key | DOI/PMID | Why included | Exclusion reason code | RIS action |
+|---|----------|------|----------|------|------------|----------|--------------|-----------------------|------------|
+| 1 | Author Year | 2024 | Core / Strong Related / Method Background / Disease GWAS Only / Noise / Verify | ... | KEY / PubMed-only | DOI / PMID / none | directly uses target data / excluded because ... | none / wrong data layer / disease-only GWAS / method-only / generic catalog / metadata insufficient / duplicate / off-topic / wrong population / no inspected metadata | Include / Optional / Exclude / Verify |
+
+## 8. 分类结果
+### Core
+| Citation | Data / method used | Why core |
+|----------|--------------------|----------|
+| Author Year | ... | ... |
+
+### Strong Related
+| Citation | Relation | Why related |
+|----------|----------|-------------|
+| Author Year | ... | ... |
+
+### Method Background
+| Citation | Method role | RIS action |
+|----------|-------------|------------|
+| Author Year | ... | Optional / Exclude |
+
+### Disease GWAS Only / Noise / Verify
+| Citation | Category | Reason | RIS action |
+|----------|----------|--------|------------|
+| Author Year | Disease GWAS Only / Noise / Verify | ... | Exclude / Verify |
+
+## 9. 噪音与排除原因
+| Citation | Category | Exclusion reason code | Human-readable reason | RIS action |
+|----------|----------|-----------------------|-----------------------|------------|
+| Author Year | Noise / Disease GWAS Only / Method Background / Verify | wrong data layer / disease-only GWAS / method-only / generic catalog / metadata insufficient / duplicate / off-topic / wrong population / no inspected metadata | ... | Exclude / Verify / Optional |
+
+## 10. 推荐阅读顺序
+| Priority | Citation | Why read first |
+|----------|----------|----------------|
+| 1 | Author Year | Defines target dataset / most central evidence / best review starting point |
+
+## 11. Search Reproducibility
+| Source | Query | Mode | Max results | Status | Hits | Included | Notes |
+|---|---|---|---:|---|---:|---:|---|
+| Zotero | {semantic query} | semantic | {max_results or Not recorded} | Completed / No hits / Failed | {hits} | {included_count} | full_text_inspected: yes/no/partial; included: {keys}; excluded: {record + reason} |
+| Zotero | {keyword query} | keyword / structured | {max_results or Not recorded} | Completed / No hits / Failed | {hits} | {included_count} | full_text_inspected: yes/no/partial; included: {keys}; excluded: {record + reason} |
+| Zotero | {exact phrase query or noise-control query} | exact phrase / noise-control | {max_results or Not recorded} | Completed / No hits / Failed / Not executed | {hits} | {included_count} | exclusion_reason: {reason code}; full_text_inspected: yes/no/partial |
+| PubMed | {attempted or planned PubMed query} | PubMed | {max_results} | Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported / Not executed | {hits} | {included_count} | included PMIDs: {PMIDs or none}; failed reason: {if any}; full_text_inspected: yes/no/partial |
+
+## 12. Metadata QC
+| Citation | DOI | PMID | PDF | Missing metadata | Duplicate / mismatch | Evidence source | RIS standardization source | RIS action |
+|----------|-----|------|-----|------------------|----------------------|-----------------|----------------------------|------------|
+| Author Year | DOI / missing | PMID / missing | [PDF](zotero://open-pdf/library/items/ATTACHMENT_KEY) / — | none / fields | none / possible duplicate / Possible metadata mismatch | Zotero / PubMed / Zotero + PubMed | PMID/PubMed / DOI / Zotero metadata / PubMed metadata | Include / Optional / Exclude / Verify |
+
+## 13. Export Files
+- Markdown report: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_literature_search.md`
+- EndNote RIS: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris` / Not requested
+- Included records: {N}
+- Search RIS rule: selected literature set only; Core included by default; Strong Related included only when explicitly marked Include/Optional; Method Background, Disease GWAS Only, Noise, and unresolved Verify excluded by default.
+- Critical warnings: {No critical warnings / PubMed unavailable / Zotero MCP disconnected / metadata mismatch / unresolved Verify candidates}
+```
+
+Rules:
+- Use `LITERATURE_SEARCH_REPORT` for target_literature_search and ordinary Module 1 search exports, not paragraph citation-support packages.
+- Do not include Copy-ready Manuscript Text, Annotated Recommended Text, paragraph diff, Claim–Evidence Matrix, or sentence-level citation placement unless the user also supplies a manuscript paragraph.
+- `Category` must use only `Core`, `Strong Related`, `Method Background`, `Disease GWAS Only`, `Noise`, or `Verify`.
+- `RIS action` must use only `Include`, `Optional`, `Exclude`, or `Verify`.
+- `Exclusion reason code` must use one of `wrong data layer`, `disease-only GWAS`, `method-only`, `generic catalog`, `metadata insufficient`, `duplicate`, `off-topic`, `wrong population`, `no inspected metadata`, or `none`.
+- Keep full official bibliographic metadata in the result table, metadata QC table, or Refs block only; avoid repeating full title/journal/DOI in every section.
+- Search Reproducibility must record every Zotero semantic query, Zotero keyword/structured query, and PubMed query when planned or executed.
+- Search Reproducibility should include exact phrase or noise-control searches when they were needed to classify exclusions.
+- PubMed `Completed` requires actual PubMed execution and inspected PMID metadata; otherwise use `⚠️ Tool unavailable; search not executed`, `Failed; query reported`, or `Not executed`.
+- Search RIS records must still follow `RIS_REFERENCE_FILE`: plain RIS only, inspected metadata only, no Markdown, no fabricated DOI/PMID, and no PubMed-only records unless PubMed status is `Completed` with inspected metadata.
+- Report generated paths as relative paths only.
 
 ### EVIDENCE_REVIEW_REPORT
 

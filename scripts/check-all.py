@@ -88,6 +88,7 @@ def main() -> None:
     steps: list[tuple[str, list[str]]] = [
         ("Validate zotero-evidence-review skill", [PYTHON, "scripts/validate-skill.py"]),
         ("Validate pubmed-literature-search skill", [PYTHON, "scripts/validate-pubmed-skill.py"]),
+        ("Self-test literature search package writer", [PYTHON, "scripts/write_literature_search_package.py", "--self-test"]),
     ]
 
     if args.output_warnings == "skip":

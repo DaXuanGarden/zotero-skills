@@ -13,20 +13,23 @@
 
 如果你已经安装好 skill，并且当前 ZCode / OpenCode 会话能看到 Zotero MCP（可选：PubMed MCP），最省事的用法是：**复制下面与你场景最接近的提示词，把主题、段落或参考文献替换成自己的内容即可。**
 
+默认行为已经调整为“检索也导出”：普通文献检索、目标文献检索、段落补引用/润色、PubMed 主题检索都会默认生成 Markdown 报告 + EndNote-compatible RIS。只想在聊天里快速看结果时，请在提示词开头明确写 `只在聊天输出，不要生成文件`。
+
 | 场景 | 推荐入口 | 复制即用提示词 | 典型产物 |
 |---|---|---|---|
 | 写论文时给一段草稿找证据、补引用 | `/zotero-evidence-review` | `帮我给下面这段草稿找证据并补引用，使用完整工作流，生成 Markdown evidence report 和 EndNote RIS：...` | `zotero-evidence-output/.../*_evidence_review.md` + `*_references.ris` |
 | 已有编号引用，怀疑某些引用不支持原句 | `/zotero-evidence-review` | `帮我检查并更新下面这段已有编号引用，逐条判断引用是否支持原句，修复不支持的引用，并生成最终 RIS：...` | 引用支持/不支持表、改写段落、最终 RIS |
-| 只想快速在 Zotero 库里找文献 | `/zotero-evidence-review` | `搜 Zotero 库中关于 {topic} 的论文，列出最相关的 10 篇，并说明每篇适合支持什么主张。` | 聊天结果；可按需导出 |
+| 在 Zotero 库里找文献并导出 | `/zotero-evidence-review` | `搜 Zotero 库中关于 {topic} 的论文，列出最相关的 10 篇，并说明每篇适合支持什么主张。` | `*_literature_search.md` + Search RIS；显式 chat-only 时只聊天 |
+| 目标文献检索与文献清单导出 | `/zotero-evidence-review` | `哪些文献使用了大脑相关 GWAS 数据？请拆解检索主题，分类 Core/Strong Related/Noise，并导出 MD 和 RIS。` | `*_literature_search.md` + Search RIS |
 | Zotero 证据不够，需要补 PubMed | `/zotero-evidence-review` | `先检索 Zotero；如果证据不足，在 PubMed MCP 可用时扩展检索，并合并去重后生成 Evidence Package：...` | Zotero + PubMed 合并证据报告、RIS |
 | 只做 PubMed 检索，不依赖 Zotero | `/pubmed-literature-search` | `检索近 5 年 {topic} 的 PubMed 文献，检查 PMID 元数据，找 related reviews，并导出 Markdown 报告和 RIS。` | PubMed-only report + RIS |
 | 核实一篇文献是否真的支持某句话 | `/zotero-evidence-review` | `请核实这篇文献是否支持以下主张：claim = ...；文献 = DOI/PMID/Zotero key/...；优先读取全文/PDF。` | fully/partially/contradicted/not addressed 判断 |
-| 投稿前检查库和输出质量 | `/zotero-evidence-review` + 本地脚本 | `做一次 Zotero library health check，只读检查，不要修改条目。` 然后本地运行 `scripts/check-all.py` | 索引/PDF/重复/缺元数据状态、输出门禁 |
+| 投稿前检查库和输出质量 | `/zotero-evidence-review` + 本地脚本 | `做一次 Zotero library health check，只读检查，不要修改条目。` 然后本地运行 `python3 scripts/check-all.py` | 索引/PDF/重复/缺元数据状态、输出门禁 |
 
 完整工作流可以记成一句话：
 
 ```text
-草稿或问题 → Zotero 本地检索 → claim 拆解与证据矩阵 → 条件性 PubMed 扩展 → 引文放置与改写 → Citation Support Ledger → Markdown evidence report + EndNote RIS → EndNote/Word 中重排编号
+草稿或问题 → Zotero 本地检索 → claim 拆解/检索分类 → PubMed 可见时自动扩展 → 引文放置与改写或文献清单分类 → Citation/PMID Ledger → Markdown report + EndNote RIS → EndNote/Word 中重排编号
 ```
 
 最常用的端到端提示词：
@@ -48,17 +51,29 @@
 只在聊天输出，不要生成文件：
 ```
 
+如果已经通过 `target_literature_search` 完成检索、分类和元数据检查，并整理成候选 JSON，可以用 Phase 3 writer 直接生成标准专题检索包：
+
+```bash
+python3 scripts/write_literature_search_package.py \
+  --input scripts/fixtures/literature_search_package_sample.json \
+  --output-root /tmp/zotero-lit-test \
+  --slug brain_gwas \
+  --timestamp 2026-07-07_120000
+```
+
+这个脚本只负责把已检查候选写成 `*_literature_search.md` 和 Search RIS；它不会调用 Zotero 或 PubMed，也不会把 `Exclude` / `Verify` 条目写入 RIS。需要把 `Optional` 条目也写入 RIS 时，显式加 `--include-optional`。
+
 ---
 
 ## 1. 项目概览
 
-本仓库提供两个互补 skill：`zotero-evidence-review` 是核心 Zotero 本地证据审查工作流；`pubmed-literature-search` 是独立 PubMed MCP 文献检索工作流。前者通过 Zotero MCP 连接本地 Zotero 文献库，支持从“找文献”到完整的 **Paragraph Citation Package Workflow**（段落 → 主张拆解 → Zotero 本地检索 → PubMed 条件扩展 → 引文放置 → Markdown 证据报告 + EndNote RIS）再到“逐条核实引用是否真的支持主张”的证据审查工作流；后者可直接调用 PubMed MCP 进行主题检索、PMID 元数据检查、related/review discovery、OA 全文可用性检查，并可单独导出 Markdown + RIS。
+本仓库提供两个互补 skill：`zotero-evidence-review` 是核心 Zotero 本地证据审查工作流；`pubmed-literature-search` 是独立 PubMed MCP 文献检索工作流。前者通过 Zotero MCP 连接本地 Zotero 文献库，支持从“找文献”到完整的 **Paragraph Citation Package Workflow**（段落 → 主张拆解 → Zotero 本地检索 → PubMed 可见时自动扩展 → 引文放置 → Markdown 证据报告 + EndNote RIS）再到“逐条核实引用是否真的支持主张”的证据审查工作流；后者可直接调用 PubMed MCP 进行主题检索、PMID 元数据检查、related/review discovery、OA 全文可用性检查，并默认导出 Markdown + RIS，除非显式 chat-only。
 
 推荐使用路径：
 
 - 需要基于本地 Zotero 库找证据、补引用、核实引文时，用 `zotero-evidence-review`。
 - 需要直接检索 PubMed、检查 PMID、找 related/review 文献或导出 PubMed-only RIS 时，用 `pubmed-literature-search`。
-- 如果只想聊天查看结果，可明确说 `只在聊天输出` 或 `不要生成文件`。
+- 如果只想聊天查看结果，可明确说 `只在聊天输出` 或 `不要生成文件`；否则检索、补引用和润色都会默认生成相应报告与 RIS。
 
 | 项目 | 当前状态 |
 |---|---|
@@ -79,12 +94,14 @@
 | **Library Health Check** | 只读检查语义索引、PDF 覆盖、重复条目、缺失摘要等状态；不可用项目明确标记为 `⚠️`。 |
 | **Semantic + Structured Search** | 优先语义搜索概念相近文献，并结合标题、作者、关键词、DOI、PMID、年份等结构化检索兜底。 |
 | **Collection and Tag Search** | 支持按 Zotero collection、tag、分类范围缩小检索。 |
+| **Target Literature Search** | 面向无稿件段落的专题文献检索、目标文献筛选、Core/Strong Related/Verify/Noise 分类、MD/RIS 文献清单导出。 |
 | **Paragraph Citation Package Workflow** | 段落补引用默认是一个完整工作流：claim extraction → Zotero local search → evidence matrix / citation placement / diff paragraph → automatic PubMed expansion when available → Markdown report + EndNote RIS。 |
 | **Zotero + PubMed Dual-MCP Workflow** | Zotero MCP 负责本地库、PDF/笔记/collection/语义检索；PubMed MCP 负责生物医学外部扩展、PMID 元数据、related/review discovery、OA/full-text triage 与参考文献标准化。 |
 | **Citation Verification Protocol** | 针对具体文献和具体主张读取元数据与全文，判断 fully supported / partially supported / contradicted / not addressed。 |
 | **Chinese Academic Writing Rules** | 面向中文学术写作，保留原意、避免虚构引用，输出可追踪的润色与补引建议。 |
 | **External Source Fallback** | Zotero 库证据不足时，可在外部 MCP 工具已配置的前提下辅助扩展；未配置时只给出可复制检索式。 |
 | **Evidence Package Export** | 作为 Paragraph Citation Package Workflow 的导出阶段，生成两个可复用文件：Markdown 证据报告与可导入 EndNote 的 RIS 参考文献文件。 |
+| **Literature Search Package Writer** | `python3 scripts/write_literature_search_package.py` 从已检查候选 JSON/YAML 生成 `*_literature_search.md` 和 Search RIS；不调用 Zotero/PubMed。 |
 
 ### 2.1 一页式使用速查
 
@@ -94,15 +111,16 @@
 |---|---|---|---|
 | 给一段草稿找证据并补引用 | `/zotero-evidence-review 帮我给下面这段草稿找证据并补引用，生成 Evidence Package：...` | Zotero 检索 + 可用时 PubMed 扩展 + Markdown report + RIS | 如果不想生成文件，加 `只在聊天输出` |
 | 已有编号引用，想检查是否支持原句 | `/zotero-evidence-review 帮我检查并更新下面这段已有编号引用，指出哪些引用不支持，并生成最终 RIS：...` | 编号引用修复表 + Citation Support Ledger + 改写建议 + RIS | 如果只想看问题，不要 RIS，加 `不要导出` |
-| 只想在 Zotero 库里找文献 | `/zotero-evidence-review 搜 Zotero 库中关于 {topic} 的论文，列出最相关的 10 篇并说明用途。` | 聊天结果为主；需要时可导出 | 想限制范围时加 collection / tag |
-| 直接检索 PubMed | `/pubmed-literature-search 检索近 5 年 {topic} 的 PubMed 文献，检查 PMID 元数据，并列出可引用研究。` | PubMed 检索 + PMID metadata inspection；需要时导出 PubMed report + RIS | 需要 EndNote 时明确 `导出 RIS` |
+| 在 Zotero 库里找文献 | `/zotero-evidence-review 搜 Zotero 库中关于 {topic} 的论文，列出最相关的 10 篇并说明用途。` | 默认生成 search Markdown report + Search RIS；生物医学主题在 PubMed 可见时自动扩展 | 想限制范围时加 collection / tag；纯聊天加 `只在聊天输出` |
+| 想筛选某主题的目标文献清单 | `/zotero-evidence-review 哪些文献使用了 {data/method/phenotype}？请输出专题检索报告和 RIS。` | target_literature_search：Topic Decomposition + Query Expansion Plan + 分类/排除原因 + `*_literature_search.md` + Search RIS | 如果只想看聊天结果，加 `只在聊天输出，不要生成文件` |
+| 直接检索 PubMed | `/pubmed-literature-search 检索近 5 年 {topic} 的 PubMed 文献，检查 PMID 元数据，并列出可引用研究。` | 默认生成 PubMed report + RIS；Zotero MCP 可见时做本地库 cross-check | 纯聊天加 `只在聊天输出，不要生成文件` |
 | 核实某篇文献是否支持某个 claim | `/zotero-evidence-review 请核实这篇文献是否支持以下主张：claim = ...; 文献 = DOI/PMID/Zotero key/...` | 支持度判断、证据位置、建议措辞 | 要求全文核实时写 `优先读取 PDF/全文` |
 | 写作前检查 Zotero 库状态 | `/zotero-evidence-review 做一次 Zotero library health check，只读检查，不要修改条目。` | 索引/PDF/重复/缺元数据状态 | 默认只读；破坏性操作需单独确认 |
 
 最推荐的完整写作路径是：
 
 ```text
-草稿段落 → /zotero-evidence-review 生成 Evidence Package → 阅读 Markdown report 的 Bottom Line / Copy-ready Text → 检查 Citation Support Ledger → 只导入 RIS action = Include 的 RIS → 在 Word/EndNote 中重排编号 → 投稿前运行 scripts/check-all.py
+草稿段落 → /zotero-evidence-review 生成 Evidence Package → 阅读 Markdown report 的 Bottom Line / Copy-ready Text → 检查 Citation Support Ledger → 只导入 RIS action = Include 的 RIS → 在 Word/EndNote 中重排编号 → 投稿前运行 python3 scripts/check-all.py
 ```
 
 阅读 Evidence Package 时优先看 5 个位置：
@@ -137,41 +155,66 @@ git clone https://github.com/DaXuanGarden/zotero-skills.git
 cd zotero-skills
 
 # 安装/更新 Zotero evidence review 到 ZCode 全局 skill 目录，并在覆盖前备份旧版本
-scripts/install-skill.sh --target zcode --backup
+bash scripts/install-skill.sh --target zcode --backup
 
 # 安装/更新独立 PubMed literature search skill
-scripts/install-skill.sh --skill pubmed-literature-search --target zcode --backup
+bash scripts/install-skill.sh --skill pubmed-literature-search --target zcode --backup
 
 # 或一次安装两个 skill
-scripts/install-skill.sh --skill all-skills --target zcode --backup
+bash scripts/install-skill.sh --skill all-skills --target zcode --backup
 
 # 验证 skill 文件结构与本地输出质量门禁
-scripts/validate-skill.py
-scripts/validate-pubmed-skill.py
-scripts/check-all.py
+python3 scripts/validate-skill.py
+python3 scripts/validate-pubmed-skill.py
+python3 scripts/check-all.py
 ```
 
-`scripts/validate-skill.py` 和 `scripts/validate-pubmed-skill.py` 是静态校验工具：它们检查 skill frontmatter、依赖声明、章节、输出模板、Evidence Package/RIS 约束和外部工具安全防护说明；它们不会连接 Zotero、不会执行 PubMed 检索，也不会验证真实引文是否支持稿件主张。
+`python3 scripts/validate-skill.py` 和 `python3 scripts/validate-pubmed-skill.py` 是静态校验工具：它们检查 skill frontmatter、依赖声明、章节、输出模板、Evidence Package/RIS 约束和外部工具安全防护说明；它们不会连接 Zotero、不会执行 PubMed 检索，也不会验证真实引文是否支持稿件主张。
 
-`scripts/check-all.py` 是只读本地质量门禁，会串行运行两个 skill validator，并在输出目录存在时运行 output audit 和 RIS lint。默认模式等价于严格提交前检查：`scripts/evidence_output_audit.py --fail-on-warnings` 与 `scripts/ris_lint.py --fail-on-warnings` 都会把 warning 作为失败；如果历史 evidence package 触发 warning，应按报告逐项判断是旧产物问题还是需要更新模板。处理旧包噪音时可显式使用 `scripts/check-all.py --output-warnings warn`（打印但不因 output warnings 失败）、`scripts/check-all.py --output-warnings skip`（只跑 skill validators），或 `scripts/check-all.py --ignore-output-warnings-before YYYY-MM-DD`（仍严格检查新包，但抑制 cutoff 之前旧包的 warnings；RIS errors 仍会失败）。
+`python3 scripts/check-all.py` 是只读本地质量门禁，会串行运行两个 skill validator、Phase 3 literature search writer self-test，并在输出目录存在时运行 output audit 和 RIS lint。默认模式等价于严格提交前检查：`python3 scripts/evidence_output_audit.py --fail-on-warnings` 与 `python3 scripts/ris_lint.py --fail-on-warnings` 都会把 warning 作为失败；如果历史 evidence package 触发 warning，应按报告逐项判断是旧产物问题还是需要更新模板。处理旧包噪音时可显式使用 `python3 scripts/check-all.py --output-warnings warn`（打印但不因 output warnings 失败）、`python3 scripts/check-all.py --output-warnings skip`（只跑 skill validators 和 writer self-test），或 `python3 scripts/check-all.py --ignore-output-warnings-before YYYY-MM-DD`（仍严格检查新包，但抑制 cutoff 之前旧包的 warnings；RIS errors 仍会失败）。
+
+### 3.3 功能覆盖检查矩阵
+
+下面这些命令是仓库侧“真实可运行”的检查。它们不会替代 Zotero/PubMed MCP 的真实运行，但能确认 skill 文本、路由模板、writer、RIS 规则和 smoke prompt guardrail 没有漂移。
+
+| 要检查的功能 | 可运行命令 | 通过代表什么 |
+|---|---|---|
+| Zotero evidence review skill 结构、段落证据包、target search、Search RIS / Citation RIS 规则 | `python3 scripts/validate-skill.py` | `zotero-evidence-review/SKILL.md` 的章节、模板、路由、RIS guardrail 和 Phase 3 writer handoff 符合仓库规范 |
+| PubMed literature search skill 结构和 PMID inspection guardrail | `python3 scripts/validate-pubmed-skill.py` | `pubmed-literature-search/SKILL.md` 的 PubMed 检索、PMID metadata inspection、RIS 模板结构有效 |
+| Phase 3 目标文献检索包 writer | `python3 scripts/write_literature_search_package.py --self-test` | fixture 能生成 `*_literature_search.md` 与 Search RIS，且 RIS 记录边界可校验 |
+| 历史/新生成 RIS 文件格式 | `python3 scripts/ris_lint.py zotero-evidence-output` | 扫描 `.ris` 是否含 Markdown、缺少 `TY  -` / `ER  -`、明显占位符或常见字段问题 |
+| 全仓库本地质量门 | `python3 scripts/check-all.py --output-warnings skip --smoke-prompts check` | 两个 skill validator、writer self-test、smoke prompt guardrail 全部通过 |
+| MCP 配置文件形态 | `python3 scripts/mcp_config_sanity.py --client auto` | 本机 ZCode/OpenCode 配置 JSON、MCP server command 路径和关键 env 形态可读 |
+| 已安装 skill 是否与仓库一致 | `python3 scripts/check-installed-skills.py --target all --mode warn` | 能发现 `~/.zcode/skills`、OpenCode 全局、项目级 `.opencode/skills` 与仓库源码是否漂移 |
+
+真正的 Zotero / PubMed 运行时能力必须在 ZCode / OpenCode 会话中用 smoke prompt 验证，因为只有当前会话的 MCP tool list 才能证明工具可调用：
+
+```bash
+python3 scripts/smoke_prompts.py --list
+python3 scripts/smoke_prompts.py --prompt zotero-health
+python3 scripts/smoke_prompts.py --prompt zotero-target-export-dry-run
+python3 scripts/smoke_prompts.py --prompt pubmed-readiness
+```
+
+把打印出的 prompt 复制进新开的 ZCode / OpenCode 会话执行。若工具不可见或失败，正确结果应是报告 `unavailable` / `not executed`，而不是假装完成检索。
 
 可选运行时诊断 gate 默认关闭，避免因为不同机器的本地 MCP 配置影响常规校验；需要排查 Zotero/PubMed MCP 时可显式开启：
 
 ```bash
 # 只读检查 ZCode/OpenCode MCP config 形态、command 路径和关键 env；不启动 MCP、不联网
-scripts/check-all.py --output-warnings skip --mcp-config warn
+python3 scripts/check-all.py --output-warnings skip --mcp-config warn
 
 # 检查仓库 skill 与 ~/.zcode/skills、OpenCode skill 副本是否漂移
-scripts/check-all.py --output-warnings skip --installed-skills warn
+python3 scripts/check-all.py --output-warnings skip --installed-skills warn
 
 # 校验或打印可复制的人工 MCP smoke-test prompts
-scripts/check-all.py --output-warnings skip --smoke-prompts check
-scripts/smoke_prompts.py
+python3 scripts/check-all.py --output-warnings skip --smoke-prompts check
+python3 scripts/smoke_prompts.py
 ```
 
-也可以单独运行：`scripts/mcp_config_sanity.py --client auto`、`scripts/check-installed-skills.py --target all --mode warn`、`scripts/smoke_prompts.py --check`。
+也可以单独运行：`python3 scripts/mcp_config_sanity.py --client auto`、`python3 scripts/check-installed-skills.py --target all --mode warn`、`python3 scripts/smoke_prompts.py --check`。
 
-### 3.3 静态校验 vs 运行时 MCP 就绪
+### 3.4 静态校验 vs 运行时 MCP 就绪
 
 静态校验通过只说明 skill 文本结构正确，不等于当前 Agent IDE 会话已经能调用 Zotero / PubMed。真正执行工作流前，请按下面的只读 checklist 快速确认：
 
@@ -188,16 +231,16 @@ scripts/smoke_prompts.py
 
 | 脚本 | 用途 | 是否调用 MCP/联网/改配置 |
 |---|---|---|
-| `scripts/mcp_config_sanity.py --client auto` | 检查 `~/.zcode/v2/config.json`、`~/.zcode/cli/config.json`、`~/.config/opencode/opencode.json` 的 JSON 形态、`mcp`/`mcp.servers`/`mcpServers` 差异、command 路径、GUI PATH 风险、PubMed/Zotero 关键 env | 否 |
-| `scripts/check-installed-skills.py --target all --mode warn` | 比较仓库 `SKILL.md` 与 `~/.zcode/skills`、OpenCode 全局、项目级 `.opencode/skills` 中的 installed copy 是否一致 | 否 |
-| `scripts/smoke_prompts.py` | 打印可复制到 ZCode/OpenCode 的安全人工 smoke-test prompt，强调只读、分步调用、不可伪造结果 | 否 |
+| `python3 scripts/mcp_config_sanity.py --client auto` | 检查 `~/.zcode/v2/config.json`、`~/.zcode/cli/config.json`、`~/.config/opencode/opencode.json` 的 JSON 形态、`mcp`/`mcp.servers`/`mcpServers` 差异、command 路径、GUI PATH 风险、PubMed/Zotero 关键 env | 否 |
+| `python3 scripts/check-installed-skills.py --target all --mode warn` | 比较仓库 `SKILL.md` 与 `~/.zcode/skills`、OpenCode 全局、项目级 `.opencode/skills` 中的 installed copy 是否一致 | 否 |
+| `python3 scripts/smoke_prompts.py` | 打印可复制到 ZCode/OpenCode 的安全人工 smoke-test prompt，强调只读、分步调用、不可伪造结果 | 否 |
 
 如果 `mcp_config_sanity.py` 提示 `mcpServers`，通常说明把 Claude 风格配置粘贴到了 ZCode/OpenCode 配置；如果提示 command 不是绝对路径，GUI 启动的 ZCode/OpenCode 可能拿不到 shell `PATH`。这些脚本只能检查本地文件和 prompt 文本，不能替代当前会话真实 MCP tool list；修改配置或同步 skill 后仍需完整重启客户端或开启新会话。
 
 如果验证成功，会看到类似：
 
 ```text
-✅ frontmatter parsed; version 2.1.1
+✅ frontmatter parsed; version 2.8.0
 ✅ markdown code fences balanced
 ✅ required workflow headings present
 ✅ section numbering is consistent
@@ -210,7 +253,7 @@ scripts/smoke_prompts.py
 All validations passed.
 ```
 
-### 3.4 安装后第一次完整试跑
+### 3.5 安装后第一次完整试跑
 
 安装、MCP 配置和静态校验完成后，建议先用一个短段落做端到端试跑，确认当前 Agent 会话能看到 Zotero/PubMed 工具，并能正确生成 evidence package：
 
@@ -240,28 +283,28 @@ Sedentary behaviour may be associated with cardiometabolic and reproductive heal
 
 ## 4. 安装目标与同步方式
 
-`scripts/install-skill.sh` 用于把仓库中的最新版 skill 同步到不同 skill 目录，避免“仓库版本已更新，但全局安装版本仍是旧版”的漂移问题。默认安装 `zotero-evidence-review`；可用 `--skill pubmed-literature-search` 安装独立 PubMed skill，或用 `--skill all-skills` 一次安装全部。
+`bash scripts/install-skill.sh` 用于把仓库中的最新版 skill 同步到不同 skill 目录，避免“仓库版本已更新，但全局安装版本仍是旧版”的漂移问题。默认安装 `zotero-evidence-review`；可用 `--skill pubmed-literature-search` 安装独立 PubMed skill，或用 `--skill all-skills` 一次安装全部。
 
 ### 4.1 安装到不同目标
 
 ```bash
 # ZCode 全局目录（推荐给 ZCode 用户；默认安装 zotero-evidence-review）
-scripts/install-skill.sh --target zcode --backup
+bash scripts/install-skill.sh --target zcode --backup
 
 # 安装独立 PubMed literature search skill
-scripts/install-skill.sh --skill pubmed-literature-search --target zcode --backup
+bash scripts/install-skill.sh --skill pubmed-literature-search --target zcode --backup
 
 # 一次安装全部 skill
-scripts/install-skill.sh --skill all-skills --target zcode --backup
+bash scripts/install-skill.sh --skill all-skills --target zcode --backup
 
 # OpenCode 全局目录（推荐给 OpenCode 用户）
-scripts/install-skill.sh --target opencode --backup
+bash scripts/install-skill.sh --target opencode --backup
 
 # 当前仓库项目级 OpenCode skill 目录
-scripts/install-skill.sh --target project --backup
+bash scripts/install-skill.sh --target project --backup
 
 # 同时同步到 ZCode + OpenCode + 项目级目录
-scripts/install-skill.sh --target all --backup
+bash scripts/install-skill.sh --target all --backup
 ```
 
 ### 4.2 目标路径
@@ -288,7 +331,7 @@ zotero-evidence-review.backup-YYYYmmdd-HHMMSS
 修改仓库中的 `SKILL.md` 不会自动更新已经安装到 `~/.zcode/skills/` 或 OpenCode 目录中的旧副本。每次修复 workflow、MCP guardrail 或输出模板后，请重新运行安装脚本同步目标目录，例如：
 
 ```bash
-scripts/install-skill.sh --skill all-skills --target zcode --backup
+bash scripts/install-skill.sh --skill all-skills --target zcode --backup
 ```
 
 同步后请完全重启 ZCode / OpenCode 或开启新会话；仅刷新当前聊天通常不会重新加载 skill 与 MCP tool 列表。若仍看到 `Tool skipped because a previous tool call in the scheduled sequence failed`，先检查同一批工具调用中第一个失败的 MCP 调用，并确认当前会话加载的是同步后的 skill 副本。
@@ -296,10 +339,10 @@ scripts/install-skill.sh --skill all-skills --target zcode --backup
 可用下面的只读命令确认 installed copy 是否与仓库一致：
 
 ```bash
-scripts/check-installed-skills.py --target all --mode warn
+python3 scripts/check-installed-skills.py --target all --mode warn
 ```
 
-若报告 `different` 或 `missing`，先重新运行 `scripts/install-skill.sh --skill all-skills --target ... --backup`，再重启客户端。
+若报告 `different` 或 `missing`，先重新运行 `bash scripts/install-skill.sh --skill all-skills --target ... --backup`，再重启客户端。
 
 ---
 
@@ -492,18 +535,18 @@ zotero-mcp update-db --force-rebuild
 把 workflow 想成两层：
 
 1. **Zotero-first**：先用你的本地 Zotero 库找可追踪证据，保留 Zotero item、PDF、notes、collection 和本地上下文。
-2. **PubMed-when-needed**：当主题属于生物医学、Zotero 证据不足，或你明确要求补充 PubMed 时，再调用当前会话可见的 PubMed MCP；不可见时只给可复制 query，不声称已完成检索。
+2. **PubMed-auto when visible**：生物医学主题会在 Zotero 本地检索后自动尝试当前会话可见的 PubMed MCP；不可见时只给可复制 query，不声称已完成检索，也不生成 PubMed-only RIS。
 
 最常用的完整路径如下：
 
 ```text
-安装/同步 skill → 配置 Zotero MCP → 构建语义索引 → 在 ZCode/OpenCode 中发起请求 → intent routing → Zotero local search → paragraph/search evidence analysis → PubMed conditional expansion → citation support / PMID inspection ledgers → metadata QC → Markdown report + EndNote RIS
+安装/同步 skill → 配置 Zotero MCP → 构建语义索引 → 在 ZCode/OpenCode 中发起请求 → intent routing → Zotero local search → paragraph/search evidence analysis → PubMed auto expansion when visible → citation support / PMID inspection ledgers → metadata QC → Markdown report + EndNote RIS
 ```
 
 | 需求类型 | 默认路线 | PubMed MCP 用法 | 文件输出 | 最省事提示词 |
 |---|---|---|---|---|
-| 找文献 / 主题综述 | `zotero-evidence-review` Module 1：Zotero 语义+结构检索 | 生物医学主题在 Zotero 后条件性扩展 | 默认聊天输出；用户要求时导出 | `搜 Zotero 库中关于 {topic} 的论文，列出最相关的 10 篇。` |
-| 直接 PubMed 主题检索 / PMID 检查 | `pubmed-literature-search`：PubMed search → PMID metadata → optional related/review expansion | 作为主检索层，必须实际调用 PubMed MCP 才能标记 Completed | 默认聊天输出；用户要求时导出 PubMed review + RIS | `检索近 5 年 {topic} 的 PubMed 文献，并导出 RIS。` |
+| 找文献 / 主题综述 | `zotero-evidence-review` Module 1：Zotero 语义+结构检索 | 生物医学主题在 Zotero 后自动扩展 | 默认生成 search Markdown report + Search RIS | `搜 Zotero 库中关于 {topic} 的论文，列出最相关的 10 篇。` |
+| 直接 PubMed 主题检索 / PMID 检查 | `pubmed-literature-search`：PubMed search → PMID metadata → optional related/review expansion → Zotero cross-check when visible | 作为主检索层，必须实际调用 PubMed MCP 才能标记 Completed | 默认生成 PubMed review + RIS | `检索近 5 年 {topic} 的 PubMed 文献。` |
 | 段落找证据、找引文、补引用 | `zotero-evidence-review` Module 2 → Module 2.5 完整 Paragraph Citation Package Workflow | Zotero 本地检索后自动 PubMed expansion；按 DOI/PMID 去重 | 默认生成 Markdown report + EndNote RIS | `帮我给下面这段草稿找证据并补引用，生成 Evidence Package：...` |
 | 已有编号引用修复 | `zotero-evidence-review` Existing Numbered Citation Repair | 需要替换或补充 biomedical references 时扩展 | 默认生成 Markdown report + 最终 RIS | `检查并更新下面这段已有编号引用，指出不支持的引用并修复：...` |
 | 精确核实某条引用是否支持某主张 | `zotero-evidence-review` Module 3：读取元数据/全文并逐条判断 | 仅在需要 PMID 元数据、外部摘要或 OA/full-text triage 时使用 | 默认聊天输出 | `核实 文献=... 是否支持 claim=...，优先读取全文。` |
@@ -527,11 +570,13 @@ zotero-mcp update-db --force-rebuild
 
 ### 7.1 场景 A：从零开始找文献
 
-适合：刚确定选题，想先知道 Zotero 库里有什么可用文献。
+适合：刚确定选题，想先知道 Zotero 库里有什么可用文献，并默认得到可复用的检索报告和 RIS。
 
 ```text
 /zotero-evidence-review 搜 Zotero 库中关于 CRISPR base editing off-target effects 的论文，列出最相关的 10 篇，并说明每篇适合支持什么主张。
 ```
+
+默认会写入 `zotero-evidence-output/.../*_literature_search.md` 和 `*_references.ris`；如果只想在聊天中预览结果，请改成 `只在聊天输出，不要生成文件：搜 Zotero 库中关于 ...`。
 
 ```text
 /zotero-evidence-review 查找 Zotero 中关于 climate change and cardiovascular health 的文献，并按研究类型分组：综述、队列研究、机制研究、临床研究。
@@ -603,7 +648,7 @@ Several genetic observations were consistent with a directional contribution of 
 
 ### 7.5 场景 E：Evidence Package 导出
 
-Evidence Package 是 **Paragraph Citation Package Workflow** 的导出阶段，由 OpenCode / ZCode agent 按 `zotero-evidence-review` workflow 执行：agent 负责 Zotero 本地检索、PubMed 条件扩展、匹配质控、写入 Markdown 与 RIS；仓库脚本目前负责安装同步和静态校验，并不是独立的 RIS 生成 CLI。
+Evidence Package 是 **Paragraph Citation Package Workflow** 的导出阶段，由 OpenCode / ZCode agent 按 `zotero-evidence-review` workflow 执行：agent 负责 Zotero 本地检索、PubMed 可见时自动扩展、匹配质控、写入 Markdown 与 RIS。段落补引文/写作证据包没有独立生成 CLI；仓库脚本负责安装同步、静态校验、RIS lint 和 output audit。另一个场景“目标文献检索清单”有独立 Phase 3 writer，见 [8.4 Target Literature Search Package](#84-target-literature-search-package)。
 
 完整导出流程：
 
@@ -625,7 +670,7 @@ paragraph/search → claim extraction or search synthesis → Zotero local searc
 10. 最终聊天回复只列出生成文件路径和关键 warnings，不重复整份报告。
 
 ```text
-/zotero-evidence-review 请围绕下面这段讨论生成 Evidence Package：自动检索 Zotero 证据，条件性尝试 PubMed 扩展，保存 Markdown 证据报告，并生成可导入 EndNote 的 RIS 文件。
+/zotero-evidence-review 请围绕下面这段讨论生成 Evidence Package：自动检索 Zotero 证据，PubMed MCP 可见时自动扩展，保存 Markdown 证据报告，并生成可导入 EndNote 的 RIS 文件。
 
 「久坐行为可能与 PCOS 发生风险相关，但既往队列研究证据仍不一致……」
 ```
@@ -717,7 +762,7 @@ Zotero item key 不作为主要阅读对象展示，只隐藏在可点击链接�
 
 ### 8.3 PubMed Expansion
 
-PubMed 是 Paragraph Citation Package Workflow 中的条件扩展步骤：段落引文导出时，skill 会在 Zotero local search 后自动尝试 PubMed expansion；只有当前环境确实配置并可见 PubMed-capable MCP 工具时，才能声称已完成 PubMed 检索。
+PubMed 是 Paragraph Citation Package Workflow 中的自动扩展步骤：段落引文导出、普通生物医学检索和目标文献检索时，skill 会在 Zotero local search 后自动尝试 PubMed expansion；只有当前环境确实配置并可见 PubMed-capable MCP 工具时，才能声称已完成 PubMed 检索。
 
 #### PubMed 工具配置
 
@@ -902,7 +947,49 @@ Query:
 
 当 PubMed 工具不可用时，只输出 query 与状态 `⚠️ Tool unavailable; search not executed`，不生成 PubMed-only RIS records。此时可复制报告中的 PubMed query 到 PubMed 网页手动检索，或先完成上述 MCP 配置后重新运行 `/zotero-evidence-review`。
 
-### 8.4 Reviewer-risk 与 Metadata QC
+### 8.4 Target Literature Search Package
+
+目标文献检索与段落 Evidence Package 是两条不同路线。用户没有提供稿件段落，而是问“哪些文献使用了 X 数据/方法/表型”“检索 Zotero 中关于 X 的文献”“导出文献清单/RIS”时，应使用 `target_literature_search`，默认输出 `LITERATURE_SEARCH_REPORT` + Search RIS，而不是 Copy-ready Manuscript Text、逐句 citation placement 或 paragraph diff。
+
+典型提示词：
+
+```text
+/zotero-evidence-review 哪些文献使用了大脑相关 GWAS 数据？请做 Topic Decomposition、Query Expansion、Core/Strong Related/Noise 分类，并导出 MD 和 RIS。
+```
+
+若只想聊天查看，不生成文件：
+
+```text
+/zotero-evidence-review 只在聊天输出，不要生成文件：检索 Zotero 中关于肠道菌群和抑郁症的文献，按 Core / Strong Related / Verify / Noise 分类。
+```
+
+如果候选文献已经由 agent 或人工检索、分类、检查元数据，并整理成 JSON/YAML，可用 Phase 3 writer 生成标准检索包：
+
+```bash
+python3 scripts/write_literature_search_package.py \
+  --input scripts/fixtures/literature_search_package_sample.json \
+  --output-root /tmp/zotero-lit-test \
+  --slug brain_gwas \
+  --timestamp 2026-07-07_120000
+```
+
+writer 的边界很明确：
+
+- 它不调用 Zotero 或 PubMed，只格式化已检查候选。
+- JSON 必须支持；YAML 只在当前 Python 环境已有 PyYAML 时支持，不新增依赖。
+- 默认只把 `RIS action = Include` 且类别合格的记录写入 Search RIS。
+- `--include-optional` 才会写入合格的 `Optional` 记录。
+- `Exclude` 与 `Verify` 永远不写入 Search RIS。
+- PubMed-only 条目必须有 `pubmed_status = Completed` 且 `metadata_inspected = true`。
+
+输出路径格式：
+
+```text
+zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_literature_search.md
+zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris
+```
+
+### 8.5 Reviewer-risk 与 Metadata QC
 
 Reviewer-risk 应指向具体主张或句子，方便回到原文修改；Metadata QC 应在导出信息前独立显示。Reference Canonicalization Gate 应把 RIS 决策回连到 Citation Support Ledger：只有 support verdict 与 RIS action 一致、且元数据来源可追踪的条目，才应进入最终 RIS。
 
@@ -918,7 +1005,7 @@ Reviewer-risk 应指向具体主张或句子，方便回到原文修改；Metada
 | Author Year | DOI / PMID / pages / none | Possible metadata mismatch / none | Possible duplicate / none | Zotero / PubMed / Zotero + PubMed | PMID/PubMed / DOI / Zotero metadata / PubMed metadata | claim/sentence row | Include / Exclude / Verify / Optional |
 ```
 
-### 8.5 RIS export snippet
+### 8.6 RIS export snippet
 
 RIS 文件必须是 plain RIS records，不要混入 Markdown 标题、说明文字、代码围栏或注释。
 
@@ -945,7 +1032,7 @@ EndNote 导入建议步骤：
 
 如果 EndNote 报错，先确认 `.ris` 文件没有 Markdown 标题、中文解释、代码围栏、emoji、个人流程标签或不完整 record；每条记录都应以 `TY  -` 开始，并以 `ER  -` 结束。
 
-### 8.6 Chat-only templates
+### 8.7 Chat-only templates
 
 不需要保存文件时，可继续使用简短对话模板：`REFS_BLOCK`、`CLAIM_EVIDENCE_MATRIX`、`WRITING_SUGGESTIONS_TABLE`、`DIFF_REVISED_PARAGRAPH` 和 `VERIFICATION_REPORT`。完整规范以 `zotero-evidence-review/SKILL.md` 的 Appendix 为准。
 
@@ -976,9 +1063,16 @@ zotero-skills/
 ├── Zotero_MCP_OpenCode_Guide.md
 ├── zotero-evidence-review/
 │   └── SKILL.md
+├── pubmed-literature-search/
+│   └── SKILL.md
 ├── scripts/
 │   ├── install-skill.sh
-│   └── validate-skill.py
+│   ├── validate-skill.py
+│   ├── validate-pubmed-skill.py
+│   ├── check-all.py
+│   ├── ris_lint.py
+│   ├── smoke_prompts.py
+│   └── write_literature_search_package.py
 ├── docs/
 │   ├── DEVELOPMENT_PLAN.md
 │   ├── DEVELOPMENT_PLAN00.md
@@ -991,9 +1085,14 @@ zotero-skills/
 | 路径 | 说明 |
 |---|---|
 | `zotero-evidence-review/SKILL.md` | 核心 skill 定义文件；当前工作流的权威规范。 |
-| `scripts/install-skill.sh` | 安装/同步 skill 到 ZCode、OpenCode 或项目目录。 |
-| `scripts/validate-skill.py` | 静态验证 SKILL.md 的元数据、章节、模板和安全防护说明；不执行 Zotero/PubMed 工作流。 |
-| `.opencode/skills/` | 运行 `scripts/install-skill.sh --target project` 后生成的项目级 OpenCode skill 目录。 |
+| `pubmed-literature-search/SKILL.md` | 独立 PubMed MCP 文献检索 skill 定义文件。 |
+| `scripts/install-skill.sh` | 安装/同步 skill 到 ZCode、OpenCode 或项目目录；当前 README 用 `bash scripts/install-skill.sh ...` 调用。 |
+| `scripts/validate-skill.py` | 静态验证 Zotero skill 的元数据、章节、模板和安全防护说明；不执行 Zotero/PubMed 工作流。 |
+| `scripts/validate-pubmed-skill.py` | 静态验证 PubMed literature search skill。 |
+| `scripts/check-all.py` | 本地质量门：validator、writer self-test、可选 output audit/RIS lint/MCP config/installed drift/smoke prompt check。 |
+| `scripts/write_literature_search_package.py` | Phase 3 target literature search package writer：从已检查候选 JSON/YAML 生成 `*_literature_search.md` 和 Search RIS。 |
+| `scripts/fixtures/literature_search_package_sample.json` | Phase 3 writer 的最小可运行 fixture。 |
+| `.opencode/skills/` | 运行 `bash scripts/install-skill.sh --target project` 后生成的项目级 OpenCode skill 目录。 |
 | `Zotero_MCP_OpenCode_Guide.md` | 更详细的 Zotero MCP 与 OpenCode 配置指南。 |
 | `docs/` | 规划、设计和历史文档；当前行为以 `README.md` 与 `zotero-evidence-review/SKILL.md` 为准。 |
 
@@ -1007,10 +1106,10 @@ zotero-skills/
 
 ```bash
 # ZCode
-scripts/install-skill.sh --target zcode --backup
+bash scripts/install-skill.sh --target zcode --backup
 
 # OpenCode
-scripts/install-skill.sh --target opencode --backup
+bash scripts/install-skill.sh --target opencode --backup
 ```
 
 然后重启或刷新 ZCode / OpenCode 会话。确认目录存在：
@@ -1122,7 +1221,7 @@ git remote set-url origin https://github.com/DaXuanGarden/zotero-skills.git
 提交前建议运行：
 
 ```bash
-scripts/validate-skill.py
+python3 scripts/check-all.py --output-warnings skip --smoke-prompts check
 ```
 
 ---

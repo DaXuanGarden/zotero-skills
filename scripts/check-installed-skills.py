@@ -23,16 +23,16 @@ class Target:
 
 
 TARGETS = {
-    "zcode": Target("zcode", HOME / ".zcode/skills", "scripts/install-skill.sh --skill all-skills --target zcode --backup"),
+    "zcode": Target("zcode", HOME / ".zcode/skills", "bash scripts/install-skill.sh --skill all-skills --target zcode --backup"),
     "opencode": Target(
         "opencode",
         HOME / ".config/opencode/skills",
-        "scripts/install-skill.sh --skill all-skills --target opencode --backup",
+        "bash scripts/install-skill.sh --skill all-skills --target opencode --backup",
     ),
     "project": Target(
         "project",
         REPO_ROOT / ".opencode/skills",
-        "scripts/install-skill.sh --skill all-skills --target project --backup",
+        "bash scripts/install-skill.sh --skill all-skills --target project --backup",
     ),
 }
 

@@ -65,6 +65,19 @@ PUBMED_SEQUENTIAL_GUARDRAIL_REQUIREMENTS = [
     "not a downstream call pre-scheduled in the same tool-call batch",
     "do not fabricate PMIDs or continue to metadata inspection",
 ]
+PUBMED_DEFAULT_EXPORT_CROSSCHECK_REQUIREMENTS = [
+    "automatic Markdown + RIS export",
+    "Default Export and Zotero Cross-Check",
+    "PubMed default export",
+    "chat-only/no-export",
+    "Zotero optional cross-check",
+    "read-only local-library cross-check",
+    "In Zotero?",
+    "Zotero match route",
+    "consider importing",
+    "No Zotero mutation",
+    "PubMed-only RIS boundary",
+]
 SCHEDULED_TOOL_FAILURE_REQUIREMENTS = [
     "Scheduled Tool Failure Handling",
     "Tool skipped because a previous tool call in the scheduled sequence failed",
@@ -249,8 +262,9 @@ def main() -> None:
     require_all(text, PUBMED_TOOL_REQUIREMENTS, "PubMed tool requirement")
     require_all(text, PUBMED_GUARDRAIL_REQUIREMENTS, "PubMed guardrail requirement")
     require_all(text, PUBMED_SEQUENTIAL_GUARDRAIL_REQUIREMENTS, "PubMed sequential execution guardrail")
+    require_all(text, PUBMED_DEFAULT_EXPORT_CROSSCHECK_REQUIREMENTS, "PubMed default export and Zotero cross-check requirement")
     require_all(text, SCHEDULED_TOOL_FAILURE_REQUIREMENTS, "scheduled tool failure handling guardrail")
-    ok("PubMed tool, sequential, and scheduled-failure guardrail requirements present")
+    ok("PubMed tool, default export/cross-check, sequential, and scheduled-failure guardrail requirements present")
 
     require_all(text, OUTPUT_REQUIREMENTS, "output requirement")
     require_all(text, PMID_INSPECTION_LEDGER_REQUIREMENTS, "PMID Inspection Ledger requirement")
@@ -263,6 +277,8 @@ def main() -> None:
         [
             "| Source | Query | Sort | Max results | Status | Hits reviewed | Selected PMIDs |",
             "| Priority | Citation | PMID | DOI | Study type | Main finding/use | Caveat |",
+            "### Zotero Local Library Cross-Check",
+            "| PMID | DOI | Title | In Zotero? | Zotero match route | Recommendation |",
             PMID_INSPECTION_LEDGER_HEADER,
             "| PMID | DOI | Title check | Authors check | Year check | Metadata warning | RIS action |",
         ],

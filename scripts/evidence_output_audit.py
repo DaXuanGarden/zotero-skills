@@ -161,7 +161,11 @@ def find_main_markdown(folder: Path) -> Path | None:
     candidates = sorted(folder.glob("*_evidence_review.md"))
     if candidates:
         return candidates[0]
-    candidates = sorted(path for path in folder.glob("*.md") if path.name != "quick_use.md")
+    candidates = sorted(
+        path
+        for path in folder.glob("*.md")
+        if path.name != "quick_use.md" and not path.name.endswith("_literature_search.md")
+    )
     return candidates[0] if candidates else None
 
 

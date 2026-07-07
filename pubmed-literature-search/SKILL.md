@@ -1,6 +1,6 @@
 ---
 name: pubmed-literature-search
-description: Search PubMed through PubMed MCP, inspect PMID metadata, expand related/review literature, and optionally export a Markdown review plus EndNote-compatible RIS references.
+description: Search PubMed through PubMed MCP, inspect PMID metadata, expand related/review literature, and export a Markdown review plus EndNote-compatible RIS references by default unless chat-only/no-export is explicit.
 license: MIT
 compatibility: opencode,zcode
 metadata:
@@ -14,7 +14,7 @@ metadata:
 
 ## Overview
 
-Use PubMed MCP tools as the primary biomedical literature-search layer. This skill is for direct PubMed / NCBI searches, PMID metadata inspection, related-article and review discovery, OA full-text triage, and optional Markdown + RIS export. It can be used independently from `zotero-evidence-review`; when Zotero tools are visible, Zotero may be mentioned only as an optional follow-up import or local-library cross-check layer.
+Use PubMed MCP tools as the primary biomedical literature-search layer. This skill is for direct PubMed / NCBI searches, PMID metadata inspection, related-article and review discovery, OA full-text triage, and automatic Markdown + RIS export unless the user explicitly chooses chat-only/no-export mode. It can be used independently from `zotero-evidence-review`; when Zotero tools are visible, use Zotero only as an optional local-library cross-check and import-suggestion layer, never as a PubMed search client.
 
 Default output is Chinese-first when the user writes in Chinese, while official bibliographic metadata, article titles, journal names, DOI, PMID, and RIS field tags remain in their original/official format.
 
@@ -36,8 +36,8 @@ Route the request before choosing tools. Do not ask the user to choose a mode wh
 ### Routing Rules
 
 1. `/pubmed-literature-search` is the recommended user-facing entry point. Treat it as a request to run this skill and auto-route from the user's topic or PMID input.
-2. If the user asks only for quick search results or says `只在聊天输出`, `不要生成文件`, `不导出`, or `chat only`, keep the response in chat and do not write package files.
-3. If the user asks for an EndNote/RIS file, saved report, reusable literature review, or `完整工作流`, run the relevant search/inspection workflow first, then Module 5.
+2. If the user says `只在聊天输出`, `不要生成文件`, `不导出`, or `chat only`, keep the response in chat and do not write package files.
+3. For topic searches, PMID inspection requests, related/review expansion, EndNote/RIS requests, saved reports, reusable literature reviews, or `完整工作流`, run the relevant search/inspection workflow first, then Module 5 by default unless chat-only/no-export is explicit.
 4. If the request includes both a broad topic and a key PMID, run topic search first and then use the key PMID for related/review expansion.
 5. If PubMed MCP tools are unavailable, do not claim that a PubMed search ran. Provide the planned query and report status as `⚠️ Tool unavailable; search not executed`.
 6. If intent is ambiguous, ask the user to choose:
@@ -51,6 +51,16 @@ Route the request before choosing tools. Do not ask the user to choose a mode wh
 5. 生成 Markdown 报告 + EndNote RIS
 ```
 
+### Default Export and Zotero Cross-Check
+
+Use these defaults for PubMed-first work:
+
+1. **PubMed default export**: PubMed topic search default output is a Markdown PubMed review report plus EndNote-compatible RIS. PMID inspection and related/review expansion also continue to Module 5 when they produce reusable selected records, unless the prompt explicitly says chat-only/no-export.
+2. **Chat-only opt-out**: only explicit `只在聊天输出`, `不要生成文件`, `不导出`, or `chat only` suppresses package writing.
+3. **Zotero optional cross-check**: when Zotero MCP tools are visible, perform a read-only local-library cross-check for selected/exported PMIDs by PMID, DOI, and normalized title after PubMed metadata inspection. Record `In Zotero?`, the Zotero match route, and `recommend citing / consider importing / already in library`.
+4. **No Zotero mutation**: do not import PubMed records into Zotero, attach PDFs, batch tag, or move collections unless the user explicitly confirms that separate action.
+5. **PubMed-only RIS boundary**: only PMIDs with completed PubMed metadata inspection can enter RIS. Zotero cross-check status does not make an uninspected PubMed hit citation-ready.
+
 ---
 
 ## 0.25 PubMed MCP Readiness and Runtime Availability
@@ -62,7 +72,7 @@ Use this readiness gate before any PubMed-dependent workflow. Static validation 
 | Layer | Requirement | Runtime availability rule |
 |---|---|---|
 | PubMed MCP | Required (`metadata.requires: pubmed-mcp`) | The active session must expose callable PubMed / NCBI tools before searches, PMID inspection, related/review expansion, or PubMed-only RIS generation. |
-| Zotero MCP | Optional (`metadata.optional: zotero-mcp`) | Zotero tools may be used only for optional local-library cross-checks or later import suggestions; Zotero is not a PubMed search client. |
+| Zotero MCP | Optional (`metadata.optional: zotero-mcp`) | Zotero tools may be used only for read-only local-library cross-checks or later import suggestions; Zotero is not a PubMed search client. |
 | Static validation | Repository-side guardrail only | `scripts/validate-skill.py --skill pubmed-literature-search` checks structure and guardrail text; it does not run live MCP smoke tests. |
 
 Expected PubMed MCP tools for PancrePal-style servers include `pubmed_search`, `pubmed_get_details`, `pubmed_extract_info`, `pubmed_find_related`, `pubmed_detect_fulltext`, `pubmed_download_fulltext`, `pubmed_system_status`, and `pubmed_manage_cache`. Actual availability depends on the active session.
@@ -72,7 +82,7 @@ Expected PubMed MCP tools for PancrePal-style servers include `pubmed_search`, `
 | Condition | Required report status | RIS consequence |
 |---|---|---|
 | No PubMed-capable tool is visible | `⚠️ Tool unavailable; search not executed` | Do not create PubMed-only RIS records; provide a copyable query. |
-| Tool is visible, but workflow is chat-only and no export was requested | `Completed` only if the search/details actually ran; otherwise `Not executed` with reason | Do not create files unless explicitly requested. |
+| Tool is visible, but workflow is explicit chat-only/no-export | `Completed` only if the search/details actually ran; otherwise `Not executed` with reason | Do not create package files for that run. |
 | PubMed search call failed | `Failed; query reported` | Do not create PubMed-only RIS records from failed queries. |
 | PubMed search ran and selected PMID metadata was inspected | `Completed` | PubMed-only RIS records are allowed for inspected records with sufficient metadata. |
 
@@ -155,9 +165,11 @@ Use for topic-level biomedical literature searches.
    - systematic-style scan: use a larger result count only when the user requests breadth.
 4. Execute `pubmed_search` only if PubMed MCP is visible.
 5. Inspect selected candidate PMIDs with `pubmed_get_details` or `pubmed_extract_info` before making citation recommendations.
-6. Record every selected, recommended, excluded-for-metadata, or RIS-candidate PMID in the PMID Inspection Ledger with inspection status, route/tool, inspected fields, DOI, abstract status, metadata/retraction warning, evidence use, and RIS action.
-7. Classify results by relevance, study type, evidence role, and citation readiness.
-8. If no results are found, revise the query once by broadening synonyms, removing overly narrow filters, or switching from MeSH-heavy to keyword-heavy terms.
+6. When Zotero MCP is visible, run a read-only Zotero local-library cross-check for selected/exported PMIDs by PMID, DOI, and title after PubMed metadata inspection; record `In Zotero?`, match route, and import/citation recommendation.
+7. Record every selected, recommended, excluded-for-metadata, or RIS-candidate PMID in the PMID Inspection Ledger with inspection status, route/tool, inspected fields, DOI, abstract status, metadata/retraction warning, evidence use, and RIS action.
+8. Classify results by relevance, study type, evidence role, and citation readiness.
+9. If no results are found, revise the query once by broadening synonyms, removing overly narrow filters, or switching from MeSH-heavy to keyword-heavy terms.
+10. Unless the prompt explicitly says chat-only/no-export, continue to Module 5 and write the PubMed review Markdown report plus RIS.
 
 ### Chat Output
 
@@ -246,7 +258,7 @@ Use when the user asks whether PubMed results have accessible full text.
 
 ## 5. PubMed Review Package Export
 
-Use when the user asks for saved outputs, EndNote/RIS, or a reusable PubMed literature review.
+Use when the user asks for saved outputs, EndNote/RIS, or a reusable PubMed literature review. Also use this module automatically after PubMed topic search, selected PMID inspection, or related/review expansion unless the user explicitly says chat-only/no-export.
 
 ### Default Deliverables
 
@@ -257,16 +269,17 @@ pubmed-literature-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slu
 pubmed-literature-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris
 ```
 
-Do not write package files for chat-only requests. Do not overwrite existing files or folders unless the user explicitly confirms replacement; append `_v2`, `_v3`, etc. if needed.
+Do not write package files for explicit chat-only/no-export requests. Do not overwrite existing files or folders unless the user explicitly confirms replacement; append `_v2`, `_v3`, etc. if needed.
 
 ### Export Requirements
 
 1. Run the relevant search, PMID inspection, and optional related/review expansion first.
 2. Include only selected PMIDs whose metadata was inspected with `pubmed_get_details`, `pubmed_extract_info`, or equivalent visible PubMed metadata tooling.
 3. Exclude uninspected hits, failed-query hits, metadata-conflict records, and low-relevance records from RIS by default.
-4. Record the PubMed query, tool status, selected PMIDs, excluded PMIDs, PMID Inspection Ledger, and metadata warnings in the Markdown report.
+4. Record the PubMed query, tool status, selected PMIDs, excluded PMIDs, PMID Inspection Ledger, Zotero optional cross-check status when available, and metadata warnings in the Markdown report.
 5. Generate EndNote-compatible RIS records using inspected metadata only.
 6. Only PMIDs with `Inspection status = completed` through `pubmed_get_details`, `pubmed_extract_info`, or equivalent visible PubMed metadata tooling may use `RIS action = include`; search snippets alone are insufficient for recommended citations or RIS export.
+7. Zotero cross-check results may mark `already in library` or `consider importing`, but they do not override PubMed metadata inspection requirements and must not trigger Zotero imports without explicit confirmation.
 
 ### Final Chat Output
 
@@ -316,6 +329,12 @@ Critical Warnings:
 | Priority | Citation | PMID | DOI | Study type | Main finding/use | Caveat |
 |---:|---|---|---|---|---|---|
 | `{n}` | `{Author et al., year}` | `{PMID}` | `{DOI or —}` | `{type}` | `{use}` | `{caveat}` |
+
+### Zotero Local Library Cross-Check
+
+| PMID | DOI | Title | In Zotero? | Zotero match route | Recommendation |
+|---|---|---|---|---|---|
+| `{PMID}` | `{DOI or —}` | `{title}` | `{yes/no/not checked/tool unavailable}` | `{PMID / DOI / title / not checked}` | `{already in library / recommend citing / consider importing / no action}` |
 
 ## 5. Related and Review Expansion
 
