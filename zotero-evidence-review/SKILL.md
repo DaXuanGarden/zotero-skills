@@ -7,7 +7,7 @@ metadata:
   workflow: academic-research
   requires: zotero-mcp
   optional: pubmed-mcp
-  version: 2.8.0
+  version: 2.9.0
 ---
 
 # Zotero Evidence Review Skill
@@ -26,6 +26,7 @@ Route the user's request before choosing tools. Use the input shape and explicit
 
 | Intent | User input features | Route to |
 |--------|---------------------|----------|
+| `method_parameters` | Requests for method/software parameters, thresholds, hyperparameters, defaults, settings, adjustment advice, or the exact Methods passage (e.g. "GSMR 参数怎么设", "原文在哪段") | **Module 1.2: Methodology Parameter Extraction and Report** |
 | `search` | Keywords, concepts, natural-language questions, broad topic discovery, or requests such as "search", "find papers", "what literature do I have about…" | **Module 1: Semantic + Structured Search**, then auto-export Search Report + RIS unless chat-only/no-export is explicit |
 | `target_literature_search` | Topic/question asks which papers use a data source, method, phenotype, cohort, disease area, or research direction; user wants literature discovery, screening, search report, MD, RIS, or EndNote export, and no manuscript paragraph is supplied | **Module 1.8: Target Literature Search and Export** |
 | `paragraph` | A pasted manuscript paragraph, draft section, or multi-sentence passage that asks for chat-only evidence analysis, with no citation/export/full-workflow trigger | **Module 2: Paragraph Evidence & Citation Analysis** |
@@ -35,6 +36,8 @@ Route the user's request before choosing tools. Use the input shape and explicit
 | `health` | "library status", "库状态", "health check", "健康检查", "preflight", "index status", or questions about Zotero database readiness | **Module 0.5: Library Health Check** |
 
 ### Routing Rules
+
+**Method-parameter precedence**: when the user asks what settings a method used, what a parameter means or how to adjust it, or where the source describes it, route to **Module 1.2** before generic `search` or `target_literature_search`. If the user asks which studies merely use a method, route to Module 1.8. If the user supplies manuscript text for citation analysis, use Module 2. Read [references/method-parameter-search.md](references/method-parameter-search.md) for the evidence and report requirements.
 
 1. **Slash command and simple-request entry**: `/zotero-evidence-review` is the recommended user-facing entry point. Treat it as a request to run this skill and auto-route from the user's short request; do not require the user to name modules or repeat the full workflow. When the short request asks for ordinary literature search, target literature search, evidence, citation support, paragraph polishing, reusable writing output, or an evidence package, default to the appropriate export workflow and write the Markdown report plus RIS unless the user explicitly opts out.
 2. **Paragraph-first, package by default for citation work**: if the user provides a paragraph, run Module 2 first. If the same request includes `/zotero-evidence-review`, `使用技能`, `完整工作流`, "find evidence", "find/add/recommend citations", `找证据`, `找引文`, `补引用`, `推荐引用`, `citation`, `refs`, `参考文献`, `文献引用`, or any request for saved/reusable writing outputs, continue automatically to the Paragraph Citation Package Workflow / Module 2.5 and write the Markdown report plus RIS file.
@@ -63,25 +66,26 @@ Route the user's request before choosing tools. Use the input shape and explicit
 
 Use these defaults for every non-health, non-verify workflow:
 
-1. **Dual-MCP auto search**: run Zotero first for local-library evidence, then automatically attempt PubMed expansion for biomedical ordinary search, target literature search, paragraph citation matching, paragraph polishing, and reference-update workflows when a PubMed-capable MCP tool is visible.
-2. **Automatic export by default**: ordinary `search`, `target_literature_search`, paragraph citation matching, paragraph polishing, `package`, and `reference_update` workflows write Markdown + RIS outputs by default. The only general opt-out is explicit `只在聊天输出`, `不要生成文件`, `不导出`, or `chat only`.
+1. **Dual-MCP auto search**: run Zotero first for local-library evidence, then automatically attempt PubMed expansion for biomedical ordinary search, target literature search, paragraph citation matching, paragraph polishing, method-parameter retrieval, and reference-update workflows when a PubMed-capable MCP tool is visible.
+2. **Automatic export by default**: ordinary `search`, `target_literature_search`, paragraph citation matching, paragraph polishing, `method_parameters`, `package`, and `reference_update` workflows write Markdown + RIS outputs by default. The only general opt-out is explicit `只在聊天输出`, `不要生成文件`, `不导出`, or `chat only`.
 3. **Ordinary search output**: Module 1 ordinary Zotero search default output is **Search Report + RIS**. Use a `LITERATURE_SEARCH_REPORT`-compatible search report without paragraph-only sections, and write Search RIS from inspected included records.
 4. **Target search output**: Module 1.8 target literature search default output is `LITERATURE_SEARCH_REPORT` + Search RIS, with Core / Strong Related / Method Background / Disease GWAS Only / Noise / Verify classification and exclusion reasons.
-5. **Paragraph output**: Module 2 + Module 2.5 paragraph citation matching, paragraph polishing, and citation insertion default output is `EVIDENCE_REVIEW_REPORT` + Citation RIS, including Copy-ready Manuscript Text, Annotated Recommended Text, Citation Support Ledger, and diff/wording changes.
-6. **PubMed truth boundary**: PubMed expansion can be recorded as `Completed` only after an actual PubMed search ran and selected PMID metadata was inspected. If PubMed tools are absent or fail, record the planned/attempted query and use `⚠️ Tool unavailable; search not executed` or `Failed; query reported`; never create PubMed-only RIS records from planned, failed, or uninspected PubMed results.
-7. **No route mixing**: search reports and target literature search reports never include Copy-ready Manuscript Text, sentence-level citation placement, or paragraph diff unless the user supplies a manuscript paragraph. Paragraph evidence packages never use Search RIS as a substitute for claim-level Citation RIS.
+5. **Method-parameter output**: Module 1.2 writes `LITERATURE_SEARCH_REPORT` + Search RIS by default and adds the `METHOD_PARAMETER_EVIDENCE` section. That section must contain inspected source passages, section/page locations, and Zotero item/PDF links. Do not add paragraph-writing sections unless the user also supplies a manuscript paragraph.
+6. **Paragraph output**: Module 2 + Module 2.5 paragraph citation matching, paragraph polishing, and citation insertion default output is `EVIDENCE_REVIEW_REPORT` + Citation RIS, including Copy-ready Manuscript Text, Annotated Recommended Text, Citation Support Ledger, and diff/wording changes.
+7. **PubMed truth boundary**: PubMed expansion can be recorded as `Completed` only after an actual PubMed search ran and selected PMID metadata was inspected. If PubMed tools are absent or fail, record the planned/attempted query and use `⚠️ Tool unavailable; search not executed` or `Failed; query reported`; never create PubMed-only RIS records from planned, failed, or uninspected PubMed results.
+8. **No route mixing**: search reports, target literature search reports, and method-parameter reports never include Copy-ready Manuscript Text, sentence-level citation placement, or paragraph diff unless the user supplies a manuscript paragraph. Paragraph evidence packages never use Search RIS as a substitute for claim-level Citation RIS.
 
 ### End-to-End Workflow Map
 
 Use this map as the default execution path so the workflow remains continuous and auditable:
 
 ```text
-intent routing → optional read-only library readiness check → Module 1 search, Module 1.8 target literature search/export, Module 2 paragraph analysis, or Module 2.2 existing numbered citation repair → Zotero canonical metadata + PDF links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown report + EndNote RIS unless chat-only/no-export is explicit → final path-only summary
+intent routing → optional read-only library readiness check → Module 1 search, Module 1.2 method-parameter extraction, Module 1.8 target literature search/export, Module 2 paragraph analysis, or Module 2.2 existing numbered citation repair → Zotero canonical metadata + inspected Methods passages and PDF page links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown report + EndNote RIS unless chat-only/no-export is explicit → final path-only summary
 ```
 
 Operational checkpoints:
 
-1. **Before searching**: identify scope, language, explicit opt-out, and whether the request is ordinary `search`, `target_literature_search`, or the full **Paragraph Citation Package Workflow (Module 2 + Module 2.5)**. If there is no chat-only/no-export opt-out, plan Markdown + RIS output from the start.
+1. **Before searching**: identify scope, language, explicit opt-out, and whether the request is ordinary `search`, `method_parameters`, `target_literature_search`, or the full **Paragraph Citation Package Workflow (Module 2 + Module 2.5)**. If there is no chat-only/no-export opt-out, plan Markdown + RIS output from the start.
 2. **Before MCP-dependent work**: apply **0.25 MCP Readiness and Runtime Availability**. Zotero MCP is required for local evidence work; PubMed MCP is optional and can only be used when a PubMed/NCBI-capable callable tool is visible in the active session.
 3. **During Zotero work**: search Zotero first, deduplicate candidate evidence, and retrieve inspected metadata before using an item in a report or RIS record.
 4. **During PubMed work**: when PubMed tools are visible, use `pubmed_search` for expansion, `pubmed_get_details` or `pubmed_extract_info` for selected PMIDs, `pubmed_find_related` for key-paper expansion, and `pubmed_detect_fulltext` / `pubmed_download_fulltext` only for OA full text when enabled and useful.
@@ -249,9 +253,10 @@ Choose the right Zotero MCP tool for each task:
 
 - **Conceptual literature discovery** → `zotero_semantic_search` first.
 - **Exact title, DOI, PMID, author, keyword** → `zotero_search_items` or `zotero_advanced_search`.
+- **Method/software parameters and source passages** → **Module 1.2**; read [references/method-parameter-search.md](references/method-parameter-search.md). Search for candidate records, then inspect the selected methods pages; metadata search alone does not establish a parameter value.
 - **Citation-key lookup** → `zotero_search_by_citation_key`.
 - **Metadata, abstracts, BibTeX/JSON export** → `zotero_get_item_metadata`; required before writing RIS records for Zotero items.
-- **Attachments / PDF links** → `zotero_get_item_children` or `zotero_get_items_children` to find attachment keys for `zotero://open-pdf/library/items/{attachment_key}` links.
+- **Attachments / PDF links** → `zotero_get_item_children` or `zotero_get_items_children` to find attachment keys; use `zotero_get_pdf_outline` and `zotero_read_pdf_pages` to locate and inspect relevant pages.
 - **Full text** → `zotero_get_item_fulltext` or `zotero_read_pdf_pages`.
 - **Annotations and reading notes** → `zotero_get_annotations` and `zotero_get_notes`.
 - **Collection-level search** → `zotero_get_collections`, `zotero_search_collections`, `zotero_get_collection_items`.
@@ -340,6 +345,16 @@ Present **all** hits in a single scannable table — one row per paper. Do **not
 Then add a compact **Refs** appendix so full metadata appears exactly once (and only here). Output format: see **Appendix: Output Templates → REFS_BLOCK**.
 
 After the table + Refs, refer to papers only as `Author Year (KEY)` — never re-list title/journal/DOI again.
+
+---
+
+## 1.2 Methodology Parameter Extraction and Report
+
+Use this module when the user asks for a method/software setting, parameter value or default, how a parameter was selected or adjusted, or the original Methods passage that reports it. Use Module 1.8 instead when the request is only to find papers that use a method. Read [references/method-parameter-search.md](references/method-parameter-search.md) before executing this workflow.
+
+This module follows the normal Zotero readiness and dual-MCP sequence, then inspects the selected paper's full text. Separate original-method settings, software defaults, explicit author recommendations, and values chosen by application studies. Report the complete relevant Methods paragraph in the original language, exact section, printed page and physical PDF page when available, a Zotero item link, and a page-specific PDF link. Do not infer parameter values or adjustment effects from abstracts or search snippets.
+
+Unless the user explicitly opts out, use the existing `LITERATURE_SEARCH_REPORT` + Search RIS workflow and include `METHOD_PARAMETER_EVIDENCE` as a dedicated section. Do not add manuscript rewriting sections unless a manuscript paragraph is part of the request.
 
 ---
 
@@ -1652,6 +1667,15 @@ The skill will:
 2. Attempt PubMed expansion when a PubMed-capable MCP tool is visible because this is a biomedical topic.
 3. Write a search-focused Markdown report plus Search RIS by default, and return a compact path summary. If the prompt says `只在聊天输出`, `不要生成文件`, `不导出`, or `chat only`, stop at the chat table + Refs.
 
+### Methodology Parameter Retrieval
+
+> "/zotero-evidence-review GSMR 的 HEIDI 阈值、SNP 筛选参数怎么设？请给出原文方法段落和 Zotero PDF 页链接。"
+
+The skill will:
+1. Route to Module 1.2 and search original-method, software-implementation, recommendation, and applied-study sources as distinct roles.
+2. Inspect the relevant methods pages and report each setting with its complete locating paragraph, section/page numbers, item links, and PDF page links.
+3. Write a search report + Search RIS by default, or keep the result in chat when explicitly requested.
+
 ### Paragraph Evidence & Citation Analysis
 
 > "/zotero-evidence-review 帮我给下面这段草稿找证据并补引用：
@@ -1698,6 +1722,7 @@ Chat-only example:
 - Always prefer **semantic search** first for conceptual queries.
 - For author/year specific lookups, use keyword search with exact fields.
 - Zotero links use the format: `zotero://select/items/0_{ItemKey}`
+- Module 1.2 report details and page-level Zotero links follow [references/method-parameter-search.md](references/method-parameter-search.md).
 - If the user has not built the semantic index yet, prompt them to run `zotero-mcp update-db`.
 - If full-text is needed, suggest `zotero-mcp update-db --fulltext`.
 - Token budget for full verification: estimate 700 tokens per page + 1000 overhead.
@@ -1706,7 +1731,7 @@ Chat-only example:
 
 ## Appendix: Output Templates
 
-Use these named templates whenever a module references an appendix template. For chat-only outputs, keep full bibliographic metadata in `REFS_BLOCK` only; elsewhere cite papers as `Author Year (KEY)`. For ordinary search and target literature search reports, use `LITERATURE_SEARCH_REPORT` plus `RIS_REFERENCE_FILE` unless chat-only/no-export is explicit. For paragraph evidence packages, use `EVIDENCE_REVIEW_REPORT` plus `RIS_REFERENCE_FILE`.
+Use these named templates whenever a module references an appendix template. For chat-only outputs, keep full bibliographic metadata in `REFS_BLOCK` only; elsewhere cite papers as `Author Year (KEY)`. For ordinary search, target literature search, and method-parameter reports, use `LITERATURE_SEARCH_REPORT` plus `RIS_REFERENCE_FILE` unless chat-only/no-export is explicit. Module 1.2 adds its detailed `METHOD_PARAMETER_EVIDENCE` block as described in [references/method-parameter-search.md](references/method-parameter-search.md). For paragraph evidence packages, use `EVIDENCE_REVIEW_REPORT` plus `RIS_REFERENCE_FILE`.
 
 ### REFS_BLOCK
 
@@ -1854,6 +1879,22 @@ Rules:
 | Citation | Method role | RIS action |
 |----------|-------------|------------|
 | Author Year | ... | Optional / Exclude |
+
+### 方法学参数与原文定位（Module 1.2 only）
+| 参数 | 原文设定 | 来源角色 | 解释/调整证据 | 方法学小节 | 印刷页 / PDF页 | Zotero PDF |
+|---|---|---|---|---|---|---|
+| {parameter} | {exact setting, units, conditions} | Original method / Software implementation / Author recommendation / Applied-study choice | {source-supported effect or 未报告} | {section/subsection} | {printed page / physical PDF page} | [PDF 第{N}页](zotero://open-pdf/library/items/{attachment_key}?page={N}) |
+
+#### 原文定位段落
+##### {Author Year — source role}
+条目：[Zotero 条目](zotero://select/items/0_{parent_item_key})
+位置：{main text or supplement; section/subsection; printed page; physical PDF page}
+参数：{parameter names}
+
+> {Complete relevant Methods paragraph verbatim}
+
+解释/调整边界：{source-based interpretation; distinguish analyst interpretation}
+PDF 定位：[打开 PDF 第{N}页](zotero://open-pdf/library/items/{attachment_key}?page={N})
 
 ### Disease GWAS Only / Noise / Verify
 | Citation | Category | Reason | RIS action |
