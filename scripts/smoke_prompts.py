@@ -19,6 +19,21 @@ COMMON_GUARDRAIL = """只读测试；不要修改 Zotero；不要生成文件；
 
 PROMPTS = [
     SmokePrompt(
+        "zotero-manuscript-thinking-dry-run",
+        "Zotero manuscript-level thinking route dry run",
+        f"""/zotero-evidence-review 只读路由验证，不要生成文件：如果用户提供标题、摘要、Introduction、Results 和 Discussion，并要求“从全文角度看看语言精确度、Introduction/Discussion 逻辑、论文主线和下一轮修改顺序”，请说明应路由到 Module 2.8 Manuscript-Level Thinking Checkpoint 和 companion zotero-manuscript-thinking Skill。\n{COMMON_GUARDRAIL}\n请只输出 scope ledger、paper contract、Language Audit、Introduction/Discussion Logic Map、argument spine、thinking-model-router 的 primary route、P0/P1 action table、下游 handoff 和 stop conditions；不要改写论文，不要承诺新实验。""",
+    ),
+    SmokePrompt(
+        "zotero-domain-style-calibration-dry-run",
+        "Zotero domain-native style calibration route dry run",
+        f"""/zotero-manuscript-thinking 只读路由验证，不要生成文件：如果用户要求“参考 Zotero 中 3–5 篇同领域、同文章类型的代表性论文，检查 Introduction 的语言是否地道，并给出保守的 copy-ready 改写”，请说明应先建立 style_corpus_ledger，再按 zotero_get_recent → zotero_semantic_search → inspect → zotero_get_item_metadata → zotero_get_item_children → zotero_get_pdf_outline → zotero_read_pdf_pages 的顺序读取；然后输出 Domain Style Calibration、Zotero Style Evidence Ledger、peer pattern、calibration_confidence 和 draft-to-profile comparison；不得复制 peer 原文，不得改变 claim 强度。\n{COMMON_GUARDRAIL}\n如果 Zotero/PubMed MCP 不可见，请写 corpus_status: unavailable，并说明只能做 genre-neutral 语言诊断。不要实际检索或写文件。""",
+    ),
+    SmokePrompt(
+        "zotero-methods-results-calibration-dry-run",
+        "Zotero Methods/Results calibration route dry run",
+        f"""/zotero-manuscript-thinking 只读路由验证，不要生成文件：如果用户要求“参考 Zotero 中同领域、同研究设计的论文，检查 Methods 是否可复现、Results 是否地道且叙事清楚，并核对 Methods–Results–图表一致性”，请说明应先建立按 section 分层的 style_corpus_ledger，再对 Methods 和 Results 分别抽取 reproducibility detail order、报告规范、结果块顺序、quantitative anchor、figure/table linking 和 interpretation boundary；然后输出 Methods Logic Map、Results Logic Map、Zotero Style Evidence Ledger、Methods–Results alignment audit 和 calibration_confidence。不得补写未提供的参数、改变数字/方向/单位或把 Results 解释成 Discussion。\n{COMMON_GUARDRAIL}\n如果 Zotero/PubMed MCP 不可见，请写 corpus_status: unavailable，并说明只能做 genre-neutral、evidence-bound 的章节诊断。不要实际检索或写文件。""",
+    ),
+    SmokePrompt(
         "zotero-health",
         "Zotero read-only health check",
         f"""/zotero-evidence-review 做一次 Zotero MCP 只读健康检查。\n{COMMON_GUARDRAIL}\n请只报告：当前会话是否能看到 Zotero MCP tools、语义索引/全文能力是否可检查、最近文献/collection/tag 检索是否能安全执行。""",

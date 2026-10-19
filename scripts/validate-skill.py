@@ -40,6 +40,7 @@ REQUIRED_TEMPLATES = (
     "DIFF_REVISED_PARAGRAPH",
     "LITERATURE_SEARCH_REPORT",
     "EVIDENCE_REVIEW_REPORT",
+    "MANUSCRIPT_STRATEGIC_REVIEW",
     "RIS_REFERENCE_FILE",
     "VERIFICATION_REPORT",
 )
@@ -55,6 +56,7 @@ REQUIRED_HEADINGS = [
     "## 1.8 Target Literature Search and Export",
     "## 2. Paragraph Evidence & Citation Analysis",
     "## 2.5 Evidence Package Export",
+    "## 2.8 Manuscript-Level Thinking Checkpoint",
     "## 3. Citation Verification Protocol",
     "## 4. Chinese Academic Writing Rules",
     "## 5. External Source Fallback",

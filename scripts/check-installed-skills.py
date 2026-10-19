@@ -12,7 +12,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 HOME = Path.home()
-SKILLS = ("zotero-evidence-review", "pubmed-literature-search")
+SKILLS = ("zotero-evidence-review", "zotero-manuscript-thinking", "pubmed-literature-search")
 
 
 @dataclass(frozen=True)
@@ -23,6 +23,7 @@ class Target:
 
 
 TARGETS = {
+    "codex": Target("codex", HOME / ".codex/skills", "bash scripts/install-skill.sh --skill all-skills --target codex --backup"),
     "zcode": Target("zcode", HOME / ".zcode/skills", "bash scripts/install-skill.sh --skill all-skills --target zcode --backup"),
     "opencode": Target(
         "opencode",
@@ -47,10 +48,10 @@ class SkillMeta:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Check installed ZCode/OpenCode skill copies for drift")
+    parser = argparse.ArgumentParser(description="Check installed Codex/ZCode/OpenCode skill copies for drift")
     parser.add_argument(
         "--target",
-        choices=("zcode", "opencode", "project", "all"),
+        choices=("codex", "zcode", "opencode", "project", "all"),
         default="all",
         help="Installed skill target to inspect",
     )
@@ -99,7 +100,7 @@ def short_hash(value: str | None) -> str:
 
 def selected_targets(target: str) -> list[Target]:
     if target == "all":
-        return [TARGETS[name] for name in ("zcode", "opencode", "project")]
+        return [TARGETS[name] for name in ("codex", "zcode", "opencode", "project")]
     return [TARGETS[target]]
 
 

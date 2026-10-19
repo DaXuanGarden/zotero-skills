@@ -575,3 +575,50 @@ Critical Warnings:
 - 每段推荐文本必须区分 copy-ready 和 annotated。
 
 完成后，skill 的输出将从“完整但偏长的证据报告”升级为“可直接服务科研写作与审稿风险控制的 evidence intelligence workflow”。
+
+---
+
+## Phase 11：Manuscript-Level Thinking Checkpoint（新增）
+
+### 为什么需要这一层
+
+现有模块已经能够做段落主张拆解、证据检索、引文修复和 Copy-ready 改写，但这些能力容易把用户带入“局部最优”：句子越来越顺，论文的研究问题、贡献、章节分工和结论边界却没有同步变清楚。这个问题需要一个独立的 manuscript-level checkpoint 来解决。语言表达是默认重点，但必须先经过意义保持门禁，避免把逻辑问题润色得更顺却更不准确。
+
+### 设计原则
+
+1. **局部与整体分离**：子 Skill 先回答“整篇论文最应该改什么”，再把具体动作交给现有 evidence、audit、revision 和 writing 模块。
+2. **语言与章节逻辑分层**：默认按 `meaning gate → language → Introduction/Discussion logic → whole-paper spine` 工作；语言层检查精确度、衔接、密度、术语和中英文自然度，不能用同义词掩盖 gap 或解释链问题。
+3. **思考模型按机制路由**：使用 `thinking-model-router`，默认只选一个 primary route；`systems` 看章节/证据互动，`first-principles` 看贡献与假设，`steel-manning` 看审稿反驳，`socratic` 看未定义前提。只有 primary 留下实质盲点时才组合模型。
+4. **证据边界继承现有规范**：继续使用 `Current study`、`Zotero external evidence`、`PubMed external evidence`、`Interpretive bridge`、`Unsupported gap` 和 A–E evidence levels。
+5. **证据账本与行动计划**：借鉴 `agent-scout` 的 input ledger、质量门和 continuation 思路，记录实际读取的材料、未读材料、风险、下一步和停止条件；不把“思考过程”写成论文内容。
+6. **可逆、可交接**：每个 P0/P1 问题必须有 claim ID、位置、action type、next owner 和 Done when；不自动承诺新实验、不自动删除原稿。
+
+### 初版交付
+
+- 新增 `zotero-manuscript-thinking/SKILL.md`；
+- 在 `zotero-evidence-review` 中加入 `manuscript_strategy` 路由和 Module 2.8；
+- 新增 `MANUSCRIPT_STRATEGIC_REVIEW` 输出模板；
+- 安装脚本、已安装 skill 漂移检查和 `check-all.py` 支持该子 Skill；
+- 新增静态校验 `scripts/validate-manuscript-thinking.py`。
+
+### 后续可选增强
+
+- 以 `claim IDs` 为键，把 checkpoint 与 Evidence Package 报告自动关联；
+- 在同一 topic 的多次运行之间记录 superseded/continuation 关系；
+- 在用户明确提供 raw results 时接入 `paper-claim-audit`，把结构风险与数字一致性风险合并展示；
+- 将“局部修改两轮后触发 checkpoint”改为可配置阈值，避免打断短小任务。
+
+## Phase 12：Domain Style Calibration（本轮新增）
+
+用户对“地道”的要求不是把句子改得更口语化，而是让表达符合同领域、同文体、同目标 venue 的可观察写作惯例。仅靠 `academic register` 或模型直觉不足以证明这一点，因此新增可选的 `Domain Style Calibration`：
+
+1. 从 Zotero 优先选择 3–5 篇同 section、同文章类型、同子领域/方法相近的可检查论文；记录 `style_corpus_ledger`、访问状态、选择理由和 `calibration_confidence`。
+2. 提取 rhetorical moves、sentence functions、claim verbs/hedges、术语、citation ownership、信息节奏和 reader path，而不是复制句子或建立无依据的“高分论文”标签。
+3. 输出 `peer pattern → draft mismatch → safe action → meaning check` 对照表，再把 profile 交给 `writing-core` 或 `medical-english-precision-editor`。
+4. 没有可匹配语料时明确 `corpus_status: unavailable/partial`，退回 genre-neutral 语言诊断；不把摘要或搜索 snippet 当作风格证据。
+
+本轮实现：`zotero-manuscript-thinking/references/domain-style-calibration.md`、Skill 的 `0.4.0` 路由/输出/安全门、Methods/Results 章节协议、父 Skill Module 2.8 的交接字段、README 示例和 style calibration smoke prompt；并根据真实 Zotero 回放补充 parent-key、fulltext fallback 和 `isError: false` 文本错误解析规则。
+
+### Phase 13：Methods 与 Results 写作校准
+
+Methods 和 Results 也进入 manuscript-level checkpoint，但职责不同：Methods 以可复现性和 Methods–Results 对齐为中心，Results 以主要发现、定量锚点、图表映射和解释边界为中心。新增 `Methods Logic Map`、`Results Logic Map`、Methods–Results alignment audit，并将请求分别交给 `methods-section-writer` / `method-writing` / `methods-reverse-engineer`、`results-section-structurer` / `results-section-revision` 和 `result-figure-consistencycheck`。
