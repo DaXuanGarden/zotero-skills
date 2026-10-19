@@ -3,20 +3,22 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/install-skill.sh [--skill zotero-evidence-review|pubmed-literature-search|all-skills] [--target zcode|opencode|project|all] [--backup]
+Usage: scripts/install-skill.sh [--skill zotero-evidence-review|zotero-manuscript-thinking|pubmed-literature-search|all-skills] [--target codex|zcode|opencode|project|all] [--backup]
 
 Install skills from this repository into a local skill directory.
 
 Skills:
   zotero-evidence-review     Zotero-grounded evidence review workflow (default)
+  zotero-manuscript-thinking Whole-manuscript argument and revision checkpoint
   pubmed-literature-search   PubMed MCP literature search workflow
   all-skills                 Install all repository skills
 
 Targets:
+  codex    ~/.codex/skills/<skill-name>
   zcode     ~/.zcode/skills/<skill-name>
   opencode  ~/.config/opencode/skills/<skill-name>
   project   ./.opencode/skills/<skill-name>
-  all       zcode + opencode + project
+  all       codex + zcode + opencode + project
 
 Options:
   --backup  If the target exists, copy it to <target>.backup-YYYYmmdd-HHMMSS before replacing it.
@@ -57,7 +59,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "$TARGET" in
-  zcode|opencode|project|all) ;;
+  codex|zcode|opencode|project|all) ;;
   *)
     echo "Invalid target: $TARGET" >&2
     usage >&2
@@ -66,7 +68,7 @@ case "$TARGET" in
 esac
 
 case "$SKILL" in
-  zotero-evidence-review|pubmed-literature-search|all-skills) ;;
+  zotero-evidence-review|zotero-manuscript-thinking|pubmed-literature-search|all-skills) ;;
   *)
     echo "Invalid skill: $SKILL" >&2
     usage >&2
@@ -80,7 +82,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 skill_names() {
   case "$SKILL" in
     all-skills)
-      printf '%s\n' zotero-evidence-review pubmed-literature-search
+      printf '%s\n' zotero-evidence-review zotero-manuscript-thinking pubmed-literature-search
       ;;
     *)
       printf '%s\n' "$SKILL"
@@ -91,6 +93,9 @@ skill_names() {
 target_paths() {
   local skill_name="$1"
   case "$TARGET" in
+    codex)
+      printf '%s\n' "$HOME/.codex/skills/$skill_name"
+      ;;
     zcode)
       printf '%s\n' "$HOME/.zcode/skills/$skill_name"
       ;;
@@ -102,6 +107,7 @@ target_paths() {
       ;;
     all)
       printf '%s\n' \
+        "$HOME/.codex/skills/$skill_name" \
         "$HOME/.zcode/skills/$skill_name" \
         "$HOME/.config/opencode/skills/$skill_name" \
         "$REPO_ROOT/.opencode/skills/$skill_name"

@@ -18,6 +18,9 @@
 | 场景 | 推荐入口 | 复制即用提示词 | 典型产物 |
 |---|---|---|---|
 | 写论文时给一段草稿找证据、补引用 | `/zotero-evidence-review` | `帮我给下面这段草稿找证据并补引用，使用完整工作流，生成 Markdown evidence report 和 EndNote RIS：...` | `zotero-evidence-output/.../*_evidence_review.md` + `*_references.ris` |
+| 从全文角度检查语言、Methods/Results、Introduction/Discussion 和主线 | `/zotero-manuscript-thinking` | `请检查语言精确度、Methods/Results/Introduction/Discussion 逻辑和全文主线，找出 P0/P1 问题，并给出下一轮修改顺序，不要直接重写全文。` | `MANUSCRIPT_STRATEGIC_REVIEW`（结构与语言诊断；不自动生成 RIS） |
+| 参考同领域代表性论文校准地道表达 | `/zotero-manuscript-thinking` | `请从 Zotero 选 3–5 篇同领域、同文章类型的代表性论文，比较这段 Introduction 的段落推进、术语和 claim verbs，再给保守改写；不要复制原文。` | `Domain Style Calibration` + peer-pattern 对照表 + copy-ready 文本 |
+| 校准 Methods/Results 的地道写法与证据边界 | `/zotero-manuscript-thinking` | `请从 Zotero 选同领域、同研究设计的论文，检查我的 Methods 是否可复现、Results 是否按主要发现推进，并核对 Methods–Results–图表一致性；先给 Logic Map，再润色。` | `Methods Logic Map` + `Results Logic Map` + reproducibility/alignment audit |
 | 已有编号引用，怀疑某些引用不支持原句 | `/zotero-evidence-review` | `帮我检查并更新下面这段已有编号引用，逐条判断引用是否支持原句，修复不支持的引用，并生成最终 RIS：...` | 引用支持/不支持表、改写段落、最终 RIS |
 | 在 Zotero 库里找文献并导出 | `/zotero-evidence-review` | `搜 Zotero 库中关于 {topic} 的论文，列出最相关的 10 篇，并说明每篇适合支持什么主张。` | `*_literature_search.md` + Search RIS；显式 chat-only 时只聊天 |
 | 目标文献检索与文献清单导出 | `/zotero-evidence-review` | `哪些文献使用了大脑相关 GWAS 数据？请拆解检索主题，分类 Core/Strong Related/Noise，并导出 MD 和 RIS。` | `*_literature_search.md` + Search RIS |
@@ -67,7 +70,7 @@ python3 scripts/write_literature_search_package.py \
 
 ## 1. 项目概览
 
-本仓库提供两个互补 skill：`zotero-evidence-review` 是核心 Zotero 本地证据审查工作流；`pubmed-literature-search` 是独立 PubMed MCP 文献检索工作流。前者通过 Zotero MCP 连接本地 Zotero 文献库，支持从“找文献”到完整的 **Paragraph Citation Package Workflow**（段落 → 主张拆解 → Zotero 本地检索 → PubMed 可见时自动扩展 → 引文放置 → Markdown 证据报告 + EndNote RIS）再到“逐条核实引用是否真的支持主张”的证据审查工作流；后者可直接调用 PubMed MCP 进行主题检索、PMID 元数据检查、related/review discovery、OA 全文可用性检查，并默认导出 Markdown + RIS，除非显式 chat-only。
+本仓库提供三个互补 skill：`zotero-evidence-review` 是核心 Zotero 本地证据审查工作流；`zotero-manuscript-thinking` 是在局部修改后抬头检查整篇论文的论证与修订策略子 Skill；`pubmed-literature-search` 是独立 PubMed MCP 文献检索工作流。证据审查 Skill 通过 Zotero MCP 连接本地 Zotero 文献库，支持从“找文献”到完整的 **Paragraph Citation Package Workflow**（段落 → 主张拆解 → Zotero 本地检索 → PubMed 可见时自动扩展 → 引文放置 → Markdown 证据报告 + EndNote RIS）再到“逐条核实引用是否真的支持主张”的证据审查工作流；manuscript-thinking 在需要时重建 paper contract、argument spine、claim–evidence–section map，并把 P0/P1 问题交给证据、审计、修订或语言模块；PubMed skill 可直接调用 PubMed MCP 进行主题检索、PMID 元数据检查、related/review discovery、OA 全文可用性检查，并默认导出 Markdown + RIS，除非显式 chat-only。
 
 推荐使用路径：
 
@@ -77,8 +80,8 @@ python3 scripts/write_literature_search_package.py \
 
 | 项目 | 当前状态 |
 |---|---|
-| Skill | `zotero-evidence-review` / `pubmed-literature-search` |
-| 当前版本 | Zotero skill `2.8.0`；PubMed skill `1.0.0` |
+| Skill | `zotero-evidence-review` / `zotero-manuscript-thinking` / `pubmed-literature-search` |
+| 当前版本 | Zotero skill `3.0.0`；manuscript-thinking `0.4.0`；PubMed skill `1.0.0` |
 | 兼容性 | OpenCode / ZCode |
 | 主要依赖 | Zotero 7+、zotero-mcp、Python 3.10+；PubMed 检索 skill 需要 PubMed MCP（推荐 PancrePal） |
 | 安装目标 | ZCode 全局、OpenCode 全局、项目级 `.opencode/skills` |
@@ -185,9 +188,9 @@ python3 scripts/check-all.py
 | 历史/新生成 RIS 文件格式 | `python3 scripts/ris_lint.py zotero-evidence-output` | 扫描 `.ris` 是否含 Markdown、缺少 `TY  -` / `ER  -`、明显占位符或常见字段问题 |
 | 全仓库本地质量门 | `python3 scripts/check-all.py --output-warnings skip --smoke-prompts check` | 两个 skill validator、writer self-test、smoke prompt guardrail 全部通过 |
 | MCP 配置文件形态 | `python3 scripts/mcp_config_sanity.py --client auto` | 本机 ZCode/OpenCode 配置 JSON、MCP server command 路径和关键 env 形态可读 |
-| 已安装 skill 是否与仓库一致 | `python3 scripts/check-installed-skills.py --target all --mode warn` | 能发现 `~/.zcode/skills`、OpenCode 全局、项目级 `.opencode/skills` 与仓库源码是否漂移 |
+| 已安装 skill 是否与仓库一致 | `python3 scripts/check-installed-skills.py --target all --mode warn` | 能发现 `~/.codex/skills`、`~/.zcode/skills`、OpenCode 全局、项目级 `.opencode/skills` 与仓库源码是否漂移 |
 
-真正的 Zotero / PubMed 运行时能力必须在 ZCode / OpenCode 会话中用 smoke prompt 验证，因为只有当前会话的 MCP tool list 才能证明工具可调用：
+真正的 Zotero / PubMed 运行时能力必须在 Codex / ZCode / OpenCode 会话中用 smoke prompt 验证，因为只有当前会话的 MCP tool list 才能证明工具可调用：
 
 ```bash
 python3 scripts/smoke_prompts.py --list
@@ -196,7 +199,7 @@ python3 scripts/smoke_prompts.py --prompt zotero-target-export-dry-run
 python3 scripts/smoke_prompts.py --prompt pubmed-readiness
 ```
 
-把打印出的 prompt 复制进新开的 ZCode / OpenCode 会话执行。若工具不可见或失败，正确结果应是报告 `unavailable` / `not executed`，而不是假装完成检索。
+把打印出的 prompt 复制进新开的 Codex / ZCode / OpenCode 会话执行。若工具不可见或失败，正确结果应是报告 `unavailable` / `not executed`，而不是假装完成检索。
 
 可选运行时诊断 gate 默认关闭，避免因为不同机器的本地 MCP 配置影响常规校验；需要排查 Zotero/PubMed MCP 时可显式开启：
 
@@ -204,7 +207,7 @@ python3 scripts/smoke_prompts.py --prompt pubmed-readiness
 # 只读检查 ZCode/OpenCode MCP config 形态、command 路径和关键 env；不启动 MCP、不联网
 python3 scripts/check-all.py --output-warnings skip --mcp-config warn
 
-# 检查仓库 skill 与 ~/.zcode/skills、OpenCode skill 副本是否漂移
+# 检查仓库 skill 与 ~/.codex/skills、~/.zcode/skills、OpenCode skill 副本是否漂移
 python3 scripts/check-all.py --output-warnings skip --installed-skills warn
 
 # 校验或打印可复制的人工 MCP smoke-test prompts
@@ -225,7 +228,7 @@ python3 scripts/smoke_prompts.py
 | PubMed MCP 工具可见（可选） | 当前会话能看到 `pubmed_search`、`pubmed_get_details`、`pubmed_extract_info`、`pubmed_find_related` 等 PubMed/NCBI 工具 | 报告 `PubMed: ⚠️ Tool unavailable; search not executed`，并给出可复制 query |
 | PubMed 已实际运行且元数据已检查 | PubMed search 有返回，候选 PMID 已用详情/抽取工具检查 | 只有此时才能写 `PubMed: Completed` 或生成 PubMed-only RIS |
 
-换句话说：validator 是仓库侧 guardrail；MCP readiness 是当前 ZCode / OpenCode 会话侧状态。PubMed 不可见不是 Zotero 检索失败，而是可选 PubMed 扩展层未接入。
+换句话说：validator 是仓库侧 guardrail；MCP readiness 是当前 Codex / ZCode / OpenCode 会话侧状态。PubMed 不可见不是 Zotero 检索失败，而是可选 PubMed 扩展层未接入。
 
 本仓库提供三个只读辅助脚本来定位“配置存在但当前会话不能稳定调用”的问题：
 
@@ -283,11 +286,14 @@ Sedentary behaviour may be associated with cardiometabolic and reproductive heal
 
 ## 4. 安装目标与同步方式
 
-`bash scripts/install-skill.sh` 用于把仓库中的最新版 skill 同步到不同 skill 目录，避免“仓库版本已更新，但全局安装版本仍是旧版”的漂移问题。默认安装 `zotero-evidence-review`；可用 `--skill pubmed-literature-search` 安装独立 PubMed skill，或用 `--skill all-skills` 一次安装全部。
+`bash scripts/install-skill.sh` 用于把仓库中的最新版 skill 同步到不同 skill 目录，避免“仓库版本已更新，但全局安装版本仍是旧版”的漂移问题。默认安装 `zotero-evidence-review`；可用 `--skill zotero-manuscript-thinking` 安装全文 checkpoint，或用 `--skill all-skills` 一次安装全部。
 
 ### 4.1 安装到不同目标
 
 ```bash
+# Codex 全局目录（当前 Codex 会话使用的 skill 目录）
+bash scripts/install-skill.sh --target codex --backup
+
 # ZCode 全局目录（推荐给 ZCode 用户；默认安装 zotero-evidence-review）
 bash scripts/install-skill.sh --target zcode --backup
 
@@ -311,10 +317,11 @@ bash scripts/install-skill.sh --target all --backup
 
 | `--target` | 安装路径 |
 |---|---|
+| `codex` | `~/.codex/skills/<skill-name>` |
 | `zcode` | `~/.zcode/skills/<skill-name>` |
 | `opencode` | `~/.config/opencode/skills/<skill-name>` |
 | `project` | 当前仓库的 `.opencode/skills/<skill-name>` |
-| `all` | 同步到以上三个位置 |
+| `all` | 同步到以上四个位置 |
 
 ### 4.3 备份规则
 
@@ -328,13 +335,13 @@ zotero-evidence-review.backup-YYYYmmdd-HHMMSS
 
 ### 4.4 更新后确认当前会话使用的是新 skill
 
-修改仓库中的 `SKILL.md` 不会自动更新已经安装到 `~/.zcode/skills/` 或 OpenCode 目录中的旧副本。每次修复 workflow、MCP guardrail 或输出模板后，请重新运行安装脚本同步目标目录，例如：
+修改仓库中的 `SKILL.md` 不会自动更新已经安装到 `~/.codex/skills/`、`~/.zcode/skills/` 或 OpenCode 目录中的旧副本。每次修复 workflow、MCP guardrail 或输出模板后，请重新运行安装脚本同步目标目录，例如：
 
 ```bash
 bash scripts/install-skill.sh --skill all-skills --target zcode --backup
 ```
 
-同步后请完全重启 ZCode / OpenCode 或开启新会话；仅刷新当前聊天通常不会重新加载 skill 与 MCP tool 列表。若仍看到 `Tool skipped because a previous tool call in the scheduled sequence failed`，先检查同一批工具调用中第一个失败的 MCP 调用，并确认当前会话加载的是同步后的 skill 副本。
+同步后请完全重启 Codex / ZCode / OpenCode 或开启新会话；仅刷新当前聊天通常不会重新加载 skill 与 MCP tool 列表。若仍看到 `Tool skipped because a previous tool call in the scheduled sequence failed`，先检查同一批工具调用中第一个失败的 MCP 调用，并确认当前会话加载的是同步后的 skill 副本。
 
 可用下面的只读命令确认 installed copy 是否与仓库一致：
 
@@ -703,7 +710,25 @@ RIS 导出会过滤 Zotero 个人/流程标签（例如 emoji、纯符号、`/re
 帮我做一次 Zotero library health check：检查语义索引、PDF 覆盖率、重复条目和缺失摘要。只读检查，不要修改任何条目。
 ```
 
-### 7.8 场景 H：Zotero 证据不足时的外部兜底
+### 7.8 场景 H：从全文角度做论证与修订策略检查
+
+局部润色解决的是句子，`zotero-manuscript-thinking` 解决的是“这篇论文整体上应该先改什么”。它先做意义保持和语言精确度检查，再检查 Introduction 的 `context → known → gap → method fit → contribution` 链、Methods 的 `design → sample/variables → procedure → QC/statistics → ethics/data` 链、Results 的 `setup/QC → primary finding → support/sensitivity → validation` 链，以及 Discussion 的 `finding → interpretation → literature comparison → alternative/limitation → bounded implication` 链；随后建立 `paper contract`、重建五句 `argument spine`，把核心 claim 映射到章节/图表/证据，再按 `thinking-model-router` 选择一个主思考模型。只有主模型留下实质盲点时，才增加第二个模型。
+
+```text
+/zotero-manuscript-thinking
+请从全文角度审视这篇论文：
+1. 重建 paper contract 和 argument spine；
+2. 检查 Current study、Zotero/PubMed external evidence 和 Interpretive bridge 是否混淆；
+3. 从审稿风险、论证杠杆和可行性排序 P0/P1/P2/P3 问题；
+4. 给出最多三轮的修改顺序和每轮完成标准；
+5. 不要直接重写全文，也不要自动承诺新实验。
+```
+
+在段落补引用或已有编号引文修复中，如果段落属于完整稿件、局部修改已重复两轮，或出现证据等级 E/强因果/主张无结果位置等高风险信号，`zotero-evidence-review` 会先运行紧凑 checkpoint，再给出 Copy-ready text。只有单个段落时会明确标记为 scope-limited checkpoint。
+
+如果你要求“语言要地道”或“像这个领域的代表性论文”，checkpoint 会额外建立一个小型 `Domain Style Calibration`：优先从 Zotero 选取 3–5 篇同领域、同文章类型、同目标 section 的可检查论文，依次执行 `zotero_get_recent → zotero_semantic_search → zotero_get_item_metadata → zotero_get_item_children → zotero_get_pdf_outline → zotero_read_pdf_pages`，提取段落功能、句子功能、术语、claim verbs、引用归属和信息节奏。Methods 还会比较可复现细节的组织顺序和报告规范；Results 还会比较主要/支持结果的排序、定量锚点、图表连接和解释边界，再把你的草稿与这些模式做对照。它只学习写作决策，不复制原文，也不会用 peer paper 替你的研究补结果或贡献。语料不足时报告 `calibration_confidence: low/none`，继续做 genre-neutral 的语言诊断。
+
+### 7.9 场景 I：Zotero 证据不足时的外部兜底
 
 ```text
 如果 Zotero 库里证据不足，请说明缺口，并在外部工具可用时给出 Crossref / OpenAlex / PubMed 检索建议；如果工具不可用，只输出可复制的检索式，不要声称已经完成外部检索。
@@ -1063,11 +1088,14 @@ zotero-skills/
 ├── Zotero_MCP_OpenCode_Guide.md
 ├── zotero-evidence-review/
 │   └── SKILL.md
+├── zotero-manuscript-thinking/
+│   └── SKILL.md
 ├── pubmed-literature-search/
 │   └── SKILL.md
 ├── scripts/
 │   ├── install-skill.sh
 │   ├── validate-skill.py
+│   ├── validate-manuscript-thinking.py
 │   ├── validate-pubmed-skill.py
 │   ├── check-all.py
 │   ├── ris_lint.py
@@ -1085,6 +1113,7 @@ zotero-skills/
 | 路径 | 说明 |
 |---|---|
 | `zotero-evidence-review/SKILL.md` | 核心 skill 定义文件；当前工作流的权威规范。 |
+| `zotero-manuscript-thinking/SKILL.md` | 全文论证、证据边界和修订优先级 checkpoint；由核心 Zotero skill 按条件调用。 |
 | `pubmed-literature-search/SKILL.md` | 独立 PubMed MCP 文献检索 skill 定义文件。 |
 | `scripts/install-skill.sh` | 安装/同步 skill 到 ZCode、OpenCode 或项目目录；当前 README 用 `bash scripts/install-skill.sh ...` 调用。 |
 | `scripts/validate-skill.py` | 静态验证 Zotero skill 的元数据、章节、模板和安全防护说明；不执行 Zotero/PubMed 工作流。 |

@@ -87,6 +87,7 @@ def main() -> None:
     args = parse_args()
     steps: list[tuple[str, list[str]]] = [
         ("Validate zotero-evidence-review skill", [PYTHON, "scripts/validate-skill.py"]),
+        ("Validate zotero-manuscript-thinking skill", [PYTHON, "scripts/validate-manuscript-thinking.py"]),
         ("Validate pubmed-literature-search skill", [PYTHON, "scripts/validate-pubmed-skill.py"]),
         ("Self-test literature search package writer", [PYTHON, "scripts/write_literature_search_package.py", "--self-test"]),
     ]

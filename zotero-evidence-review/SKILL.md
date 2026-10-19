@@ -7,7 +7,7 @@ metadata:
   workflow: academic-research
   requires: zotero-mcp
   optional: pubmed-mcp
-  version: 2.9.0
+  version: 3.0.0
 ---
 
 # Zotero Evidence Review Skill
@@ -30,6 +30,7 @@ Route the user's request before choosing tools. Use the input shape and explicit
 | `search` | Keywords, concepts, natural-language questions, broad topic discovery, or requests such as "search", "find papers", "what literature do I have about…" | **Module 1: Semantic + Structured Search**, then auto-export Search Report + RIS unless chat-only/no-export is explicit |
 | `target_literature_search` | Topic/question asks which papers use a data source, method, phenotype, cohort, disease area, or research direction; user wants literature discovery, screening, search report, MD, RIS, or EndNote export, and no manuscript paragraph is supplied | **Module 1.8: Target Literature Search and Export** |
 | `paragraph` | A pasted manuscript paragraph, draft section, or multi-sentence passage that asks for chat-only evidence analysis, with no citation/export/full-workflow trigger | **Module 2: Paragraph Evidence & Citation Analysis** |
+| `manuscript_strategy` | Requests for a whole-manuscript view, language/表达 quality, field-native wording, peer-paper or target-venue style calibration, Methods/Results/Introduction/Discussion logic, reproducibility, result narration, argument spine, contribution, novelty, reviewer-risk, revision priority, or "从整体上看看/跳出来看"; also a full manuscript or repeated local revisions that trigger the checkpoint conditions below | **Module 2.8: Manuscript-Level Thinking Checkpoint**, implemented by the companion `zotero-manuscript-thinking` Skill |
 | `package` | Requests using `/zotero-evidence-review`, saved files, EndNote/RIS export, evidence package, "使用技能", "完整工作流", "找证据", "找引文", "补引用", "推荐引用", "citation", "refs", "参考文献", "文献引用", "生成报告", "保存结果", "导出参考文献", or a paragraph/search request that asks for citation placement, reusable writing outputs, or file outputs | **Paragraph Citation Package Workflow (Module 2 + Module 2.5): analysis stage, then export stage with automatic PubMed expansion after Zotero local search when available** |
 | `reference_update` | A paragraph or manuscript passage with existing numbered citations/references, or requests such as "检查参考文献", "更新参考文献", "编号引用", "6不支持", "citation 6 does not support", "replace citation", "refresh RIS", "regenerate RIS" | **Module 2.2: Existing Numbered Citation Repair**, then **Module 2.5 Evidence Package Export** when files/RIS are requested or implied; treat this as a full reference-update workflow unless the user explicitly opts out |
 | `verify` | Words such as "verify", "核实", "check", "confirm" plus a specific citation/paper and a concrete claim, quote, statistic, or citation-supported statement | **Module 3: Citation Verification Protocol** |
@@ -39,8 +40,10 @@ Route the user's request before choosing tools. Use the input shape and explicit
 
 **Method-parameter precedence**: when the user asks what settings a method used, what a parameter means or how to adjust it, or where the source describes it, route to **Module 1.2** before generic `search` or `target_literature_search`. If the user asks which studies merely use a method, route to Module 1.8. If the user supplies manuscript text for citation analysis, use Module 2. Read [references/method-parameter-search.md](references/method-parameter-search.md) for the evidence and report requirements.
 
-1. **Slash command and simple-request entry**: `/zotero-evidence-review` is the recommended user-facing entry point. Treat it as a request to run this skill and auto-route from the user's short request; do not require the user to name modules or repeat the full workflow. When the short request asks for ordinary literature search, target literature search, evidence, citation support, paragraph polishing, reusable writing output, or an evidence package, default to the appropriate export workflow and write the Markdown report plus RIS unless the user explicitly opts out.
-2. **Paragraph-first, package by default for citation work**: if the user provides a paragraph, run Module 2 first. If the same request includes `/zotero-evidence-review`, `使用技能`, `完整工作流`, "find evidence", "find/add/recommend citations", `找证据`, `找引文`, `补引用`, `推荐引用`, `citation`, `refs`, `参考文献`, `文献引用`, or any request for saved/reusable writing outputs, continue automatically to the Paragraph Citation Package Workflow / Module 2.5 and write the Markdown report plus RIS file.
+**Manuscript-strategy precedence**: when a request contains both a broad package trigger such as `使用完整工作流` and a whole-manuscript goal such as `整体审视`, `语言表达`, `语言地道`, `同领域论文写法`, `target venue`, `Methods`, `Results`, `Introduction/Discussion`, `可复现`, `结果叙事`, `主线`, `贡献`, `审稿风险`, or `修订优先级`, route to `manuscript_strategy` / Module 2.8 first. Run citation package export only for the concrete evidence actions selected by the checkpoint.
+
+1. **Slash command and simple-request entry**: `/zotero-evidence-review` is the recommended user-facing entry point. Treat it as a request to run this skill and auto-route from the user's short request; do not require the user to name modules or repeat the full workflow. When the short request asks for ordinary literature search, target literature search, evidence, citation support, paragraph polishing, reusable writing output, or an evidence package, default to the appropriate export workflow and write the Markdown report plus RIS unless the user explicitly opts out. When the request asks for a whole-manuscript diagnosis or revision strategy, route to Module 2.8 and the companion `zotero-manuscript-thinking` Skill before local rewriting.
+2. **Paragraph-first, package by default for citation work**: if the user provides a paragraph, run Module 2 first. If the same request includes `/zotero-evidence-review`, `使用技能`, `完整工作流`, "find evidence", "find/add/recommend citations", `找证据`, `找引文`, `补引用`, `推荐引用`, `citation`, `refs`, `参考文献`, `文献引用`, or any request for saved/reusable writing outputs, continue automatically to the Paragraph Citation Package Workflow / Module 2.5 and write the Markdown report plus RIS file. If the paragraph is identified as part of a larger manuscript and the request changes the argument, contribution, conclusion, or section role, run the compact Module 2.8 checkpoint before presenting the copy-ready text; do not run a full checkpoint for a standalone paragraph with no manuscript context.
 3. **Existing numbered citation repair first**: if the user provides manuscript text plus a numbered reference list, or explicitly says an existing citation number does not support the claim, route to **Module 2.2: Existing Numbered Citation Repair** before ordinary package export. Preserve the user's supplied citation numbers in the audit tables, but do not promise to preserve final manuscript numbering after RIS import; EndNote/Word will renumber according to the final included reference list and citation style.
 4. **Reference-update requests default to the complete workflow**: requests containing `检查参考文献`, `更新参考文献`, `编号引用`, `replace citation`, `refresh RIS`, or `regenerate RIS` are not chat-only spot checks by default. Run claim mapping, support verification, replacement search when needed, metadata canonicalization, and final Markdown + RIS export unless the user explicitly opts out.
 5. **Target literature search separation**: if the user asks "which papers use X", "find papers about X", "search Zotero for X", "export a literature list/report/RIS", or equivalent, and does not provide a manuscript paragraph to revise, route to `target_literature_search`, not the Paragraph Citation Package Workflow. This mode writes a Markdown search report and Search RIS by default, but it must not require Copy-ready Manuscript Text, sentence-level citation placement, or paragraph diff output.
@@ -49,7 +52,8 @@ Route the user's request before choosing tools. Use the input shape and explicit
 8. **Verification requires specificity**: only route to `verify` when both a cited source (or item key/DOI/title) and a claim/quote/statistic are present. Otherwise, route to `search` or ask a clarification.
 9. **Health check is read-only by default**: route health/status requests to Module 0.5 and do not run repair actions unless the user explicitly confirms them.
 10. **Evidence package request**: if the user asks for saved reports, EndNote/RIS, an evidence package, or the default citation-support workflow above, run the underlying search/paragraph workflow first, then route to the Paragraph Citation Package Workflow / Module 2.5 for file generation. For topic-only search and target literature search exports, use Module 1 / Module 1.8 and `LITERATURE_SEARCH_REPORT` instead of `EVIDENCE_REVIEW_REPORT`.
-11. **Ambiguous intent**: if the request cannot be confidently routed, output this numbered menu and ask the user to choose:
+11. **Manuscript-level checkpoint**: when Module 2, 2.2, or 2.5 detects the conditions in `zotero-manuscript-thinking/SKILL.md` (full-manuscript context, repeated local revisions, or high-risk evidence boundary), run the checkpoint before final wording. It decides what to fix first, preserves claim IDs and A–E evidence levels, and hands off concrete actions to the existing evidence, audit, revision, or writing modules. It is diagnostic; it does not silently rewrite the whole manuscript or commit the user to new experiments.
+12. **Ambiguous intent**: if the request cannot be confidently routed, output this numbered menu and ask the user to choose:
 
 ```markdown
 我可以按以下哪种方式处理？
@@ -60,6 +64,7 @@ Route the user's request before choosing tools. Use the input shape and explicit
 5. 精确核实（具体引用 + 具体主张/数据/引文）
 6. 已有编号引文修复（段落 + 6/18/19 等参考文献编号）
 7. 库健康度检查（库状态、索引、PDF覆盖率）
+8. 全文论证与修订策略（主线、Methods/Results、贡献、证据边界、审稿风险）
 ```
 
 ### Dual-MCP Auto Search and Export Defaults
@@ -80,7 +85,7 @@ Use these defaults for every non-health, non-verify workflow:
 Use this map as the default execution path so the workflow remains continuous and auditable:
 
 ```text
-intent routing → optional read-only library readiness check → Module 1 search, Module 1.2 method-parameter extraction, Module 1.8 target literature search/export, Module 2 paragraph analysis, or Module 2.2 existing numbered citation repair → Zotero canonical metadata + inspected Methods passages and PDF page links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown report + EndNote RIS unless chat-only/no-export is explicit → final path-only summary
+intent routing → optional read-only library readiness check → Module 1 search, Module 1.2 method-parameter extraction, Module 1.8 target literature search/export, Module 2 paragraph analysis, Module 2.2 existing numbered citation repair, or Module 2.8 manuscript-level thinking checkpoint → Zotero canonical metadata + inspected Methods passages and PDF page links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown report + RIS unless chat-only/no-export is explicit → final path-only summary
 ```
 
 Operational checkpoints:
@@ -1515,6 +1520,111 @@ Warnings:
 
 ---
 
+## 2.8 Manuscript-Level Thinking Checkpoint
+
+Use this module when the user asks for a whole-manuscript diagnosis, writing-language improvement, Methods/Results/Introduction/Discussion logic review, reproducibility or result-narrative review, revision strategy, argument-spine review, contribution/novelty review, reviewer-risk assessment, or when Module 2/2.2/2.5 meets the automatic checkpoint conditions. The operational details live in the companion [zotero-manuscript-thinking Skill](../zotero-manuscript-thinking/SKILL.md); this section defines how it joins the Zotero evidence workflow.
+
+### Purpose and scope
+
+The checkpoint answers **what should be fixed first across the manuscript**, with language precision as a first-class output. It treats Methods as the reproducibility contract and Results as the evidence narrative, so both must be checked against the paper contract and each other. When the user asks for field-native or target-venue wording, it may also build a small `Domain Style Calibration` corpus from inspectable peer papers and pass the resulting pattern profile to the language editor. It does not replace sentence-level evidence matching, citation verification, paper-to-raw-result auditing, or the dedicated language/section polishers. It must preserve the existing `Current study` / external-evidence boundary and A–E evidence levels.
+
+### Required inputs
+
+1. Establish `manuscript_scope` as A (full manuscript), B (paper skeleton), or C (single paragraph).
+2. Record the actual files/sections read and the files not read.
+3. Extract a `paper contract`: question, population/object, method, main finding, contribution, and boundary.
+4. If any of the first, fifth, or sixth fields is undefined, mark it as an unresolved P0 issue rather than filling it with generic prose.
+5. If the request asks for “地道”, a target venue, or peer-paper comparison, establish a `style_corpus_ledger` before rewriting: target profile, section-specific article type, 3–5 matched papers when available, inspected scope, access status, selection rationale, and `calibration_confidence`. Fewer than three suitable papers is `low`; unavailable sources are `none`.
+
+### Zotero-native style-corpus path
+
+When `Domain Style Calibration` is active, the corpus must be retrieved and inspected through the
+same read-only Zotero chain used for evidence work:
+
+```text
+zotero_get_recent(limit=3)
+  → zotero_semantic_search
+  → inspect results and select candidates
+  → [one separate zotero_search_items or zotero_advanced_search fallback if needed]
+  → zotero_get_item_metadata
+  → zotero_get_item_children / zotero_get_items_children
+  → zotero_get_pdf_outline (prefer the parent item key)
+  → zotero_read_pdf_pages (parent or confirmed-readable attachment key)
+  → [zotero_get_item_fulltext only as a documented fallback]
+```
+
+Run each dependent call only after inspecting the previous result. Record item/attachment keys,
+section/subsection, physical PDF page, a minimal source fragment, its abstracted writing pattern,
+and `full / partial / metadata-only` inspection status in the style-corpus ledger. Prefer the
+parent item key for PDF outline/page resolution: some local bridges list an attachment but cannot
+resolve the attachment key to a file. Treat a textual `Error`, `Code:`, `502`, or equivalent
+failure in a tool `result` as a failed call even when the wrapper says `isError: false`; record
+`fulltext fallback / page unavailable` when the documented full-text fallback succeeds. A search
+hit, abstract, or metadata record can justify selecting a candidate, but cannot justify a claim
+about full-text writing style. If the smoke test or any upstream call fails, stop dependent calls
+and report the exact status; do not convert a skipped PDF call into `no PDF` or `no style pattern`.
+
+### Thinking route
+
+Use `thinking-model-router` and select one primary route by mechanism: `thinking-systems` for argument/section interactions, `thinking-first-principles` for contribution and unsupported conventions, `thinking-steel-manning` for the strongest reviewer objection, or `thinking-socratic` for an undefined question/assumption. Add `thinking-model-combination` only when the primary leaves a material blind spot; cap the run at three models and predeclare the conflict rule. If no route clearly improves the diagnosis, use `NONE` and reason directly.
+
+The route record must include:
+
+```text
+route: <skill id or NONE>
+role: <job this route performs>
+unique_question: <question only this route answers>
+blind_spots: <what remains unexamined>
+exit: <when to stop or re-route>
+```
+
+### Minimum analysis
+
+1. Run the meaning gate and language audit: preserve objects, comparisons, numbers, uncertainty, terminology, citation ownership, and claim verbs; produce a language issue table rather than generic fluency comments.
+2. If the request asks for field-native or venue-calibrated wording, run `Domain Style Calibration` after section logic and before the final language pass. Extract rhetorical moves, sentence functions, claim verbs/hedges, terminology, citation ownership and information rhythm; for Methods also extract reproducibility detail order and reporting conventions, and for Results extract result-block order, quantitative anchors and figure/table linking. Do not copy peer prose or import claims.
+3. If Introduction is present, map paragraph jobs across context → known → specific gap → method fit → objective/contribution; if Methods is present, map design → sample/variables → procedure → QC/statistics → ethics/data availability and audit its links to Results; if Results is present, map setup/QC → primary finding → support/sensitivity → validation and keep interpretation bounded; if Discussion is present, map finding → interpretation → literature comparison → alternative/limitation → bounded implication.
+4. Rebuild the five-sentence argument spine: known problem, specific gap, study question/design, main result with evidence location, and bounded implication.
+5. Build a claim–evidence–section map. Every core claim gets a section/figure/table location, source layer, A–E evidence level, direct evidence location, boundary, and gap status.
+6. Assign each section one reader-facing job and identify broken handoffs between Introduction, Methods, Results, Discussion, and Conclusion. Check that Methods describes what Results reports and that Results reports what the figures/tables actually show.
+7. Run one reviewer stress test: alternative explanation, causal/predictive/mechanistic overreach, scope words, citation context, and whether the conclusion introduces unsupported claims.
+8. Rank issues as P0/P1/P2/P3 using reviewer risk × argument leverage × feasibility. Action types are `retrieve evidence`, `re-analyze`, `restructure`, `reframe`, `rewrite`, `remove`, and `verify`.
+
+### Handoff rules
+
+- Missing or weak external support → Module 1 / 2 / 2.2 / 3, with claim IDs preserved.
+- Current-study result written as external proof → Module 2 + Module 2.5, with source layer and A–E level preserved.
+- Number, scope, figure, or result fidelity risk → `paper-claim-audit`.
+- Methods reproducibility gap, missing reporting detail, or Methods–Results mismatch → `methods-section-writer` / `method-writing` / `methods-reverse-engineer`, carrying the study design, reporting guideline, unresolved fields, and claim IDs.
+- Results hierarchy, paragraph flow, or support-versus-primary confusion → `results-section-structurer` / `results-section-revision`, carrying finding IDs, quantitative anchors, and figure/table locations.
+- Results text versus figure/table labels, numbers, units, or directions → `result-figure-consistencycheck` plus `paper-claim-audit`.
+- Reviewer-comment triage or feasibility decision → `revision-strategy-planner`.
+- Chinese surface language or formatting → `writing-core`.
+- English medical terminology, syntax, tone, and meaning preservation → `medical-english-precision-editor`; if style calibration ran, pass its peer-pattern table and confidence with the handoff.
+- Introduction paragraph roles, gap, objective, and contribution chain → `academic-introduction-polisher`.
+- Discussion finding–interpretation–limitation chain → `academic-discussion-polisher`.
+- Full paper production and independent review orchestration → `paper-spine`.
+
+Do not silently start new experiments, delete text, or rewrite the whole manuscript from a checkpoint. If a proposed action needs missing data or user authorization, mark it `待决策`.
+
+### Compact checkpoint output
+
+When running automatically inside a paragraph package, output only:
+
+```markdown
+### Manuscript-level checkpoint
+- Scope: A / B / C; files read: ...
+- Primary route: ...; unique question: ...
+- Language issue: ...
+- Methods/Results/Introduction/Discussion logic issue: ...
+- Methods–Results alignment: ...
+- Highest P0/P1 issue: ...
+- Why this changes the local edit: ...
+- Next handoff: ...
+- Unknowns: ...
+```
+
+For a standalone whole-manuscript request, use `MANUSCRIPT_STRATEGIC_REVIEW` in the Appendix and write the full report when file output is requested. Do not create a RIS file for a structural diagnosis unless the underlying evidence workflow independently requires one.
+
 ## 3. Citation Verification Protocol
 
 Use when the user asks to verify whether a specific claim, quote, statistic, or citation is actually supported by a cited paper or reference. The protocol automatically detects the reference language and chooses the appropriate verification path.
@@ -2106,6 +2216,121 @@ Rules:
 - Always include the metadata quality-control table; use `none` when there are no missing metadata, metadata mismatch, or duplicate warning cases.
 - Every claim-level table in the report must use the same source layer definitions from Module 2; do not merge current-study findings and external evidence into a single unsupported proof statement.
 - Every claim-level table in the report must use the same A-E evidence level definitions from Module 2; do not introduce alternate strength scales such as `strong/moderate/weak` without also mapping them to A-E.
+
+### MANUSCRIPT_STRATEGIC_REVIEW
+
+```markdown
+# Manuscript Strategic Review: {topic}
+
+## 1. Scope and Input Ledger
+- manuscript_scope: A / B / C
+- files_read: ...
+- files_not_read: ...
+- target_venue: ...
+- research_mode: ...
+
+## 2. Router Decision
+- domain: academic writing / research argument
+- problem_type: diagnose + optimize
+- work_layers: language / domain_style_calibration / introduction_logic / discussion_logic / whole_paper
+- route: {thinking-systems / thinking-first-principles / thinking-steel-manning / thinking-socratic / NONE}
+- role: ...
+- unique_question: ...
+- blind_spots: ...
+- exit: ...
+
+## 3. Paper Contract
+| Field | Extracted statement | Evidence/location | Status |
+|---|---|---|---|
+| Question | ... | ... | defined / unresolved |
+| Population/object | ... | ... | defined / unresolved |
+| Method | ... | ... | defined / unresolved |
+| Main finding | ... | ... | defined / unresolved |
+| Contribution | ... | ... | defined / unresolved |
+| Boundary | ... | ... | defined / unresolved |
+
+## 4. Language Audit
+| Location | Original phrase | Problem type | Risk of meaning drift | Revision strategy | Author check |
+|---|---|---|---|---|---|
+
+## 5. Domain Style Calibration
+- target_profile: ...
+- corpus_status: inspected / partial / unavailable
+- calibration_confidence: high / medium / low / none
+- style_corpus_ledger: ...
+
+### Zotero Style Evidence Ledger
+| Peer ID | Zotero item/attachment | Section | PDF page | Short source fragment | Abstracted pattern | Inspection status |
+|---|---|---|---:|---|---|---|
+
+### Observed patterns
+| Pattern ID | Section/job | Peer evidence | Pattern | Boundary |
+|---|---|---|---|---|
+
+### Draft-to-profile comparison
+| Pattern ID | Draft location | Mismatch | Safe action | Meaning check |
+|---|---|---|---|---|
+
+### Author decisions
+- Keep: ...
+- Confirm: ...
+- Do not adopt: ...
+
+## 6. Introduction Logic Map
+| Paragraph | Primary job | Main claim | Evidence/citation role | Missing bridge | Action |
+|---|---|---|---|---|---|
+
+## 7. Methods Logic Map
+| Subsection | Operational job | Required details | Results cross-link | Missing/ambiguous | Action |
+|---|---|---|---|---|---|
+
+## 8. Results Logic Map
+| Result block | Reader question | Finding/quantitative anchor | Figure/table | Support vs primary | Interpretation boundary | Action |
+|---|---|---|---|---|---|---|
+
+## 9. Discussion Logic Map
+| Paragraph | Finding used | Interpretation level | Literature comparison | Alternative/limitation | Implication boundary | Action |
+|---|---|---|---|---|---|---|
+
+## 10. Argument Spine
+1. Known problem: ...
+2. Specific gap: ...
+3. Question/design: ...
+4. Main result and evidence location: ...
+5. Bounded implication: ...
+
+## 11. Claim–Evidence–Section Map
+| Claim ID | Claim | Section/figure | Source layer | Evidence level | Evidence location | Boundary | Gap |
+|---|---|---|---|---|---|---|---|
+
+## 12. Holistic Diagnosis
+| ID | Location | Problem | Evidence / basis | Risk | Leverage | Priority | Action type | Next owner | Done when |
+|---|---|---|---|---|---|---|---|---|---|
+
+## 13. Reviewer Stress Test
+| Objection | Evidence | Required wording/action | Status |
+|---|---|---|---|
+
+## 14. Prioritized Revision Plan
+### Round 1 — meaning and section logic
+...
+### Round 2 — language
+...
+### Round 3 — evidence and consistency
+...
+
+## 15. Handoff and Stop Conditions
+...
+
+## 16. Unresolved Unknowns
+...
+```
+
+Rules:
+- Use this report for diagnosis and sequencing; it is not a submission-readiness certificate.
+- Preserve claim IDs, source layers, and A–E evidence levels when handing work to downstream modules.
+- Mark uninspected Zotero/PubMed evidence as `not inspected`; never infer search completion.
+- If scope is B or C, state which whole-manuscript conclusions are unavailable.
 
 ### RIS_REFERENCE_FILE
 
