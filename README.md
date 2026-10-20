@@ -1,7 +1,8 @@
 # 📚 Zotero Skills
 
-> 面向 OpenCode / ZCode 的 Zotero 文献证据审查技能：让 AI 助手在你的 Zotero 文献库中检索、分析、核实引用，并给出可追溯的写作建议。
+> 面向 Codex / OpenCode / ZCode 的 Zotero 文献证据审查技能：让 AI 助手在你的 Zotero 文献库中检索、分析、核实引用，并给出可追溯的写作建议。
 
+![Codex](https://img.shields.io/badge/Codex-Skill-412991)
 ![OpenCode](https://img.shields.io/badge/OpenCode-MCP-0175C2)
 ![ZCode](https://img.shields.io/badge/ZCode-Skill-6f42c1)
 ![Zotero MCP](https://img.shields.io/badge/Zotero-MCP-CC2936)
@@ -11,7 +12,7 @@
 
 ## 0. 最短路径：按场景直接开始
 
-如果你已经安装好 skill，并且当前 ZCode / OpenCode 会话能看到 Zotero MCP（可选：PubMed MCP），最省事的用法是：**复制下面与你场景最接近的提示词，把主题、段落或参考文献替换成自己的内容即可。**
+如果你已经安装好 skill，并且当前 Codex / ZCode / OpenCode 会话能看到 Zotero MCP（可选：PubMed MCP），最省事的用法是：**复制下面与你场景最接近的提示词，把主题、段落或参考文献替换成自己的内容即可。**
 
 默认行为已经调整为“检索也导出”：普通文献检索、目标文献检索、段落补引用/润色、PubMed 主题检索都会默认生成 Markdown 报告 + EndNote-compatible RIS。只想在聊天里快速看结果时，请在提示词开头明确写 `只在聊天输出，不要生成文件`。
 
@@ -82,9 +83,9 @@ python3 scripts/write_literature_search_package.py \
 |---|---|
 | Skill | `zotero-evidence-review` / `zotero-manuscript-thinking` / `pubmed-literature-search` |
 | 当前版本 | Zotero skill `3.0.0`；manuscript-thinking `0.4.0`；PubMed skill `1.0.0` |
-| 兼容性 | OpenCode / ZCode |
+| 兼容性 | Codex / OpenCode / ZCode |
 | 主要依赖 | Zotero 7+、zotero-mcp、Python 3.10+；PubMed 检索 skill 需要 PubMed MCP（推荐 PancrePal） |
-| 安装目标 | ZCode 全局、OpenCode 全局、项目级 `.opencode/skills` |
+| 安装目标 | Codex 全局、ZCode 全局、OpenCode 全局、项目级 `.opencode/skills` |
 | 默认安全策略 | 健康检查只读；删除、批量修改、合并重复项等操作必须先确认 |
 
 ---
@@ -147,24 +148,21 @@ python3 scripts/write_literature_search_package.py \
 - 已安装并打开 **Zotero 7+**。
 - Zotero 中已启用本地访问：Zotero 设置 → 高级 → 允许其他应用程序访问 Zotero。
 - 已安装 **Python 3.10+**。
-- 已安装 OpenCode 或 ZCode。
+- 已安装 Codex、OpenCode 或 ZCode。
 - 已安装并配置 `zotero-mcp`（见 [第 5 节](#5-配置-zotero-mcp)），用于 `zotero-evidence-review`。
 - 如果需要 PubMed 扩展、PMID 标准化、related/review discovery、OA 全文检测，另行配置 PubMed MCP（见 [PubMed Expansion](#83-pubmed-expansion) 和 [`docs/PANCREPAL_PUBMED_MCP_GUIDE.md`](./docs/PANCREPAL_PUBMED_MCP_GUIDE.md)）；独立 `pubmed-literature-search` skill 需要 PubMed MCP。
 
-### 3.2 克隆仓库并安装到 ZCode（推荐）
+### 3.2 克隆仓库并安装到 Codex / ZCode / OpenCode
 
 ```bash
 git clone https://github.com/DaXuanGarden/zotero-skills.git
 cd zotero-skills
 
-# 安装/更新 Zotero evidence review 到 ZCode 全局 skill 目录，并在覆盖前备份旧版本
-bash scripts/install-skill.sh --target zcode --backup
+# 安装/更新全部 skill 到 Codex 全局目录，并清理旧的时间戳备份
+bash scripts/install-skill.sh --skill all-skills --target codex --prune-backups
 
-# 安装/更新独立 PubMed literature search skill
-bash scripts/install-skill.sh --skill pubmed-literature-search --target zcode --backup
-
-# 或一次安装两个 skill
-bash scripts/install-skill.sh --skill all-skills --target zcode --backup
+# 如果使用 ZCode 或 OpenCode，把 target 改成 zcode 或 opencode
+bash scripts/install-skill.sh --skill all-skills --target zcode --prune-backups
 
 # 验证 skill 文件结构与本地输出质量门禁
 python3 scripts/validate-skill.py
@@ -286,31 +284,31 @@ Sedentary behaviour may be associated with cardiometabolic and reproductive heal
 
 ## 4. 安装目标与同步方式
 
-`bash scripts/install-skill.sh` 用于把仓库中的最新版 skill 同步到不同 skill 目录，避免“仓库版本已更新，但全局安装版本仍是旧版”的漂移问题。默认安装 `zotero-evidence-review`；可用 `--skill zotero-manuscript-thinking` 安装全文 checkpoint，或用 `--skill all-skills` 一次安装全部。
+`bash scripts/install-skill.sh` 用于把仓库中的最新版 skill 同步到不同 skill 目录，避免“仓库版本已更新，但全局安装版本仍是旧版”的漂移问题。默认目标是 Codex，默认安装 `zotero-evidence-review`；可用 `--skill zotero-manuscript-thinking` 安装全文 checkpoint，或用 `--skill all-skills` 一次安装全部。
 
 ### 4.1 安装到不同目标
 
 ```bash
 # Codex 全局目录（当前 Codex 会话使用的 skill 目录）
-bash scripts/install-skill.sh --target codex --backup
+bash scripts/install-skill.sh --skill all-skills --target codex --prune-backups
 
 # ZCode 全局目录（推荐给 ZCode 用户；默认安装 zotero-evidence-review）
-bash scripts/install-skill.sh --target zcode --backup
+bash scripts/install-skill.sh --target zcode --prune-backups
 
 # 安装独立 PubMed literature search skill
-bash scripts/install-skill.sh --skill pubmed-literature-search --target zcode --backup
+bash scripts/install-skill.sh --skill pubmed-literature-search --target zcode --prune-backups
 
 # 一次安装全部 skill
-bash scripts/install-skill.sh --skill all-skills --target zcode --backup
+bash scripts/install-skill.sh --skill all-skills --target zcode --prune-backups
 
 # OpenCode 全局目录（推荐给 OpenCode 用户）
-bash scripts/install-skill.sh --target opencode --backup
+bash scripts/install-skill.sh --target opencode --prune-backups
 
 # 当前仓库项目级 OpenCode skill 目录
-bash scripts/install-skill.sh --target project --backup
+bash scripts/install-skill.sh --target project --prune-backups
 
-# 同时同步到 ZCode + OpenCode + 项目级目录
-bash scripts/install-skill.sh --target all --backup
+# 同时同步到 Codex + ZCode + OpenCode + 项目级目录
+bash scripts/install-skill.sh --target all --prune-backups
 ```
 
 ### 4.2 目标路径
@@ -323,7 +321,7 @@ bash scripts/install-skill.sh --target all --backup
 | `project` | 当前仓库的 `.opencode/skills/<skill-name>` |
 | `all` | 同步到以上四个位置 |
 
-### 4.3 备份规则
+### 4.3 备份与去重规则
 
 加上 `--backup` 后，如果目标目录已存在，脚本会先创建备份：
 
@@ -331,14 +329,26 @@ bash scripts/install-skill.sh --target all --backup
 zotero-evidence-review.backup-YYYYmmdd-HHMMSS
 ```
 
-然后再覆盖安装。建议每次更新都使用 `--backup`。
+然后再覆盖安装。需要保留回滚副本时使用 `--backup`；日常同步建议使用 `--prune-backups`，安装成功后会删除所选目标下该仓库技能产生的时间戳备份。它只处理 `zotero-evidence-review.backup-*`、`zotero-manuscript-thinking.backup-*` 和 `pubmed-literature-search.backup-*`，不会触碰其它 Skill 或 Zotero 数据。
+
+只想先查看、不删除时运行：
+
+```bash
+python3 scripts/cleanup-installed-skills.py --target codex
+```
+
+确认后再加 `--apply`。安装状态检查会把残留备份报告为漂移；严格门禁下会返回失败：
+
+```bash
+python3 scripts/check-installed-skills.py --target codex --mode fail
+```
 
 ### 4.4 更新后确认当前会话使用的是新 skill
 
 修改仓库中的 `SKILL.md` 不会自动更新已经安装到 `~/.codex/skills/`、`~/.zcode/skills/` 或 OpenCode 目录中的旧副本。每次修复 workflow、MCP guardrail 或输出模板后，请重新运行安装脚本同步目标目录，例如：
 
 ```bash
-bash scripts/install-skill.sh --skill all-skills --target zcode --backup
+bash scripts/install-skill.sh --skill all-skills --target codex --prune-backups
 ```
 
 同步后请完全重启 Codex / ZCode / OpenCode 或开启新会话；仅刷新当前聊天通常不会重新加载 skill 与 MCP tool 列表。若仍看到 `Tool skipped because a previous tool call in the scheduled sequence failed`，先检查同一批工具调用中第一个失败的 MCP 调用，并确认当前会话加载的是同步后的 skill 副本。
@@ -349,7 +359,7 @@ bash scripts/install-skill.sh --skill all-skills --target zcode --backup
 python3 scripts/check-installed-skills.py --target all --mode warn
 ```
 
-若报告 `different` 或 `missing`，先重新运行 `bash scripts/install-skill.sh --skill all-skills --target ... --backup`，再重启客户端。
+若报告 `different`、`missing` 或 `timestamped backup copies remain`，先重新运行 `bash scripts/install-skill.sh --skill all-skills --target ... --prune-backups`，再重启客户端。
 
 ---
 
@@ -1094,6 +1104,7 @@ zotero-skills/
 │   └── SKILL.md
 ├── scripts/
 │   ├── install-skill.sh
+│   ├── cleanup-installed-skills.py
 │   ├── validate-skill.py
 │   ├── validate-manuscript-thinking.py
 │   ├── validate-pubmed-skill.py
@@ -1115,7 +1126,8 @@ zotero-skills/
 | `zotero-evidence-review/SKILL.md` | 核心 skill 定义文件；当前工作流的权威规范。 |
 | `zotero-manuscript-thinking/SKILL.md` | 全文论证、证据边界和修订优先级 checkpoint；由核心 Zotero skill 按条件调用。 |
 | `pubmed-literature-search/SKILL.md` | 独立 PubMed MCP 文献检索 skill 定义文件。 |
-| `scripts/install-skill.sh` | 安装/同步 skill 到 ZCode、OpenCode 或项目目录；当前 README 用 `bash scripts/install-skill.sh ...` 调用。 |
+| `scripts/install-skill.sh` | 安装/同步 skill 到 Codex、ZCode、OpenCode 或项目目录；可用 `--prune-backups` 清理本仓库产生的旧备份。 |
+| `scripts/cleanup-installed-skills.py` | 默认只读盘点，按目标和仓库技能安全清理时间戳备份；必须显式加 `--apply` 才删除。 |
 | `scripts/validate-skill.py` | 静态验证 Zotero skill 的元数据、章节、模板和安全防护说明；不执行 Zotero/PubMed 工作流。 |
 | `scripts/validate-pubmed-skill.py` | 静态验证 PubMed literature search skill。 |
 | `scripts/check-all.py` | 本地质量门：validator、writer self-test、可选 output audit/RIS lint/MCP config/installed drift/smoke prompt check。 |
@@ -1129,19 +1141,22 @@ zotero-skills/
 
 ## 11. 常见问题排查
 
-### 11.1 ZCode / OpenCode 看不到 skill
+### 11.1 Codex / ZCode / OpenCode 看不到 skill
 
 请重新同步到对应目录：
 
 ```bash
+# Codex
+bash scripts/install-skill.sh --skill all-skills --target codex --prune-backups
+
 # ZCode
-bash scripts/install-skill.sh --target zcode --backup
+bash scripts/install-skill.sh --target zcode --prune-backups
 
 # OpenCode
-bash scripts/install-skill.sh --target opencode --backup
+bash scripts/install-skill.sh --target opencode --prune-backups
 ```
 
-然后重启或刷新 ZCode / OpenCode 会话。确认目录存在：
+然后重启或刷新 Codex / ZCode / OpenCode 会话。确认目录存在：
 
 ```text
 ~/.zcode/skills/zotero-evidence-review

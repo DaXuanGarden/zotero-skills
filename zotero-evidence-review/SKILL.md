@@ -2,7 +2,7 @@
 name: zotero-evidence-review
 description: Search, analyze, verify, and export Zotero-grounded evidence packages with Markdown evidence reports and EndNote-compatible RIS references. Requires Zotero MCP to be configured.
 license: MIT
-compatibility: opencode,zcode
+compatibility: codex,opencode,zcode
 metadata:
   workflow: academic-research
   requires: zotero-mcp

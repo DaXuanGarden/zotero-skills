@@ -3,9 +3,10 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/install-skill.sh [--skill zotero-evidence-review|zotero-manuscript-thinking|pubmed-literature-search|all-skills] [--target codex|zcode|opencode|project|all] [--backup]
+Usage: scripts/install-skill.sh [--skill zotero-evidence-review|zotero-manuscript-thinking|pubmed-literature-search|all-skills] [--target codex|zcode|opencode|project|all] [--backup] [--prune-backups]
 
 Install skills from this repository into a local skill directory.
+Defaults: all calls target Codex and install zotero-evidence-review.
 
 Skills:
   zotero-evidence-review     Zotero-grounded evidence review workflow (default)
@@ -22,13 +23,15 @@ Targets:
 
 Options:
   --backup  If the target exists, copy it to <target>.backup-YYYYmmdd-HHMMSS before replacing it.
+  --prune-backups  Remove timestamped backups for the selected skills after installation.
   -h, --help  Show this help.
 USAGE
 }
 
-TARGET="zcode"
+TARGET="codex"
 SKILL="zotero-evidence-review"
 BACKUP=false
+PRUNE_BACKUPS=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -44,6 +47,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --backup)
       BACKUP=true
+      shift
+      ;;
+    --prune-backups)
+      PRUNE_BACKUPS=true
       shift
       ;;
     -h|--help)
@@ -150,3 +157,10 @@ while IFS= read -r skill_name; do
     install_one "$source_dir" "$dest"
   done < <(target_paths "$skill_name")
 done < <(skill_names)
+
+if [[ "$PRUNE_BACKUPS" == true ]]; then
+  python3 "$REPO_ROOT/scripts/cleanup-installed-skills.py" \
+    --target "$TARGET" \
+    --skill "$SKILL" \
+    --apply
+fi

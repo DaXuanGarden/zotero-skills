@@ -53,7 +53,7 @@ def parse_args() -> argparse.Namespace:
         "--installed-skills",
         choices=("skip", "warn", "fail"),
         default="skip",
-        help="Optionally check installed ZCode/OpenCode skill copies for drift",
+        help="Optionally check installed Codex/ZCode/OpenCode skill copies for drift",
     )
     parser.add_argument(
         "--smoke-prompts",
