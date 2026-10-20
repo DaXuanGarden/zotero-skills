@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Detect drift between repository skills and installed ZCode/OpenCode copies."""
+"""Detect drift and stale backup copies for installed Codex/ZCode/OpenCode skills."""
 
 from __future__ import annotations
 
@@ -23,17 +23,17 @@ class Target:
 
 
 TARGETS = {
-    "codex": Target("codex", HOME / ".codex/skills", "bash scripts/install-skill.sh --skill all-skills --target codex --backup"),
-    "zcode": Target("zcode", HOME / ".zcode/skills", "bash scripts/install-skill.sh --skill all-skills --target zcode --backup"),
+    "codex": Target("codex", HOME / ".codex/skills", "bash scripts/install-skill.sh --skill all-skills --target codex --prune-backups"),
+    "zcode": Target("zcode", HOME / ".zcode/skills", "bash scripts/install-skill.sh --skill all-skills --target zcode --prune-backups"),
     "opencode": Target(
         "opencode",
         HOME / ".config/opencode/skills",
-        "bash scripts/install-skill.sh --skill all-skills --target opencode --backup",
+        "bash scripts/install-skill.sh --skill all-skills --target opencode --prune-backups",
     ),
     "project": Target(
         "project",
         REPO_ROOT / ".opencode/skills",
-        "bash scripts/install-skill.sh --skill all-skills --target project --backup",
+        "bash scripts/install-skill.sh --skill all-skills --target project --prune-backups",
     ),
 }
 
@@ -98,6 +98,16 @@ def short_hash(value: str | None) -> str:
     return value[:12] if value else "-"
 
 
+def backup_paths(root: Path, skill: str) -> list[Path]:
+    if not root.is_dir():
+        return []
+    return sorted(
+        path
+        for path in root.glob(f"{skill}.backup-*")
+        if path.parent == root and (path.is_dir() or path.is_symlink())
+    )
+
+
 def selected_targets(target: str) -> list[Target]:
     if target == "all":
         return [TARGETS[name] for name in ("codex", "zcode", "opencode", "project")]
@@ -108,6 +118,7 @@ def main() -> None:
     args = parse_args()
     drift_count = 0
     missing_count = 0
+    backup_count = 0
 
     print("Installed skill drift check (read-only).")
     print(f"Repository root: {REPO_ROOT}")
@@ -123,6 +134,11 @@ def main() -> None:
             installed_path = target.root / skill / "SKILL.md"
             installed = read_meta(installed_path)
             label = f"{target.name}:{skill}"
+            backups = backup_paths(target.root, skill)
+            if backups:
+                backup_count += len(backups)
+                print(f"  ⚠️ {label}: {len(backups)} timestamped backup copies remain")
+
             if not installed.exists:
                 missing_count += 1
                 print(f"  ⚠️ {label}: missing at {installed_path}")
@@ -140,15 +156,16 @@ def main() -> None:
                     f"installed_version={installed.version or '-'} path={installed_path}"
                 )
 
-    if drift_count or missing_count:
+
+    if drift_count or missing_count or backup_count:
         print("\nRecommended sync commands:")
         for target in selected_targets(args.target):
             print(f"  {target.install_hint}")
-        print("After syncing, fully restart ZCode/OpenCode or open a new session so skills and MCP tool lists reload.")
+        print("After syncing, fully restart Codex/ZCode/OpenCode or open a new session so skills and MCP tool lists reload.")
     else:
         print("\nAll checked installed skill copies match the repository versions.")
 
-    if args.mode == "fail" and (drift_count or missing_count):
+    if args.mode == "fail" and (drift_count or missing_count or backup_count):
         raise SystemExit(1)
 
 

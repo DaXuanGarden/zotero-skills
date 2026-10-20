@@ -2,7 +2,7 @@
 name: pubmed-literature-search
 description: Search PubMed through PubMed MCP, inspect PMID metadata, expand related/review literature, and export a Markdown review plus EndNote-compatible RIS references by default unless chat-only/no-export is explicit.
 license: MIT
-compatibility: opencode,zcode
+compatibility: codex,opencode,zcode
 metadata:
   workflow: biomedical-literature-search
   requires: pubmed-mcp
