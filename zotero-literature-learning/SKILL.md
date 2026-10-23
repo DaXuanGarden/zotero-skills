@@ -1,21 +1,22 @@
 ---
 name: zotero-literature-learning
-description: "基于 Zotero MCP 的论文素材学习工作流：按研究问题检索候选文献，核验摘要/全文/PDF 可用性，建立 3–5 篇可学习的 peer corpus，抽取证据、论证和领域写作模式，并把结构化素材包交接给证据审查或全文思考 Skill。"
+description: "基于 Zotero MCP 的论文素材学习工作流：按研究问题检索候选文献，核验摘要/全文/PDF 可用性，建立 3–5 篇可学习的 peer corpus；当写作卡住时，抽取可迁移的句式、术语、论证和证据模式，并把结构化素材包交接给证据审查、证据驱动写作或全文思考 Skill。"
 license: MIT
 compatibility: codex,opencode,zcode
 metadata:
   workflow: zotero-grounded-literature-learning
   requires: zotero-mcp
   optional: pubmed-mcp
-  version: 0.1.0
-  handoff: zotero-evidence-review,zotero-manuscript-thinking
+  version: 0.2.0
+  handoff: zotero-evidence-review,zotero-manuscript-thinking,evidence-driven-writing
+  references: references/materials-package-schema.md,references/methods-language-calibration.md
 ---
 
 # Zotero Literature Learning
 
 这个 Skill 负责“先找对素材、读懂素材、抽取可迁移模式，再开始写或改”。它使用当前会话可见的 Zotero MCP 工具访问用户自己的 Zotero 库，优先读取摘要、全文和 PDF 相关页；它不把搜索结果标题、snippet 或模型常识当成已核验的论文证据。
 
-它解决的是素材学习层的问题：
+它解决的是素材学习层的问题，也处理“写到这里不知道怎么写”的局部学习任务：
 
 ```text
 研究问题/待改章节
@@ -39,6 +40,9 @@ metadata:
 - “找全文，学习同领域论文怎么写 gap、Methods、Results 或 Discussion”；
 - “不要马上改，先收集、筛选、阅读并总结可迁移写法”；
 - “基于我 Zotero 里的论文，帮我形成 evidence/style/argument profile”。
+- “这句话太啰嗦/不地道，先找同领域论文看看怎么写”；
+- “Methods 里这个方法到底叫 annotation、characterization、enrichment 还是 analysis”；
+- “我知道结果，但不知道 Results 段落怎样组织和推进”。
 
 如果用户已经给出具体段落并直接要求补引用，交给 `zotero-evidence-review`；如果用户已经有足够素材、要求整体审视全文逻辑和语言，交给 `zotero-manuscript-thinking`。两者可以在本 Skill 的 handoff 之后继续工作。
 
@@ -56,12 +60,15 @@ target_venue: ""
 audience: ""
 language: Chinese | English | bilingual | unspecified
 material_goal: evidence | style | argument | methods_reproducibility | results_narration | mixed
+writing_block_type: none | wording | paragraph_role | method_naming | result_narration | evidence_gap | structure
+target_text: ""
+must_preserve: [study_design, numbers, units, direction, claim_strength, citations]
 author_constraints: []
 zotero_scope: collection/tag/item_keys/whole_library
 fulltext_requirement: abstract_ok | fulltext_preferred | fulltext_required
 ```
 
-如果 `research_question`、`target_section` 和 `material_goal` 都不清楚，先询问一个最小澄清问题；没有清楚目标时不批量检索。
+如果 `research_question`、`target_section` 和 `material_goal` 都不清楚，先询问一个最小澄清问题；没有清楚目标时不批量检索。若用户给了待改句子，还要先标出 `target_text` 和 `must_preserve`，不能直接用同领域论文的句子替换。
 
 ## 3. 阶段状态机
 
@@ -78,6 +85,19 @@ fulltext_requirement: abstract_ok | fulltext_preferred | fulltext_required
 - 为一个研究问题建立可支持 claim 的证据池。
 
 输出 `task_contract` 和选择标准。没有目标就不能判断“相关”或“值得学习”。
+
+如果用户说“不会写/不知道怎么表达/这句太啰嗦”，先把问题归为一个 `writing_block_type`，并写出句子的功能：
+
+| 卡点 | 先回答的问题 | 主要学习材料 |
+|---|---|---|
+| `wording` | 这句话要让读者知道什么？ | 同 section、同 claim function 的句子 |
+| `paragraph_role` | 这一段在全文中承担什么任务？ | 同文章类型的段落推进 |
+| `method_naming` | 这里实际做的是标注、富集、定位还是解释？ | Methods 和 statistical analysis 相关段落 |
+| `result_narration` | 读者先需要知道比较、数字还是验证？ | Results 小节和图表衔接 |
+| `evidence_gap` | 这是表达问题还是缺少支持？ | evidence map 和原始来源 |
+| `structure` | 当前句子是否承担了过多功能？ | peer paragraph blueprint |
+
+这一诊断只决定检索范围，不替用户增加研究内容。
 
 ### Stage 1 — Zotero 候选检索
 
@@ -157,6 +177,53 @@ L3 targeted passage/page inspection
 
 每次阅读都留下 `source_location`（section、页码或 PDF 页）和短片段。短片段只用于核验和抽象模式，不复制独特句子、连续原文或未公开数据。
 
+### Stage 4A — 写作卡点学习回路
+
+当用户卡在一句话、一个方法名称或一个结果段落时，不启动大规模文献综述，而执行一次窄范围的 `WRITING_BLOCK_LEARNING`：
+
+1. **定义功能**：记录句子/段落的 `rhetorical_job`、目标读者、章节、文章类型和不能改变的科学信息；
+2. **构造检索式**：把研究对象、方法、结果类型、section 和目标功能组合成 Zotero semantic query，再用 1 次 keyword/advanced search 做精确兜底；
+3. **选择高匹配片段**：默认 3–5 篇，优先同 section、同文章类型、同研究设计或方法；不以“顶刊/高分”作为唯一筛选条件；
+4. **定点阅读**：只读对应章节、段落或 PDF 页，记录 `source_id`、位置、访问状态和最短核验片段；
+5. **抽取决策**：比较 subject–verb 结构、方法术语、claim verb/hedge、信息顺序、数字/图表落点和段落过渡；
+6. **生成候选**：只基于用户自己的事实生成 2–3 个版本：`conservative`、`compressed`、`field_native`；每版附 `why`、`evidence_boundary` 和 `author_check`；
+7. **回查**：逐项检查 `study_design`、数字、单位、方向、时态、引用归属和 claim strength 是否保持。
+
+如果 3–5 篇高匹配论文没有改变候选表达或行动建议，就停止学习并交付。若问题其实是证据不足，转为 `evidence_gap`，不继续做语言替换。
+
+#### Methods 术语决策：annotation 不是默认词
+
+`annotation` 只在研究确实为变异、基因或位点赋予功能标签/生物学类别时使用。若实际工作是统计富集、组织表达、通路分析、候选基因优先级排序或生物学解释，优先考虑：
+
+| 实际操作 | 更清楚的表达 | 使用前核对 |
+|---|---|---|
+| 对变异/基因添加功能标签 | `functionally annotated variants/genes` | 是否真的输出了功能标签或类别 |
+| 基因、组织和通路的统计分析 | `performed gene-, tissue-, and pathway-level analyses` | 是否包含三类独立分析 |
+| 组织/通路的过度代表或富集 | `conducted tissue-expression and pathway-enrichment analyses` | 是否有 enrichment/over-representation 方法 |
+| 多组学结果用于解释和筛选 | `integrated multi-omic data to prioritize candidate genes/cell types` | 是否是优先级排序，而非因果证明 |
+| 多个结果共同解释生物学过程 | `characterized the biological processes and tissues implicated by ...` | 是否只是解释，不能写成直接机制 |
+
+不要在不知道具体方法时把 `annotation` 换成更强的 `functional characterization`。如果方法名不确定，使用较窄的 `gene-, tissue-, and pathway-level analyses`，并把具体工具留给 `author_check`。
+
+#### Evidence-driven writing gate
+
+当目标是 Introduction、Related Work、background 或任何需要文献驱动主张的段落时，必须先交给 `evidence-driven-writing` 的硬门禁：
+
+```text
+evidence map
+→ paragraph blueprint
+→ evidence coverage review
+→ manuscript prose
+```
+
+素材包至少要提供：
+
+- `evidence-map.md`：Source ID、citation、source type、abstract-level finding、usable fact、supported claim、citation slot、risk；
+- `<section>-blueprint.md`：段落角色、main claim、Evidence IDs、transition、forbidden content；
+- `evidence-coverage.md`：每个关键 claim 的支持状态和 indirect risk。
+
+没有这三个计划性产物时，只能返回素材学习结果和下一步，不能直接生成引用驱动的正文。
+
 ### Stage 5 — 抽取可迁移模式
 
 只抽取“写作决策”，不把同行文本当作模板原文。允许的模式字段：
@@ -198,9 +265,18 @@ reading_queue.md       # 已读、待读、停止规则和下一步
 evidence_profile.md    # claim–source–location–support ledger
 style_profile.md       # peer pattern、draft mismatch、safe action
 argument_profile.md    # question–gap–contribution–boundary
+writing_block_card.md  # 卡点功能、候选表达、术语决策和回查结果
 source_fragments.md    # 最短核验片段和页码/章节
 unresolved_gaps.md     # 缺证据、缺全文、需作者确认的问题
 handoff.md             # 下一个 Skill、输入、完成条件
+```
+
+当目标是引用驱动的 Introduction、Related Work 或 background 时，额外生成并交给 `evidence-driven-writing`：
+
+```text
+evidence-map.md
+<section>-blueprint.md
+evidence-coverage.md
 ```
 
 交接规则：
@@ -252,11 +328,12 @@ Methods–Results alignment preserved?
 3. `corpus_status` 与 `calibration_confidence`；
 4. Candidate/Peer Corpus Ledger；
 5. Evidence Profile、Style Profile、Argument Profile；
-6. Reading Queue 和停止理由；
-7. Unresolved Gaps；
-8. Handoff；
-9. 如果有稿件，`draft_to_profile_comparison`；
-10. 如果下游已改写，`POST_WRITE_MATERIALS_AUDIT`。
+6. 如果触发卡点学习，`WRITING_BLOCK_LEARNING` 和 `writing_block_card`；
+7. Reading Queue 和停止理由；
+8. Unresolved Gaps；
+9. Handoff；
+10. 如果有稿件，`draft_to_profile_comparison`；
+11. 如果下游已改写，`POST_WRITE_MATERIALS_AUDIT`。
 
 报告状态使用：
 

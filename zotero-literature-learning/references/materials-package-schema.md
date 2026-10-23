@@ -75,6 +75,28 @@ open_risks: []
 done_when: ""
 ```
 
+## Writing-block card
+
+```yaml
+writing_block_type: wording | paragraph_role | method_naming | result_narration | evidence_gap | structure
+rhetorical_job: ""
+target_text: ""
+must_preserve: [study_design, numbers, units, direction, claim_strength, citations]
+source_ids: []
+candidate_versions:
+  - label: conservative | compressed | field_native
+    text: ""
+    why: ""
+    evidence_boundary: ""
+    author_check: ""
+terminology_decision:
+  term_considered: "annotation"
+  chosen_term: ""
+  reason: ""
+  method_check: ""
+post_write_audit: claim_unchanged | author_check
+```
+
 ## File privacy
 
 The package may contain unpublished manuscript text, local Zotero links, notes, and search terms. Keep it outside Git unless the user explicitly asks to share a sanitized fixture.

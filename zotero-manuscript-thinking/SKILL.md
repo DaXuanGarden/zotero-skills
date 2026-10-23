@@ -6,7 +6,7 @@ compatibility: codex,opencode,zcode
 metadata:
   parent_skill: zotero-evidence-review
   workflow: manuscript-level-diagnosis
-  version: 0.4.0
+  version: 0.4.1
   optional: zotero-mcp, pubmed-mcp
   reference: references/domain-style-calibration.md
 ---
@@ -17,17 +17,18 @@ metadata:
 
 当用户要求“像本领域高水平论文一样自然”“参考同领域代表性文章”“像某个期刊/会议的写法”时，启动可选的 `Domain Style Calibration`：从 Zotero/PubMed 或用户指定的 3–5 篇可核验论文中提取段落功能、句子功能、术语、claim verb、引用归属和信息节奏等模式，再对照用户自己的稿件。它学习的是可解释的写作决策，不复制原文，也不把“高分”当作未经证明的事实。
 
-它可以独立调用，也可以作为 `zotero-evidence-review` 在段落证据分析或引用修复后的 manuscript-level checkpoint。默认只输出诊断和优先级计划，不自动改写整篇论文，不自动承诺新实验。 如果用户尚未收集可核验的 peer corpus，先交给 `zotero-literature-learning` 建立素材包；本 Skill 消费其 `style_profile`、`evidence_profile` 和 `argument_profile`，不重复做无目标的批量检索。
+它可以独立调用，也可以作为 `zotero-evidence-review` 在段落证据分析或引用修复后的 manuscript-level checkpoint。默认只输出诊断和优先级计划，不自动改写整篇论文，不自动承诺新实验。 如果用户尚未收集可核验的 peer corpus，先交给 `zotero-literature-learning` 建立素材包；本 Skill 消费其 `style_profile`、`evidence_profile` 和 `argument_profile`，不重复做无目标的批量检索。用户出现“知道意思但不会写、句子太啰嗦、方法名拿不准、Results 不知道如何推进”等卡点时，先触发 `WRITING_BLOCK_LEARNING`，再决定是否进入全文诊断。
 
 ## 1. 何时触发
 
 ### 1.0 任务分层
 
-先把请求标记为一个或多个工作层级；没有领域语料请求时，默认顺序是 `meaning gate → language → section logic → whole-paper spine`。如果用户要求领域地道或目标期刊校准，在意义门禁后加入 `section logic → domain style calibration → language`；语料不足时必须保留 `calibration_confidence: low/none`，不能强行给出“本领域标准写法”。Methods 和 Results 的语言校准必须与各自的证据职责一起检查，不能只做表面同义替换。
+先把请求标记为一个或多个工作层级；没有领域语料请求时，默认顺序是 `meaning gate → language → section logic → whole-paper spine`；出现明确写作卡点时，先运行 `writing_block`，不把局部表达问题扩大成整篇重写。如果用户要求领域地道或目标期刊校准，在意义门禁后加入 `section logic → domain style calibration → language`；语料不足时必须保留 `calibration_confidence: low/none`，不能强行给出“本领域标准写法”。Methods 和 Results 的语言校准必须与各自的证据职责一起检查，不能只做表面同义替换。
 
 | 层级 | 主要问题 | 默认交付 |
 |---|---|---|
 | `language` | 句子是否准确、自然、连贯、符合学术语域，是否因改写改变了证据强度 | Copy-ready 文本 + 语言问题表 |
+| `writing_block` | 写作者知道科学内容但卡在句式、段落功能、方法命名或结果推进 | `WRITING_BLOCK_LEARNING` + 2–3 个保守候选 + author check |
 | `domain_style_calibration` | 与同领域、同文体、同目标期刊/会议的可核验论文比较写作模式；可作用于 Methods/Results 等各 section | Domain Style Calibration + 对照后的 Copy-ready 文本 |
 | `introduction_logic` | 背景、已知、具体 gap、方法适配、研究目标和贡献是否逐段推进 | Introduction logic map + 修改顺序 |
 | `methods_logic` | 设计、样本、变量、流程、统计和质量控制是否足以让读者复现，并与 Results 对齐 | Methods Logic Map + reproducibility audit |
@@ -47,6 +48,7 @@ metadata:
 - “给出论文修改策略/优先级/下一轮怎么改”，或要求结合全文、摘要、图表、结果和参考文献判断。
 - “语言要地道”“像这个领域的高水平论文”“参考几篇代表性文章来改”“像某期刊/会议的写法”“不要翻译腔但要保留专业性”。
 - “Methods 写得不够可复现”“方法学和 Results 对不上”“Results 像图注堆砌”“结果叙事不清”“统计结果表达不规范”。
+- “知道结果但不知道怎么写”“这句话太长/太啰嗦”“annotation 这个词是否准确”“Methods overview 怎么压缩”。
 
 ### 1.2 自动 checkpoint
 
@@ -434,6 +436,7 @@ priority_score = reviewer_risk (1–5) × argument_leverage (1–5) × feasibili
 | 中文表面表达、AI 化或排版问题 | `writing-core` | 三轮结构/语言/排版检查 |
 | 英文医学稿的术语、句法、语气和意义保持 | `medical-english-precision-editor` | precision edit with meaning-preservation notes |
 | 需要与同领域/目标 venue 论文校准地道表达 | `writing-core` 或 `medical-english-precision-editor` | 携带 `Domain Style Calibration`、peer pattern、confidence 和不可改变的 claim/term 约束 |
+| 写作卡点需要先从 Zotero 学习表达、方法命名或结果推进 | `zotero-literature-learning` → `evidence-driven-writing`（引用驱动段落） | `writing_block_card`、source locations、2–3 个候选版本、evidence map/paragraph blueprint 和 author checks |
 | Introduction 的段落功能、gap、目标和贡献链 | `academic-introduction-polisher` | logic map + revised Introduction |
 | Methods 的可复现性、报告规范和与 Results 的对齐 | `methods-section-writer` / `method-writing` / `methods-reverse-engineer` | Methods Logic Map + reproducibility audit + author checks |
 | Results 的顺序、段落推进和主/支持结果分层 | `results-section-structurer` / `results-section-revision` | Results Logic Map + revised Results |
