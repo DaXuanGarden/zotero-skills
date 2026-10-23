@@ -20,6 +20,10 @@ For paragraph citation-support requests, the default is one complete **Paragraph
 
 ---
 
+## 素材学习入口
+
+当用户要求“先收集素材、阅读 Zotero 全文、学习同领域论文写法，再开始改稿”时，优先交接给 `zotero-literature-learning`。它负责候选筛选、摘要/全文分层阅读、peer corpus 和 Evidence/Style/Argument Profile；本 Skill 继续负责逐条证据支持、引用核实和 RIS。不要让两个 Skill 为同一任务各自建立一套文献出口。
+
 ## 0. Intent Detection
 
 Route the user's request before choosing tools. Use the input shape and explicit trigger words; do not ask the user to choose a mode when the intent is clear.

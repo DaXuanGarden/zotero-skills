@@ -21,3 +21,6 @@ venv/
 .cache/
 dist/
 build/
+
+# Local literature-learning packages (may contain unpublished text and Zotero links)
+zotero-literature-output/
