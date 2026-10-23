@@ -76,6 +76,10 @@ REQUIRED_PHRASES = [
     "zotero_read_pdf_pages",
     "Zotero Style Evidence Ledger",
     "metadata-only",
+    "WRITING_BLOCK_LEARNING",
+    "zotero-literature-learning",
+    "evidence-driven-writing",
+    "writing_block",
 ]
 
 

@@ -27,6 +27,12 @@
 
 “地道”在这里被定义为可核验的写作决策：段落功能、术语、claim verbs、信息节奏、证据边界、Methods 可复现顺序和 Results 叙事，而不是口语化或华丽化。素材学习只抽象模式，不复制同行原句。
 
+### 写作卡住时的窄范围学习
+
+当作者知道科学内容、但不知道怎么写时，Skill 先区分 `wording`、`paragraph_role`、`method_naming`、`result_narration` 和 `evidence_gap`，再只读取同章节、同文章类型的 3–5 篇高匹配片段。输出 2–3 个保守候选，并检查研究设计、数字、单位、方向和 claim strength 是否保持。这样可以把“找范文”变成可审查的句式学习，而不是继续堆积文献。
+
+对于 `Introduction`、`Related Work` 和其他引用驱动段落，必须先建立 `evidence map`、`paragraph blueprint` 和 `evidence coverage`，再生成正文。Methods 中的术语则按实际操作选择：`annotation` 只用于赋予功能标签；基因、组织和通路层面的统计工作通常写成 `gene-, tissue-, and pathway-level analyses`，若确实是富集分析则明确写 `...-enrichment analyses`。
+
 ## 与 Zotero MCP 的关系
 
 Zotero MCP 是本 Skill 的主素材源。默认按以下顺序使用工具，并在每一步检查返回值：

@@ -24,6 +24,11 @@ PROMPTS = [
         f"""/zotero-literature-learning 只读路由验证，不要生成文件：如果用户要求“先从 Zotero 找 3–5 篇同领域论文，读取摘要/全文，学习 Introduction、Methods 或 Results 的写法，然后再改稿”，请说明应按 Stage 0–8 执行：先建立 task_contract；再按 zotero_get_recent → zotero_semantic_search → zotero_search_items/advanced_search → zotero_get_item_metadata → zotero_get_item_children → zotero_get_pdf_outline → zotero_read_pdf_pages（必要时 zotero_get_item_fulltext fallback）分步调用；建立 corpus ledger、reading queue、Evidence/Style/Argument Profile 和 handoff。只能抽象模式，不复制同行原句；默认不生成 RIS；全文/工具不可用时标记 corpus_status: unavailable 或 Caution，不得伪造结果。\n{COMMON_GUARDRAIL}\n请只输出预期阶段、状态字段、停止条件和下游 handoff，不要实际检索或写文件。""",
     ),
     SmokePrompt(
+        "zotero-writing-block-learning-dry-run",
+        "Zotero writing-block learning and methods wording dry run",
+        f"""/zotero-literature-learning 只读路由验证，不要生成文件：用户知道研究内容但觉得 Methods overview 太啰嗦，并怀疑“gene-, tissue-, and pathway-level annotation”中的 annotation 不准确。请先建立 writing_block_type=method_naming/wording 和 must_preserve 清单，再按 Zotero MCP 分步寻找同领域、同章节、同文章类型的 3–5 篇高匹配片段；比较 subject–verb 结构、方法术语、并列分析动作和证据边界；输出 WRITING_BLOCK_LEARNING、2–3 个保守候选版本、annotation/analysis/characterization/enrichment 的术语决策、author checks。若目标是 Introduction 或其他引用驱动段落，必须先建立 evidence map、paragraph blueprint 和 evidence coverage；不得复制同行原句或改变研究设计、数字和 claim strength。\n{COMMON_GUARDRAIL}\n请只输出预期流程和字段，不要实际检索或写文件。""",
+    ),
+    SmokePrompt(
         "zotero-manuscript-thinking-dry-run",
         "Zotero manuscript-level thinking route dry run",
         f"""/zotero-evidence-review 只读路由验证，不要生成文件：如果用户提供标题、摘要、Introduction、Results 和 Discussion，并要求“从全文角度看看语言精确度、Introduction/Discussion 逻辑、论文主线和下一轮修改顺序”，请说明应路由到 Module 2.8 Manuscript-Level Thinking Checkpoint 和 companion zotero-manuscript-thinking Skill。\n{COMMON_GUARDRAIL}\n请只输出 scope ledger、paper contract、Language Audit、Introduction/Discussion Logic Map、argument spine、thinking-model-router 的 primary route、P0/P1 action table、下游 handoff 和 stop conditions；不要改写论文，不要承诺新实验。""",

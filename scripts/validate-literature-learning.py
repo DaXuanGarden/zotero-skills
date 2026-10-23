@@ -15,12 +15,13 @@ SCHEMA = ROOT / "zotero-literature-learning" / "references" / "materials-package
 REQUIRED_PHRASES = (
     "name: zotero-literature-learning",
     "requires: zotero-mcp",
-    "version: 0.1.0",
+    "version: 0.2.0",
     "Stage 0 — 定义学习任务",
     "Stage 1 — Zotero 候选检索",
     "Stage 2 — 元数据与可访问性筛选",
     "Stage 3 — 选择 peer corpus",
     "Stage 4 — 分层阅读",
+    "Stage 4A — 写作卡点学习回路",
     "Stage 5 — 抽取可迁移模式",
     "Stage 6 — 形成三个 profile",
     "Stage 7 — 交接",
@@ -36,6 +37,14 @@ REQUIRED_PHRASES = (
     "abstract-only",
     "full-text-inspected",
     "calibration_confidence",
+    "WRITING_BLOCK_LEARNING",
+    "writing_block_card",
+    "evidence-driven-writing",
+    "evidence map",
+    "paragraph blueprint",
+    "evidence-coverage.md",
+    "annotation",
+    "gene-, tissue-, and pathway-level analyses",
     "Evidence Profile",
     "Style Profile",
     "Argument Profile",
@@ -66,9 +75,16 @@ def main() -> None:
     for phrase in REQUIRED_PHRASES:
         if phrase not in text:
             fail(f"missing required workflow or guardrail phrase: {phrase}")
-    for phrase in ("Candidate record", "Evidence profile row", "Style profile row", "Handoff record", "File privacy"):
+    for phrase in ("Candidate record", "Evidence profile row", "Style profile row", "Handoff record", "Writing-block card", "File privacy"):
         if phrase not in schema:
             fail(f"schema reference missing: {phrase}")
+    methods_reference = SKILL.parent / "references" / "methods-language-calibration.md"
+    if not methods_reference.exists():
+        fail(f"missing methods language calibration reference: {methods_reference}")
+    methods_text = methods_reference.read_text(encoding="utf-8")
+    for phrase in ("annotation", "functionally annotated", "pathway-enrichment", "prioritize candidate", "gene-, tissue-, and pathway-level analyses"):
+        if phrase not in methods_text:
+            fail(f"methods language reference missing: {phrase}")
     if not re.search(r"\| Source ID \| Zotero key \| DOI/PMID \| Relevance", text):
         fail("missing corpus ledger table")
     if not re.search(r"\| Pattern ID \| Source ID \| Location \| Pattern type", text):
