@@ -17,7 +17,7 @@ metadata:
 
 当用户要求“像本领域高水平论文一样自然”“参考同领域代表性文章”“像某个期刊/会议的写法”时，启动可选的 `Domain Style Calibration`：从 Zotero/PubMed 或用户指定的 3–5 篇可核验论文中提取段落功能、句子功能、术语、claim verb、引用归属和信息节奏等模式，再对照用户自己的稿件。它学习的是可解释的写作决策，不复制原文，也不把“高分”当作未经证明的事实。
 
-它可以独立调用，也可以作为 `zotero-evidence-review` 在段落证据分析或引用修复后的 manuscript-level checkpoint。默认只输出诊断和优先级计划，不自动改写整篇论文，不自动承诺新实验。
+它可以独立调用，也可以作为 `zotero-evidence-review` 在段落证据分析或引用修复后的 manuscript-level checkpoint。默认只输出诊断和优先级计划，不自动改写整篇论文，不自动承诺新实验。 如果用户尚未收集可核验的 peer corpus，先交给 `zotero-literature-learning` 建立素材包；本 Skill 消费其 `style_profile`、`evidence_profile` 和 `argument_profile`，不重复做无目标的批量检索。
 
 ## 1. 何时触发
 
