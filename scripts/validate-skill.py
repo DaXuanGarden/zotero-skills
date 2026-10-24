@@ -44,6 +44,7 @@ REQUIRED_TEMPLATES = (
     "RIS_REFERENCE_FILE",
     "VERIFICATION_REPORT",
     "RECALL_AUDIT",
+    "ZOTERO_IMPORT_HANDOFF",
     "ENDNOTE_IMPORT_HANDOFF",
 )
 REQUIRED_HEADINGS = [
@@ -282,6 +283,11 @@ RECALL_FIRST_REQUIREMENTS = [
     "recall_status",
     "coverage_gaps",
     "two consecutive query rounds",
+    "ZOTERO_IMPORT_HANDOFF",
+    "zotero_import_status",
+    "zotero_add_by_doi",
+    "zotero_update_search_database",
+    "never invent a Zotero item key",
     "ENDNOTE_IMPORT_HANDOFF",
     "format-references-endnote",
     "endnote-workflow",
@@ -702,7 +708,22 @@ def main() -> None:
     if not recall_reference.exists():
         fail(f"missing recall-first retrieval reference: {recall_reference}")
     recall_text = recall_reference.read_text(encoding="utf-8")
-    require_all(recall_text, ("zotero_semantic", "pubmed_broad", "saturated", "coverage_gaps", "ENDNOTE_IMPORT_HANDOFF"), "recall-first reference")
+    require_all(
+        recall_text,
+        (
+            "zotero_semantic",
+            "pubmed_broad",
+            "saturated",
+            "coverage_gaps",
+            "ZOTERO_IMPORT_HANDOFF",
+            "zotero_import_status",
+            "zotero_add_by_doi",
+            "zotero_update_search_database",
+            "never invent a Zotero item key",
+            "ENDNOTE_IMPORT_HANDOFF",
+        ),
+        "recall-first reference",
+    )
 
     require_all(text, DEFAULT_EXPORT_REQUIREMENTS, "default export routing requirement")
     require_all(text, DUAL_MCP_AUTO_EXPORT_REQUIREMENTS, "Dual-MCP auto search/export default requirement")

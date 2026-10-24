@@ -94,7 +94,7 @@ python3 scripts/write_literature_search_package.py \
 | 项目 | 当前状态 |
 |---|---|
 | Skill | `zotero-evidence-review` / `zotero-literature-learning` / `zotero-manuscript-thinking` / `pubmed-literature-search` |
-| 当前版本 | Zotero evidence `3.2.0`；literature learning `0.3.0`；manuscript-thinking `0.5.0`；PubMed `1.0.0` |
+| 当前版本 | Zotero evidence `3.2.1`；literature learning `0.3.0`；manuscript-thinking `0.5.0`；PubMed `1.0.0` |
 | 兼容性 | Codex / OpenCode / ZCode |
 | 主要依赖 | Zotero 7+、zotero-mcp、Python 3.10+；PubMed 检索 skill 需要 PubMed MCP（推荐 PancrePal） |
 | 安装目标 | Codex 全局、ZCode 全局、OpenCode 全局、项目级 `.opencode/skills` |
@@ -117,7 +117,7 @@ python3 scripts/write_literature_search_package.py \
 | **Citation Verification Protocol** | 针对具体文献和具体主张读取元数据与全文，判断 fully supported / partially supported / contradicted / not addressed。 |
 | **Chinese Academic Writing Rules** | 面向中文学术写作，保留原意、避免虚构引用，输出可追踪的润色与补引建议。 |
 | **External Source Fallback** | Zotero 库证据不足时，可在外部 MCP 工具已配置的前提下辅助扩展；未配置时只给出可复制检索式。 |
-| **Evidence Package Export** | 作为 Paragraph Citation Package Workflow 的导出阶段，生成 Markdown 证据报告与唯一 canonical RIS，并附 `ENDNOTE_IMPORT_HANDOFF`；实际写入 EndNote 文库由用户在 EndNote 中确认。 |
+| **Evidence Package Export** | 作为 Paragraph Citation Package Workflow 的导出阶段，生成 Markdown 证据报告与唯一 canonical RIS，并附 `ZOTERO_IMPORT_HANDOFF` 与 `ENDNOTE_IMPORT_HANDOFF`；PubMed-only 条目不伪造 Zotero key，实际写入 Zotero/EndNote 文库均由用户明确确认。 |
 | **Literature Search Package Writer** | `python3 scripts/write_literature_search_package.py` 从已检查候选 JSON/YAML 生成 `*_literature_search.md` 和 Search RIS；不调用 Zotero/PubMed。 |
 
 ### 2.1 一页式使用速查

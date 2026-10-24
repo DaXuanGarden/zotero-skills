@@ -91,7 +91,18 @@ exclusion_reason: ""
 
 Rank the final set by directness to the claim, evidence design, population/context match, metadata confidence, and full-text inspectability. Do not rank only by semantic similarity, recency, journal prestige, or citation count.
 
-## 5. EndNote import handoff
+## 5. PubMed-only records and optional Zotero import
+
+PubMed-only records do not have a Zotero item key. Keep their DOI/PMID and set `zotero_import_status: pending`; never invent a Zotero item key or a `zotero://select/items/...` link. If the user explicitly requests Zotero synchronization for selected records, use `zotero_add_by_doi` when a DOI is available, then run `zotero_update_search_database` and re-fetch `zotero_get_item_metadata` before returning the new key. This is an explicit library-write action and is outside the default read-only retrieval path.
+
+```markdown
+## ZOTERO_IMPORT_HANDOFF
+| Candidate | DOI / PMID | Zotero item key | zotero_import_status | Action |
+|---|---|---|---|---|
+| Author Year | DOI / PMID | pending | pending / imported / failed | import by DOI only after explicit request |
+```
+
+## 6. EndNote import handoff
 
 The canonical output is a plain UTF-8 RIS file. Before handoff:
 
@@ -104,7 +115,7 @@ The canonical output is a plain UTF-8 RIS file. Before handoff:
 
 `endnote-workflow` is a separate two-phase Windows/EndNote 20 workflow for supplied DOCX files and a read-only library. `bib-formatter` can validate or reformat RIS, but it does not import records into EndNote. These boundaries must be stated in the report.
 
-## 6. Required report block
+## 7. Required report block
 
 ```markdown
 ## Recall Audit

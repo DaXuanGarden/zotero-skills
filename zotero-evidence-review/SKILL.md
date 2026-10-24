@@ -7,7 +7,7 @@ metadata:
   workflow: academic-research
   requires: zotero-mcp
   optional: pubmed-mcp
-  version: 3.2.0
+  version: 3.2.1
   references: references/method-parameter-search.md,references/recall-first-retrieval.md
 ---
 
@@ -1011,6 +1011,8 @@ Do not create extra JSON, BibTeX, EndNote XML, DOI lists, or log files unless th
 
 The RIS file is the single citation handoff between this Skill and EndNote. Before presenting it, run `scripts/ris_lint.py` with `--fail-on-warnings` when the file is available and include an `ENDNOTE_IMPORT_HANDOFF` block with record count, canonical metadata source, deduplication rule, linter status and import instructions. This Skill never edits an EndNote `.enl`, `.Data` or `sdb.eni` file. The user confirms the destination library and performs the import in EndNote.
 
+PubMed-only records do not have a Zotero item key. Report their DOI/PMID and a `zotero_import_status: pending` value rather than fabricating a `zotero://select/items/...` link. If the user explicitly asks to sync selected records into Zotero, use `zotero_add_by_doi` (preferred) or the documented DOI/URL import path, then refresh the search database and re-fetch metadata before returning the new Zotero key. Do not add, tag, move, or delete Zotero items by default.
+
 The installed `format-references-endnote` Skill is an optional downstream document converter for explicit `[PMID: ...]` markers; it is not the discovery layer and must not replace a mixed Zotero + PubMed RIS with a PubMed-only re-fetch. The installed `endnote-workflow` Skill is a separate Windows/EndNote 20 DOCX workflow and is read-only with respect to the library. `bib-formatter` can validate or reformat RIS but does not import records.
 
 Target literature search exports are handled by **Module 1.8 Target Literature Search and Export** and use a different Markdown suffix:
@@ -1924,6 +1926,15 @@ Use these named templates whenever a module references an appendix template. For
 - optional_document_handoff: format-references-endnote only when explicit `[PMID: ...]` markers are present
 ```
 
+### ZOTERO_IMPORT_HANDOFF
+
+```markdown
+## ZOTERO_IMPORT_HANDOFF
+| Candidate | DOI / PMID | Zotero item key | zotero_import_status | Action |
+|---|---|---|---|---|
+| Author Year | DOI / PMID | pending | pending / imported / failed | import by DOI only after explicit request |
+```
+
 ### REFS_BLOCK
 
 ```markdown
@@ -2309,6 +2320,7 @@ Ledger rules:
 - Import action: user imports the UTF-8 RIS into the selected EndNote library
 - direct library write: not supported; no `.enl`, `.Data`, or `sdb.eni` files modified
 - Optional document handoff: `format-references-endnote` only when explicit `[PMID: ...]` markers are present
+- PubMed-only Zotero import: not executed unless explicitly requested; never invent a Zotero item key
 ```
 
 Rules:
