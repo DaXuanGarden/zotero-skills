@@ -29,12 +29,17 @@ section_match: true
 design_or_method_match: true
 metadata_status: inspected
 access_status: pdf-page-inspected
+evidence_usable: true
+style_usable: true
+argument_usable: true
+inspection_basis: "Introduction, PDF pp. 2-3"
 source_locations:
   - section: "Introduction"
     pages: "2-3"
     zotero_link: "zotero://open-pdf/library/items/..."
 selection_decision: peer-corpus | evidence-candidate | background | verify | exclude
 exclusion_or_uncertainty: ""
+next_action: ""
 ```
 
 ## Evidence profile row
@@ -95,6 +100,18 @@ terminology_decision:
   reason: ""
   method_check: ""
 post_write_audit: claim_unchanged | author_check
+```
+
+## Learning decision
+
+```yaml
+decision_id: D01
+observation: ""
+source_ids: [S01]
+safe_action: adopt_move | reorder | clarify_subject | calibrate_verb | replace_nonstandard_term | compress_repetition | add_bridge | retain | do_not_adopt
+meaning_check: ""
+next_owner: zotero-manuscript-thinking | zotero-evidence-review | evidence-driven-writing | author
+done_when: ""
 ```
 
 ## File privacy

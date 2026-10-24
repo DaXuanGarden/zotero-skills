@@ -15,7 +15,7 @@ SCHEMA = ROOT / "zotero-literature-learning" / "references" / "materials-package
 REQUIRED_PHRASES = (
     "name: zotero-literature-learning",
     "requires: zotero-mcp",
-    "version: 0.2.0",
+    "version: 0.3.0",
     "Stage 0 — 定义学习任务",
     "Stage 1 — Zotero 候选检索",
     "Stage 2 — 元数据与可访问性筛选",
@@ -49,6 +49,11 @@ REQUIRED_PHRASES = (
     "Style Profile",
     "Argument Profile",
     "MATERIALS_PACKAGE",
+    "evidence_usable",
+    "style_usable",
+    "argument_usable",
+    "learning_decision",
+    "learning_decisions.md",
     "POST_WRITE_MATERIALS_AUDIT",
     "不复制同行原句",
     "不生成 RIS",
@@ -75,7 +80,7 @@ def main() -> None:
     for phrase in REQUIRED_PHRASES:
         if phrase not in text:
             fail(f"missing required workflow or guardrail phrase: {phrase}")
-    for phrase in ("Candidate record", "Evidence profile row", "Style profile row", "Handoff record", "Writing-block card", "File privacy"):
+    for phrase in ("Candidate record", "Evidence profile row", "Style profile row", "Handoff record", "Writing-block card", "Learning decision", "File privacy"):
         if phrase not in schema:
             fail(f"schema reference missing: {phrase}")
     methods_reference = SKILL.parent / "references" / "methods-language-calibration.md"

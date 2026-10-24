@@ -7,7 +7,7 @@ metadata:
   workflow: zotero-grounded-literature-learning
   requires: zotero-mcp
   optional: pubmed-mcp
-  version: 0.2.0
+  version: 0.3.0
   handoff: zotero-evidence-review,zotero-manuscript-thinking,evidence-driven-writing
   references: references/materials-package-schema.md,references/methods-language-calibration.md
 ---
@@ -30,6 +30,26 @@ metadata:
 ```
 
 它不替用户发明数据、结果、引用或贡献，也不复制同行原句。默认不生成 RIS；需要引文支持或参考文献导出时交给 `zotero-evidence-review`，这样不会产生两个互相冲突的参考文献出口。
+
+## 0.1 素材包契约：收集、学习、写作三层分开
+
+每篇候选文献同时标记三种用途，避免“找到过”被误报成“读过、学过、可以引用”：
+
+| 用途 | 最低检查层级 | 可以支持什么 | 不能支持什么 |
+|---|---|---|---|
+| `evidence_usable` | 实际读取摘要/全文中的相关事实，并记录位置 | 外部事实、研究设计或结果背景的证据线索 | 用户当前研究的结果或未检查的全文细节 |
+| `style_usable` | 目标 section 的全文/PDF 页已检查 | 句子功能、术语、claim verb、段落推进和信息节奏 | “本领域统一规范”或复制原句 |
+| `argument_usable` | 已读到能判断 gap/贡献/边界的相关 section | reader path、研究问题与贡献链的比较 | 替用户补写缺失结果、创新或因果解释 |
+
+候选记录必须写出 `evidence_usable`、`style_usable`、`argument_usable`、`inspection_basis` 和 `next_action`。只有 `style_usable: true` 的来源才能进入 `Style Profile`；只有 `evidence_usable: true` 的来源才能进入交给 `zotero-evidence-review` 的证据池。这个门禁比“相关/不相关”更能防止摘要检索被误当作全文学习。
+
+素材学习的最小闭环是：
+
+```text
+task_contract → candidate ledger → inspected fragments → profile → learning decisions → handoff.done_when
+```
+
+每条学习结论都要落成一个 `learning_decision`：`observation`、`source_ids`、`safe_action`、`meaning_check`、`next_owner` 和 `done_when`。如果观察不能改变写作动作，就停止扩展语料；不要把更多论文数量当作完成度。
 
 ## 1. 何时触发
 
@@ -262,6 +282,7 @@ evidence map
 ```text
 corpus_ledger.md       # 候选、筛选、访问和选择理由
 reading_queue.md       # 已读、待读、停止规则和下一步
+learning_decisions.md  # 观察→安全动作→意义回查→下一个 owner
 evidence_profile.md    # claim–source–location–support ledger
 style_profile.md       # peer pattern、draft mismatch、safe action
 argument_profile.md    # question–gap–contribution–boundary
@@ -328,12 +349,13 @@ Methods–Results alignment preserved?
 3. `corpus_status` 与 `calibration_confidence`；
 4. Candidate/Peer Corpus Ledger；
 5. Evidence Profile、Style Profile、Argument Profile；
-6. 如果触发卡点学习，`WRITING_BLOCK_LEARNING` 和 `writing_block_card`；
-7. Reading Queue 和停止理由；
-8. Unresolved Gaps；
-9. Handoff；
-10. 如果有稿件，`draft_to_profile_comparison`；
-11. 如果下游已改写，`POST_WRITE_MATERIALS_AUDIT`。
+6. `learning_decisions.md`：每条可迁移观察对应的安全动作、意义回查和完成条件；
+7. 如果触发卡点学习，`WRITING_BLOCK_LEARNING` 和 `writing_block_card`；
+8. Reading Queue 和停止理由；
+9. Unresolved Gaps；
+10. Handoff；
+11. 如果有稿件，`draft_to_profile_comparison`；
+12. 如果下游已改写，`POST_WRITE_MATERIALS_AUDIT`。
 
 报告状态使用：
 
