@@ -7,7 +7,8 @@ metadata:
   workflow: academic-research
   requires: zotero-mcp
   optional: pubmed-mcp
-  version: 3.1.0
+  version: 3.2.0
+  references: references/method-parameter-search.md,references/recall-first-retrieval.md
 ---
 
 # Zotero Evidence Review Skill
@@ -681,6 +682,26 @@ Critical Warnings:
 
 If the user requested only a Markdown report and no RIS, omit the EndNote RIS line and state `Included records: {N}` for the report table.
 
+## 1.9 Recall-first candidate retrieval
+
+Use this module for paragraph citation work whenever the user expects broad coverage, says “不要遗漏/尽量全面/系统找全”, or when a claim has several plausible evidence families. The goal is high recall within a declared scope; no database search can prove that the literature is literally complete.
+
+Read [references/recall-first-retrieval.md](references/recall-first-retrieval.md) before searching. For each claim, decompose the population/object, exposure/method, outcome/process, design/evidence type, context/tissue, synonyms and exclusions. Then run independent retrieval lanes:
+
+```text
+Zotero semantic (`zotero_semantic`) → Zotero structured/keyword (`zotero_structured`)
+→ PubMed broad MeSH + title/abstract (`pubmed_broad`)
+→ PubMed design/method query (`pubmed_design_or_method`)
+→ PubMed related expansion (`pubmed_related`) for one or two strong anchors
+→ DOI/PMID/title deduplication → directness/quality/full-text screening
+```
+
+Do not stop after the first supporting paper. Record every lane's query, raw hit count, unique IDs, inspected records, newly discovered direct-support candidates and tool status. Run at least one semantic and one structured Zotero lane; when PubMed is available, run at least two independent PubMed query families. Stop only after two consecutive query rounds add no new direct-support candidate and no new concept block, or when the declared scope/time limit is reached. The saved report must include `Recall Audit`, `recall_status`, `coverage_gaps`, and a reason for stopping. If PubMed is unavailable or fails, the status is `partial`/`blocked`, never `saturated`.
+
+The candidate pool and final support set are separate. Keep near misses and excluded records in the Markdown audit with reasons, but put only `Include`/`Optional` records that pass canonicalization and claim-level support into Citation RIS. Preserve `retrieved_by: Zotero | PubMed | Zotero + PubMed` after deduplication so the report shows where a citation came from.
+
+An empty Zotero result is a local-library result, not a literature-completeness result: continue to the PubMed lanes when PubMed is available. If Zotero MCP is disconnected, report the local lane as unavailable and keep any independently completed PubMed evidence clearly labeled; the package status is at least `Partial` when the user's requested scope required both sources.
+
 ---
 
 ## 2. Paragraph Evidence & Citation Analysis
@@ -977,6 +998,8 @@ Visible default pipeline for paragraph citation/export work:
 paragraph → claim extraction → existing numbered citation repair when supplied references are present → one Zotero local search pass → evidence matrix → citation placement → citation support ledger → revised/diff paragraph → Zotero metadata + PDF links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown evidence report → EndNote RIS
 ```
 
+For completeness-oriented requests, replace “one Zotero local search pass” with the Module 1.9 recall-first sequence and include its `Recall Audit` before selection. “Found one supporting paper” is not a stopping condition.
+
 The default deliverable is exactly two files inside a skill-named, topic-specific output folder:
 
 ```text
@@ -985,6 +1008,10 @@ zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}
 ```
 
 Do not create extra JSON, BibTeX, EndNote XML, DOI lists, or log files unless the user explicitly requests them. The Markdown report is the human-readable evidence workspace; the RIS file is the EndNote import file.
+
+The RIS file is the single citation handoff between this Skill and EndNote. Before presenting it, run `scripts/ris_lint.py` with `--fail-on-warnings` when the file is available and include an `ENDNOTE_IMPORT_HANDOFF` block with record count, canonical metadata source, deduplication rule, linter status and import instructions. This Skill never edits an EndNote `.enl`, `.Data` or `sdb.eni` file. The user confirms the destination library and performs the import in EndNote.
+
+The installed `format-references-endnote` Skill is an optional downstream document converter for explicit `[PMID: ...]` markers; it is not the discovery layer and must not replace a mixed Zotero + PubMed RIS with a PubMed-only re-fetch. The installed `endnote-workflow` Skill is a separate Windows/EndNote 20 DOCX workflow and is read-only with respect to the library. `bib-formatter` can validate or reformat RIS but does not import records.
 
 Target literature search exports are handled by **Module 1.8 Target Literature Search and Export** and use a different Markdown suffix:
 
@@ -1016,7 +1043,7 @@ Do not route to this module when the user explicitly opts out with `只在聊天
    - For paragraph citation-support requests such as `/zotero-evidence-review`, `使用技能`, `找证据`, `找引文`, `补引用`, `推荐引用`, `citation`, `refs`, `参考文献`, or `文献引用`, default to the full workflow and write both `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_evidence_review.md` and `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris` unless the user explicitly opts out of file generation.
    - For target_literature_search topic input, run **Module 1.8** and save `LITERATURE_SEARCH_REPORT` plus Search RIS by default; do not run paragraph claim extraction, Copy-ready Manuscript Text, sentence-level citation placement, or paragraph diff.
    - For other topic/search input, run **Module 1** first, produce a search-focused report, and convert the final inspected included papers into Search RIS unless the user explicitly opts out.
-   - For biomedical paragraph/search requests, the package workflow attempts automatic PubMed expansion after Zotero local search when a PubMed-capable tool is configured and visible.
+   - For biomedical paragraph/search requests, the package workflow runs the recall-first PubMed expansion after the Zotero semantic and structured lanes when a PubMed-capable tool is configured and visible.
    - Other external source fallback beyond this built-in PubMed expansion still follows **Module 5: External Source Fallback** and requires availability checks and user confirmation where specified.
 2. **Collect canonical metadata**
    - For every Zotero item considered for the final report or RIS, retrieve metadata with `zotero_get_item_metadata`.
@@ -1027,7 +1054,7 @@ Do not route to this module when the user explicitly opts out with `只在聊天
    - Execute PubMed search automatically in ordinary search, target literature search, and full paragraph package workflows when the topic is biomedical and a PubMed-capable tool is configured and visible in the current MCP tool list.
    - Treat a PubMed-capable tool as visible only when the active session exposes a callable tool whose name or description clearly indicates PubMed / NCBI E-utilities search, such as `pubmed`, `simple-pubmed`, `pubmed-data-server`, `ncbi`, `esearch`, `efetch`, `search-pubmed`, `get_paper_fulltext`, or equivalent biomedical database search capability.
    - Do not assume Zotero MCP itself can search PubMed. Zotero MCP may contain Zotero records with PMID links, but PubMed expansion requires a separate visible PubMed/NCBI-capable tool.
-   - Treat Zotero and PubMed as two evidence-source steps: Zotero local evidence first, then PubMed expansion for additional or confirming evidence.
+   - Treat Zotero and PubMed as independent retrieval lanes: local Zotero evidence first, then broad and design/method PubMed queries for additional or confirming evidence; do not collapse the search to the first supporting paper.
    - For PancrePal PubMed MCP, use `pubmed_search` first, then call `pubmed_get_details` for PMIDs that may enter the report/RIS; use `pubmed_extract_info` for targeted DOI/authors/abstract extraction when token efficiency matters.
    - For one or two highly relevant PMIDs, use `pubmed_find_related` with `type="reviews"` or `type="similar"` when the user asks for comprehensive coverage, review evidence, or adjacent mechanisms.
    - If full-text support is needed and full-text tools are visible, use `pubmed_detect_fulltext` before any OA PDF download; do not treat downloaded PubMed PDFs as Zotero-local evidence unless the user explicitly imports or attaches them.
@@ -1860,6 +1887,43 @@ Chat-only example:
 
 Use these named templates whenever a module references an appendix template. For chat-only outputs, keep full bibliographic metadata in `REFS_BLOCK` only; elsewhere cite papers as `Author Year (KEY)`. For ordinary search, target literature search, and method-parameter reports, use `LITERATURE_SEARCH_REPORT` plus `RIS_REFERENCE_FILE` unless chat-only/no-export is explicit. Module 1.2 adds its detailed `METHOD_PARAMETER_EVIDENCE` block as described in [references/method-parameter-search.md](references/method-parameter-search.md). For paragraph evidence packages, use `EVIDENCE_REVIEW_REPORT` plus `RIS_REFERENCE_FILE`.
 
+### RECALL_AUDIT
+
+```markdown
+## Recall Audit
+- recall_status: saturated / partial / blocked / scope_limited
+- scope: ...
+- query_families_run: ...
+- raw_hits: ...
+- unique_candidates: ...
+- inspected_candidates: ...
+- direct_support_candidates: ...
+- new_direct_candidates_last_round: ...
+- coverage_gaps: ...
+- reason_for_stop: ...
+
+| Query ID | Lane | Query | Tool status | Raw hits | New unique IDs | New direct candidates | Action |
+|---|---|---|---|---:|---:|---:|---|
+| Q01 | zotero_semantic | ... | Completed / Failed / Not executed | ... | ... | ... | retain / revise / stop |
+```
+
+### ENDNOTE_IMPORT_HANDOFF
+
+```markdown
+## ENDNOTE_IMPORT_HANDOFF
+- ris_path: ...
+- record_count: ...
+- included_records: ...
+- optional_records: ...
+- excluded_or_verify_records: ...
+- deduplication_rule: DOI → PMID → normalized title + first author + year
+- ris_lint: passed / failed / not run
+- canonical_metadata_sources: PMID/PubMed / DOI / Zotero
+- import_action: User imports the UTF-8 RIS into the selected EndNote library
+- direct_library_write: not supported; no `.enl`/`.Data` files modified
+- optional_document_handoff: format-references-endnote only when explicit `[PMID: ...]` markers are present
+```
+
 ### REFS_BLOCK
 
 ```markdown
@@ -2151,11 +2215,24 @@ Ledger rules:
 | 1 | Author et al., *Journal* | 2024 | Systematic review | ... | Zotero / PubMed / Zotero + PubMed | [Item](zotero://select/items/0_KEY) | [PDF](zotero://open-pdf/library/items/ATTACHMENT_KEY) | [DOI](https://doi.org/10.xxxx/xxxx) | [PMID](https://pubmed.ncbi.nlm.nih.gov/PMID/) | Collection name |
 
 ## 10. Search Reproducibility
+### Recall Audit
+- recall_status: saturated / partial / blocked / scope_limited
+- scope: ...
+- query_families_run: ...
+- raw_hits: ...
+- unique_candidates: ...
+- inspected_candidates: ...
+- direct_support_candidates: ...
+- new_direct_candidates_last_round: ...
+- coverage_gaps: ...
+- reason_for_stop: ...
+
 | Source | Query | Mode | Max results | Status | Included | Notes |
 |---|---|---|---:|---|---:|---|
-| Zotero | {semantic query} | semantic | {max_results or Not recorded} | Completed / No hits / Failed | {included_count} | full_text_inspected: yes/no/partial; included: {citation keys}; excluded: {record + reason} |
-| Zotero | {keyword query} | keyword / structured | {max_results or Not recorded} | Completed / No hits / Failed | {included_count} | full_text_inspected: yes/no/partial; included: {citation keys}; excluded: {record + reason} |
-| PubMed | {attempted or planned PubMed query} | PubMed | {max_results} | Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported / Not executed | {included_count} | included PMIDs: {PMIDs or none}; excluded: {PMID/citation + reason}; failed reason: {if any}; full_text_inspected: yes/no/partial |
+| Zotero | {semantic query} | zotero_semantic | {max_results or Not recorded} | Completed / No hits / Failed | {included_count} | raw hits: {}; new unique IDs: {}; new direct candidates: {}; included: {citation keys}; excluded: {record + reason} |
+| Zotero | {keyword query} | zotero_structured | {max_results or Not recorded} | Completed / No hits / Failed | {included_count} | raw hits: {}; new unique IDs: {}; new direct candidates: {}; included: {citation keys}; excluded: {record + reason} |
+| PubMed | {broad MeSH/title-abstract query} | pubmed_broad | {max_results} | Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported / Not executed | {included_count} | included PMIDs: {PMIDs or none}; raw hits: {}; new unique IDs: {}; new direct candidates: {}; failed reason: {if any} |
+| PubMed | {design/method query} | pubmed_design_or_method | {max_results} | Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported / Not executed | {included_count} | included PMIDs: {PMIDs or none}; raw hits: {}; new unique IDs: {}; new direct candidates: {}; failed reason: {if any} |
 
 ## 11. Zotero 检索总结（Zotero Search Summary）
 | 检索路径 | Query | Hits | Included | 备注 |
@@ -2221,6 +2298,17 @@ Ledger rules:
 - RIS inclusion rule: final recommended citations only; low-relevance hits and unsupported numbered citation rows excluded.
 - Numbering rule: `Original citation number` is retained for auditability only; final EndNote numbering is controlled by the manuscript citation processor after RIS import.
 - Metadata warnings: {missing fields, mismatches, duplicate warnings, or none}
+
+### ENDNOTE_IMPORT_HANDOFF
+- RIS path: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris`
+- Record count: {N}
+- Included / Optional / Exclude / Verify: {counts}
+- Deduplication rule: DOI → PMID → normalized title + first author + year
+- RIS lint: passed / failed / not run
+- Canonical metadata sources: PMID/PubMed / DOI / Zotero
+- Import action: user imports the UTF-8 RIS into the selected EndNote library
+- direct library write: not supported; no `.enl`, `.Data`, or `sdb.eni` files modified
+- Optional document handoff: `format-references-endnote` only when explicit `[PMID: ...]` markers are present
 ```
 
 Rules:

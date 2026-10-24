@@ -8,7 +8,7 @@
 - `zotero-manuscript-thinking` 先看全文主线、章节逻辑和领域语言，再排修订优先级；
 - `zotero-evidence-review` 把具体主张落到可检查证据、引文核实和 RIS。
 
-本轮真正的短板不是功能不足，而是三层之间容易重复检索、摘要层证据容易被误当作全文语言依据、以及局部改写完成后缺少统一的回查记录。
+本轮真正的短板不是功能不足，而是三层之间容易重复检索、摘要层证据容易被误当作全文语言依据、局部改写完成后缺少统一的回查记录，以及“找到一篇能支持”被误当作“检索已经充分”。
 
 ## 2. 访行记录
 
@@ -31,6 +31,15 @@
 | `zotero-evidence-review` | 88/100 | 93/100 | 路由契约、单一 owner、source layer/inspection status/stop reason 进入输出约束；原有 Zotero/PubMed 顺序与 RIS 门禁通过 |
 | `zotero-literature-learning` | 86/100 | 92/100 | 新增 evidence/style/argument 三种用途门禁、`learning_decision` 和可执行的 `learning_decisions.md` |
 | `zotero-manuscript-thinking` | 87/100 | 94/100 | 固化 meaning → logic → peer calibration → language → audit 顺序；增加 Methods/Results 词义—证据职责表和 `POST_WRITE_AUDIT` |
+
+### 后续检索与 EndNote 交接打磨
+
+`zotero-evidence-review` 已升级到 **3.2.0**。本次增量把检索和导入边界进一步写实：
+
+- 段落证据请求按 claim block 拆解，分别运行 Zotero semantic、Zotero structured、PubMed broad、PubMed design/method 和必要的 PubMed related lanes；
+- 用 `Recall Audit` 记录 raw hits、unique candidates、direct-support candidates、coverage gaps 和饱和停止理由；两轮没有新 direct-support candidate 才能停止，不能因找到一篇支持文献就停止；
+- 最终仍只生成一个 canonical RIS，保留 `Zotero` / `PubMed` / `Zotero + PubMed` 来源 provenance；
+- 新增 `ENDNOTE_IMPORT_HANDOFF`。`format-references-endnote`、`endnote-workflow` 和 `bib-formatter` 被定义为下游文档/格式工具，不直接修改 EndNote 文库；实际 `.enl/.Data` 导入由用户在 EndNote 中确认。
 
 评分是仓库维护用的相对尺，不是论文质量或投稿接受率预测。静态质量门全部通过；真实 Zotero 活体检查中 `zotero_get_recent`、语义检索、metadata、children 和 fulltext fallback 成功，PDF outline 调用返回 502，因此按规则记录为失败并使用已声明的 fulltext fallback，没有把它误报成页级 PDF 检查。
 
@@ -73,6 +82,7 @@ python3 scripts/check-installed-skills.py --target codex --mode fail
 1. `MATERIALS_PACKAGE` 是否真的被下游消费，而不是重新检索同一主题；
 2. `Domain Style Calibration` 的 peer pattern 是否能减少改写轮次；
 3. `POST_WRITE_AUDIT` 是否能抓到 Methods/Results 术语或证据强度漂移。
+4. `Recall Audit` 是否能在真实段落检索中减少漏检，同时保持最终 RIS 简洁。
 
 本地 `zotero-evidence-output/gsmr_parameters_2026-09-25_225257/` 是旧的未跟踪运行产物，未删除、未提交，也未用于公开示例。
 
@@ -81,7 +91,7 @@ python3 scripts/check-installed-skills.py --target codex --mode fail
 ```text
 ┌──────────────────────────────────────────────────────────────┐
 │  鲁班出师：Zotero writing workflow v2026-10-24               │
-│  三 Skill：route 清楚 · 素材可追溯 · 改写可回查              │
+│  三 Skill：route 清楚 · 素材可追溯 · 改写可回查 · 检索可审计  │
 │  静态质量门：PASS                                             │
 │  活体 Zotero：search/metadata/fulltext fallback 已核验       │
 │  未完成项：PDF outline 502 已按 fallback 规则记录            │

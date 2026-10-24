@@ -43,6 +43,8 @@ REQUIRED_TEMPLATES = (
     "MANUSCRIPT_STRATEGIC_REVIEW",
     "RIS_REFERENCE_FILE",
     "VERIFICATION_REPORT",
+    "RECALL_AUDIT",
+    "ENDNOTE_IMPORT_HANDOFF",
 )
 REQUIRED_HEADINGS = [
     "## 0. Intent Detection",
@@ -54,6 +56,7 @@ REQUIRED_HEADINGS = [
     "## 1. Semantic + Structured Search",
     "## 1.5 Collection and Tag Search",
     "## 1.8 Target Literature Search and Export",
+    "## 1.9 Recall-first candidate retrieval",
     "## 2. Paragraph Evidence & Citation Analysis",
     "## 2.5 Evidence Package Export",
     "## 2.8 Manuscript-Level Thinking Checkpoint",
@@ -266,6 +269,24 @@ ROUTE_CONTRACT_REQUIREMENTS = [
     "source_layer",
     "inspection_status",
     "stop_reason",
+]
+
+RECALL_FIRST_REQUIREMENTS = [
+    "references/recall-first-retrieval.md",
+    "high recall",
+    "zotero_semantic",
+    "zotero_structured",
+    "pubmed_broad",
+    "pubmed_design_or_method",
+    "pubmed_related",
+    "recall_status",
+    "coverage_gaps",
+    "two consecutive query rounds",
+    "ENDNOTE_IMPORT_HANDOFF",
+    "format-references-endnote",
+    "endnote-workflow",
+    "bib-formatter",
+    "direct library write: not supported",
 ]
 RIS_REQUIREMENTS = [
     "TY  - JOUR",
@@ -673,6 +694,15 @@ def main() -> None:
 
     require_all(text, ROUTE_CONTRACT_REQUIREMENTS, "route contract requirement")
     ok("single-owner route contract and handoff fields present")
+
+    require_all(text, RECALL_FIRST_REQUIREMENTS, "recall-first retrieval and EndNote handoff requirement")
+    ok("recall-first retrieval audit and EndNote handoff requirements present")
+
+    recall_reference = REPO_ROOT / "zotero-evidence-review" / "references" / "recall-first-retrieval.md"
+    if not recall_reference.exists():
+        fail(f"missing recall-first retrieval reference: {recall_reference}")
+    recall_text = recall_reference.read_text(encoding="utf-8")
+    require_all(recall_text, ("zotero_semantic", "pubmed_broad", "saturated", "coverage_gaps", "ENDNOTE_IMPORT_HANDOFF"), "recall-first reference")
 
     require_all(text, DEFAULT_EXPORT_REQUIREMENTS, "default export routing requirement")
     require_all(text, DUAL_MCP_AUTO_EXPORT_REQUIREMENTS, "Dual-MCP auto search/export default requirement")

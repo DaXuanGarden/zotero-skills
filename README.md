@@ -94,7 +94,7 @@ python3 scripts/write_literature_search_package.py \
 | 项目 | 当前状态 |
 |---|---|
 | Skill | `zotero-evidence-review` / `zotero-literature-learning` / `zotero-manuscript-thinking` / `pubmed-literature-search` |
-| 当前版本 | Zotero evidence `3.1.0`；literature learning `0.3.0`；manuscript-thinking `0.5.0`；PubMed `1.0.0` |
+| 当前版本 | Zotero evidence `3.2.0`；literature learning `0.3.0`；manuscript-thinking `0.5.0`；PubMed `1.0.0` |
 | 兼容性 | Codex / OpenCode / ZCode |
 | 主要依赖 | Zotero 7+、zotero-mcp、Python 3.10+；PubMed 检索 skill 需要 PubMed MCP（推荐 PancrePal） |
 | 安装目标 | Codex 全局、ZCode 全局、OpenCode 全局、项目级 `.opencode/skills` |
@@ -111,12 +111,13 @@ python3 scripts/write_literature_search_package.py \
 | **Semantic + Structured Search** | 优先语义搜索概念相近文献，并结合标题、作者、关键词、DOI、PMID、年份等结构化检索兜底。 |
 | **Collection and Tag Search** | 支持按 Zotero collection、tag、分类范围缩小检索。 |
 | **Target Literature Search** | 面向无稿件段落的专题文献检索、目标文献筛选、Core/Strong Related/Verify/Noise 分类、MD/RIS 文献清单导出。 |
-| **Paragraph Citation Package Workflow** | 段落补引用默认是一个完整工作流：claim extraction → Zotero local search → evidence matrix / citation placement / diff paragraph → automatic PubMed expansion when available → Markdown report + EndNote RIS。 |
-| **Zotero + PubMed Dual-MCP Workflow** | Zotero MCP 负责本地库、PDF/笔记/collection/语义检索；PubMed MCP 负责生物医学外部扩展、PMID 元数据、related/review discovery、OA/full-text triage 与参考文献标准化。 |
+| **Paragraph Citation Package Workflow** | 段落补引用默认是一个完整工作流：claim extraction → Zotero semantic + structured lanes → PubMed broad/design lanes → recall audit → evidence matrix / citation placement / diff paragraph → canonical metadata → Markdown report + EndNote RIS。 |
+| **Recall-first retrieval** | 不因找到一篇支持文献就停止；记录多组检索式、候选池、去重、覆盖缺口和饱和停止理由，再挑选最合适的引用。 |
+| **Zotero + PubMed Dual-MCP Workflow** | Zotero MCP 负责本地库、PDF/笔记/collection/语义检索；PubMed MCP 负责独立的广召回、MeSH/题录检索、设计/方法扩展、related discovery、PMID 元数据与标准化。 |
 | **Citation Verification Protocol** | 针对具体文献和具体主张读取元数据与全文，判断 fully supported / partially supported / contradicted / not addressed。 |
 | **Chinese Academic Writing Rules** | 面向中文学术写作，保留原意、避免虚构引用，输出可追踪的润色与补引建议。 |
 | **External Source Fallback** | Zotero 库证据不足时，可在外部 MCP 工具已配置的前提下辅助扩展；未配置时只给出可复制检索式。 |
-| **Evidence Package Export** | 作为 Paragraph Citation Package Workflow 的导出阶段，生成两个可复用文件：Markdown 证据报告与可导入 EndNote 的 RIS 参考文献文件。 |
+| **Evidence Package Export** | 作为 Paragraph Citation Package Workflow 的导出阶段，生成 Markdown 证据报告与唯一 canonical RIS，并附 `ENDNOTE_IMPORT_HANDOFF`；实际写入 EndNote 文库由用户在 EndNote 中确认。 |
 | **Literature Search Package Writer** | `python3 scripts/write_literature_search_package.py` 从已检查候选 JSON/YAML 生成 `*_literature_search.md` 和 Search RIS；不调用 Zotero/PubMed。 |
 
 ### 2.1 一页式使用速查
