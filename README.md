@@ -78,6 +78,17 @@ python3 scripts/write_literature_search_package.py \
 
 这个脚本只负责把已检查候选写成 `*_literature_search.md` 和 Search RIS；它不会调用 Zotero 或 PubMed，也不会把 `Exclude` / `Verify` 条目写入 RIS。需要把 `Optional` 条目也写入 RIS 时，显式加 `--include-optional`。
 
+如果已经有确认过的 canonical RIS，并且希望按论文段落建立 EndNote 归属，可准备一个 assignments JSON，再运行：
+
+```bash
+python3 scripts/write_endnote_collection_package.py \
+  --ris path/to/canonical_references.ris \
+  --assignments path/to/manuscript_assignments.json \
+  --output-root zotero-evidence-output
+```
+
+它会生成一个去重总 RIS、`endnote-import/Introduction/Introduction-01.ris` 等选择性分组 RIS、JSON manifest 和 Markdown 映射表。总 RIS 只导入一次；段落归属写入 RIS `KW` 字段，避免把同一篇文献重复导入 EndNote。
+
 ---
 
 ## 1. 项目概览
@@ -94,7 +105,7 @@ python3 scripts/write_literature_search_package.py \
 | 项目 | 当前状态 |
 |---|---|
 | Skill | `zotero-evidence-review` / `zotero-literature-learning` / `zotero-manuscript-thinking` / `pubmed-literature-search` |
-| 当前版本 | Zotero evidence `3.2.1`；literature learning `0.3.0`；manuscript-thinking `0.5.0`；PubMed `1.0.0` |
+| 当前版本 | Zotero evidence `3.3.0`；literature learning `0.3.0`；manuscript-thinking `0.5.0`；PubMed `1.0.0` |
 | 兼容性 | Codex / OpenCode / ZCode |
 | 主要依赖 | Zotero 7+、zotero-mcp、Python 3.10+；PubMed 检索 skill 需要 PubMed MCP（推荐 PancrePal） |
 | 安装目标 | Codex 全局、ZCode 全局、OpenCode 全局、项目级 `.opencode/skills` |
@@ -118,6 +129,7 @@ python3 scripts/write_literature_search_package.py \
 | **Chinese Academic Writing Rules** | 面向中文学术写作，保留原意、避免虚构引用，输出可追踪的润色与补引建议。 |
 | **External Source Fallback** | Zotero 库证据不足时，可在外部 MCP 工具已配置的前提下辅助扩展；未配置时只给出可复制检索式。 |
 | **Evidence Package Export** | 作为 Paragraph Citation Package Workflow 的导出阶段，生成 Markdown 证据报告与唯一 canonical RIS，并附 `ZOTERO_IMPORT_HANDOFF` 与 `ENDNOTE_IMPORT_HANDOFF`；PubMed-only 条目不伪造 Zotero key，实际写入 Zotero/EndNote 文库均由用户明确确认。 |
+| **Section-aware EndNote collection** | 用户提供章节和段落边界时，生成 `Introduction/Introduction-01`、`Discussion/Discussion-01` 等稳定归属；主 RIS 只保留一份记录并写入 section/paragraph/claim/role 关键词，同时生成分组 RIS、JSON manifest 和 Markdown 映射表。 |
 | **Literature Search Package Writer** | `python3 scripts/write_literature_search_package.py` 从已检查候选 JSON/YAML 生成 `*_literature_search.md` 和 Search RIS；不调用 Zotero/PubMed。 |
 
 ### 2.1 一页式使用速查

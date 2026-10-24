@@ -34,12 +34,13 @@
 
 ### 后续检索与 EndNote 交接打磨
 
-`zotero-evidence-review` 已升级到 **3.2.1**。本次增量把检索和导入边界进一步写实：
+`zotero-evidence-review` 已升级到 **3.3.0**。本次增量把检索、段落归属和导入边界进一步写实：
 
 - 段落证据请求按 claim block 拆解，分别运行 Zotero semantic、Zotero structured、PubMed broad、PubMed design/method 和必要的 PubMed related lanes；
 - 用 `Recall Audit` 记录 raw hits、unique candidates、direct-support candidates、coverage gaps 和饱和停止理由；两轮没有新 direct-support candidate 才能停止，不能因找到一篇支持文献就停止；
 - 最终仍只生成一个 canonical RIS，保留 `Zotero` / `PubMed` / `Zotero + PubMed` 来源 provenance；
 - 新增 `ZOTERO_IMPORT_HANDOFF` 与 `ENDNOTE_IMPORT_HANDOFF`。PubMed-only 记录保留 DOI/PMID 和 `zotero_import_status: pending`，只有用户明确要求时才通过 DOI 导入 Zotero、刷新搜索索引并重新读取真实 item key；不得伪造 `zotero://select/items/...`。`format-references-endnote`、`endnote-workflow` 和 `bib-formatter` 被定义为下游文档/格式工具，不直接修改 EndNote 文库；实际 `.enl/.Data` 导入由用户在 EndNote 中确认。
+- 新增 section/paragraph-aware EndNote handoff：为 `Introduction-01`、`Methods-02`、`Results-01`、`Discussion-01` 等段落建立稳定路径，主 RIS 保持去重并写入 section/paragraph/claim/role 关键词，同时输出分组 RIS、JSON manifest 和 Markdown 映射表；未归属记录进入 `Unassigned/Unassigned`，避免静默丢失。
 
 评分是仓库维护用的相对尺，不是论文质量或投稿接受率预测。静态质量门全部通过；真实 Zotero 活体检查中 `zotero_get_recent`、语义检索、metadata、children 和 fulltext fallback 成功，PDF outline 调用返回 502，因此按规则记录为失败并使用已声明的 fulltext fallback，没有把它误报成页级 PDF 检查。
 

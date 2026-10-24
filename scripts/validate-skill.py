@@ -46,6 +46,7 @@ REQUIRED_TEMPLATES = (
     "RECALL_AUDIT",
     "ZOTERO_IMPORT_HANDOFF",
     "ENDNOTE_IMPORT_HANDOFF",
+    "ENDNOTE_COLLECTION_MANIFEST",
 )
 REQUIRED_HEADINGS = [
     "## 0. Intent Detection",
@@ -293,6 +294,22 @@ RECALL_FIRST_REQUIREMENTS = [
     "endnote-workflow",
     "bib-formatter",
     "direct library write: not supported",
+]
+ENDNOTE_COLLECTION_REQUIREMENTS = [
+    "references/endnote-section-collections.md",
+    "section-aware handoff",
+    "Discussion/Discussion-01",
+    "Methods/Methods-02",
+    "write_endnote_collection_package.py",
+    "one deduplicated master RIS",
+    "selective per-group RIS files",
+    "Manuscript section",
+    "Manuscript paragraph",
+    "Manuscript group",
+    "Evidence role",
+    "Unassigned/Unassigned",
+    "import master RIS once",
+    "direct_library_write: not supported",
 ]
 RIS_REQUIREMENTS = [
     "TY  - JOUR",
@@ -703,6 +720,16 @@ def main() -> None:
 
     require_all(text, RECALL_FIRST_REQUIREMENTS, "recall-first retrieval and EndNote handoff requirement")
     ok("recall-first retrieval audit and EndNote handoff requirements present")
+
+    require_all(text, ENDNOTE_COLLECTION_REQUIREMENTS, "section-aware EndNote collection requirement")
+    ok("section-aware EndNote collection handoff requirements present")
+
+    collection_writer = REPO_ROOT / "scripts" / "write_endnote_collection_package.py"
+    if not collection_writer.exists():
+        fail(f"missing section-aware EndNote collection writer: {collection_writer.relative_to(REPO_ROOT)}")
+    collection_writer_text = collection_writer.read_text(encoding="utf-8")
+    require_all(collection_writer_text, ("--ris", "--assignments", "--output-root", "--self-test", "Manuscript group:", "Unassigned/Unassigned", "master RIS once"), "section-aware EndNote collection writer")
+    ok("section-aware EndNote collection writer present")
 
     recall_reference = REPO_ROOT / "zotero-evidence-review" / "references" / "recall-first-retrieval.md"
     if not recall_reference.exists():

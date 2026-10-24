@@ -7,8 +7,8 @@ metadata:
   workflow: academic-research
   requires: zotero-mcp
   optional: pubmed-mcp
-  version: 3.2.1
-  references: references/method-parameter-search.md,references/recall-first-retrieval.md
+  version: 3.3.0
+  references: references/method-parameter-search.md,references/recall-first-retrieval.md,references/endnote-section-collections.md
 ---
 
 # Zotero Evidence Review Skill
@@ -1015,6 +1015,8 @@ PubMed-only records do not have a Zotero item key. Report their DOI/PMID and a `
 
 The installed `format-references-endnote` Skill is an optional downstream document converter for explicit `[PMID: ...]` markers; it is not the discovery layer and must not replace a mixed Zotero + PubMed RIS with a PubMed-only re-fetch. The installed `endnote-workflow` Skill is a separate Windows/EndNote 20 DOCX workflow and is read-only with respect to the library. `bib-formatter` can validate or reformat RIS but does not import records.
 
+When the user supplies manuscript section and paragraph boundaries, add the optional section-aware handoff described in [references/endnote-section-collections.md](references/endnote-section-collections.md). Assign stable paths such as `Discussion/Discussion-01` or `Methods/Methods-02`, preserve `Manuscript section`, `Manuscript paragraph`, `Manuscript group`, `Claim`, and `Evidence role` fields, and run `scripts/write_endnote_collection_package.py` after the canonical RIS has passed metadata QC. The package writer creates one deduplicated master RIS with EndNote-readable keyword fields plus selective per-group RIS files, a manifest, and a manuscript-to-reference map. It does not infer support, silently drop unassigned records, or edit an EndNote library.
+
 Target literature search exports are handled by **Module 1.8 Target Literature Search and Export** and use a different Markdown suffix:
 
 ```text
@@ -1105,6 +1107,7 @@ Generated Evidence Package:
 - Status: {Ready / Caution / Partial / Superseded / Unknown}
 - Markdown report: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_evidence_review.md`
 - EndNote RIS: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris`
+- Section-aware requests: add `*_all_references.ris`, `endnote-import/{Section}/{Paragraph}.ris`, `*_collection_manifest.json`, and `*_manuscript_reference_map.md` through `scripts/write_endnote_collection_package.py`
 
 Critical Warnings:
 - {warning or No critical warnings}
@@ -1926,6 +1929,21 @@ Use these named templates whenever a module references an appendix template. For
 - optional_document_handoff: format-references-endnote only when explicit `[PMID: ...]` markers are present
 ```
 
+### ENDNOTE_COLLECTION_MANIFEST
+
+```markdown
+## ENDNOTE_COLLECTION_MANIFEST
+- collection_package: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/`
+- master_ris: `{run_stem}_all_references.ris`
+- group_root: `endnote-import/`
+- hierarchy: `Introduction/Introduction-01`, `Methods/Methods-01`, `Results/Results-01`, `Discussion/Discussion-01`
+- assignment_key: `section + paragraph_id + claim_ids + evidence role`
+- import_rule: import master RIS once; per-group RIS files are selective handoffs and may duplicate records
+- group_encoding: RIS `KW` fields plus JSON manifest and Markdown map
+- unassigned_policy: retain under `Unassigned/Unassigned`
+- direct_library_write: not supported by the package writer
+```
+
 ### ZOTERO_IMPORT_HANDOFF
 
 ```markdown
@@ -2310,6 +2328,8 @@ Ledger rules:
 - Numbering rule: `Original citation number` is retained for auditability only; final EndNote numbering is controlled by the manuscript citation processor after RIS import.
 - Metadata warnings: {missing fields, mismatches, duplicate warnings, or none}
 
+When section and paragraph IDs are supplied, include `ENDNOTE_COLLECTION_MANIFEST` after the standard EndNote handoff. Do not create a second untracked RIS source: the section-aware master RIS is a tagged derivative of the canonical RIS, and the per-group files are selective views.
+
 ### ENDNOTE_IMPORT_HANDOFF
 - RIS path: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris`
 - Record count: {N}
@@ -2321,6 +2341,7 @@ Ledger rules:
 - direct library write: not supported; no `.enl`, `.Data`, or `sdb.eni` files modified
 - Optional document handoff: `format-references-endnote` only when explicit `[PMID: ...]` markers are present
 - PubMed-only Zotero import: not executed unless explicitly requested; never invent a Zotero item key
+- Section/paragraph grouping: use `ENDNOTE_COLLECTION_MANIFEST` when manuscript boundaries are supplied; master RIS is deduplicated and group RIS files are selective
 ```
 
 Rules:
