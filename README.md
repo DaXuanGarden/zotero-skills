@@ -16,6 +16,15 @@
 
 默认行为已经调整为“检索也导出”：普通文献检索、目标文献检索、段落补引用/润色、PubMed 主题检索都会默认生成 Markdown 报告 + EndNote-compatible RIS。只想在聊天里快速看结果时，请在提示词开头明确写 `只在聊天输出，不要生成文件`。
 
+写作任务建议按一条可追踪的流水线推进：
+
+```text
+收集素材 → 阅读并抽取 peer patterns → 建立 evidence/style/argument profiles
+→ 先做全文意义与章节逻辑 → 再做领域语言校准和局部改写 → 回查主张、数字、引用与 Methods–Results 对齐
+```
+
+`zotero-literature-learning` 负责前半段，`zotero-manuscript-thinking` 负责整体诊断与修订顺序，`zotero-evidence-review` 负责具体 claim 的支持、核实和 RIS。三者共享 handoff，不各自重复建立文献出口。
+
 | 场景 | 推荐入口 | 复制即用提示词 | 典型产物 |
 |---|---|---|---|
 | 写论文时给一段草稿找证据、补引用 | `/zotero-evidence-review` | `帮我给下面这段草稿找证据并补引用，使用完整工作流，生成 Markdown evidence report 和 EndNote RIS：...` | `zotero-evidence-output/.../*_evidence_review.md` + `*_references.ris` |
@@ -85,7 +94,7 @@ python3 scripts/write_literature_search_package.py \
 | 项目 | 当前状态 |
 |---|---|
 | Skill | `zotero-evidence-review` / `zotero-literature-learning` / `zotero-manuscript-thinking` / `pubmed-literature-search` |
-| 当前版本 | Zotero evidence `3.0.0`；literature learning `0.2.0`；manuscript-thinking `0.4.1`；PubMed `1.0.0` |
+| 当前版本 | Zotero evidence `3.1.0`；literature learning `0.3.0`；manuscript-thinking `0.5.0`；PubMed `1.0.0` |
 | 兼容性 | Codex / OpenCode / ZCode |
 | 主要依赖 | Zotero 7+、zotero-mcp、Python 3.10+；PubMed 检索 skill 需要 PubMed MCP（推荐 PancrePal） |
 | 安装目标 | Codex 全局、ZCode 全局、OpenCode 全局、项目级 `.opencode/skills` |

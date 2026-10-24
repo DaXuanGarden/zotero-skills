@@ -80,6 +80,12 @@ REQUIRED_PHRASES = [
     "zotero-literature-learning",
     "evidence-driven-writing",
     "writing_block",
+    "修订顺序：先保意义，再校准领域语言",
+    "meaning gate",
+    "POST_WRITE_AUDIT",
+    "Revision Decision Log",
+    "annotation",
+    "gene-, tissue-, and pathway-level analyses",
 ]
 
 

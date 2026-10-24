@@ -6,7 +6,7 @@ compatibility: codex,opencode,zcode
 metadata:
   parent_skill: zotero-evidence-review
   workflow: manuscript-level-diagnosis
-  version: 0.4.1
+  version: 0.5.0
   optional: zotero-mcp, pubmed-mcp
   reference: references/domain-style-calibration.md
 ---
@@ -18,6 +18,26 @@ metadata:
 当用户要求“像本领域高水平论文一样自然”“参考同领域代表性文章”“像某个期刊/会议的写法”时，启动可选的 `Domain Style Calibration`：从 Zotero/PubMed 或用户指定的 3–5 篇可核验论文中提取段落功能、句子功能、术语、claim verb、引用归属和信息节奏等模式，再对照用户自己的稿件。它学习的是可解释的写作决策，不复制原文，也不把“高分”当作未经证明的事实。
 
 它可以独立调用，也可以作为 `zotero-evidence-review` 在段落证据分析或引用修复后的 manuscript-level checkpoint。默认只输出诊断和优先级计划，不自动改写整篇论文，不自动承诺新实验。 如果用户尚未收集可核验的 peer corpus，先交给 `zotero-literature-learning` 建立素材包；本 Skill 消费其 `style_profile`、`evidence_profile` 和 `argument_profile`，不重复做无目标的批量检索。用户出现“知道意思但不会写、句子太啰嗦、方法名拿不准、Results 不知道如何推进”等卡点时，先触发 `WRITING_BLOCK_LEARNING`，再决定是否进入全文诊断。
+
+## 0.1 修订顺序：先保意义，再校准领域语言
+
+每次运行都把“整体观”和“地道表达”放进同一条可回查的修订链，避免先把句子改漂亮、再发现主张已经变强：
+
+```text
+meaning gate → section logic → peer-style calibration (if requested) → language pass → evidence/consistency audit
+```
+
+每一步都留下一个决定，而不是只输出一版“更流畅”的文本：
+
+| 步骤 | 要回答的问题 | 最小产物 | 继续条件 |
+|---|---|---|---|
+| `meaning gate` | 主语、比较、数字、方向、证据等级和范围是否明确且可保持 | `paper_contract` + `claim IDs` | 核心主张可定位；否则标 `P0/unknown` |
+| `section logic` | 本段/本节在读者路径中承担什么任务，是否与前后文衔接 | 对应 `Logic Map` | 段落任务和下一问题清楚 |
+| `peer-style calibration` | 3–5 篇可核验同类论文如何组织同一功能、使用哪些术语和 claim verbs | `Domain Style Calibration` | 只采用可追溯模式；语料不足则降置信度 |
+| `language pass` | 句法、术语、信息节奏和学术语域是否自然，不改变科学含义 | `Language Audit` + copy-ready text | 每个高风险改动有 `author_check` |
+| `evidence/consistency audit` | 改写后是否仍与图表、Methods、Results、引用和 profile 一致 | `POST_WRITE_AUDIT` | 发现漂移就回退措辞或交证据模块 |
+
+“地道”只有在目标 section、文章类型和可检查的 peer pattern 支持下才成立；没有可核验语料时，使用 `genre-neutral` 表达并明确 `calibration_confidence: none/low`。
 
 ## 1. 何时触发
 
@@ -108,6 +128,18 @@ metadata:
 6. **Academic register**：中文避免机械的“首先/其次/最后”和空壳强调，但不把所有连接词一律删除；英文避免翻译腔、过度名词化和虚假正式感。
 7. **Terminology and consistency**：同一概念、缩写、时态、单位、组别和图表名称在全文中保持一致；首次出现时补全必要定义。
 8. **Citation ownership**：句子中的发现属于本研究还是外部文献必须清楚；引用放置应紧跟其支持的 claim，不能用一条背景引用覆盖整段新结果。
+
+对 Methods 和 Results 追加一个“词义—证据职责”检查，避免用看似专业的名词替代实际分析：
+
+| 观察到的动作 | 优先考虑的表达 | 只有在以下条件满足时才使用更强表达 |
+|---|---|---|
+| 给变异/基因赋予功能标签 | `functionally annotated variants/genes` | 确实输出功能类别或标签 |
+| 进行基因、组织或通路层面的统计分析 | `conducted gene-, tissue-, and pathway-level analyses` | 三类分析确实执行且可定位 |
+| 检查组织表达或通路过度代表 | `tissue-expression` / `pathway-enrichment analyses` | 有对应富集或过度代表方法 |
+| 整合多组学以排序候选对象 | `integrated ... data to prioritize candidate genes/cell types` | 输出是优先级排序，不写成因果证明 |
+| 报告观察到的关系 | `was associated with` / `showed` | 设计和证据允许的范围内使用 `indicated` 或 `suggested` |
+
+如果方法动作无法落入表格，保留较窄的术语并列出 `author_check`；不要把 `annotation`、`characterization` 或 `causal` 当作默认的“高级词”。
 
 ### 语言问题输出
 
@@ -411,8 +443,11 @@ priority_score = reviewer_risk (1–5) × argument_leverage (1–5) × feasibili
 12. `Holistic Diagnosis`；
 13. `Reviewer Stress Test`；
 14. `Prioritized Revision Plan`；
-15. `Handoff and Stop Conditions`；
-16. `Unresolved Unknowns`。
+15. `Revision Decision Log`：每项改动的原句/动作、证据边界、peer pattern（如有）、`author_check` 和完成条件；
+16. `Handoff and Stop Conditions`；
+17. `Unresolved Unknowns`。
+
+局部改写也必须返回一个最小 `POST_WRITE_AUDIT`：`claim_unchanged`、`numbers_units_direction_unchanged`、`citation_ownership_preserved`、`methods_results_aligned`、`new_unsupported_claim` 和 `author_check`。任何一项无法确认都写 `unknown`，不以“更地道”代替回查。
 
 问题表至少使用以下字段：
 
