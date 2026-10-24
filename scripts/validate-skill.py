@@ -258,6 +258,15 @@ EVIDENCE_PACKAGE_REQUIREMENTS = [
     "duplicate warning",
     "metadata quality-control section",
 ]
+
+ROUTE_CONTRACT_REQUIREMENTS = [
+    "## 0.1 Route contract: one request, one evidence owner",
+    "zotero-literature-learning",
+    "zotero-manuscript-thinking",
+    "source_layer",
+    "inspection_status",
+    "stop_reason",
+]
 RIS_REQUIREMENTS = [
     "TY  - JOUR",
     "TY  -",
@@ -661,6 +670,9 @@ def main() -> None:
 
     require_all(text, EVIDENCE_PACKAGE_REQUIREMENTS, "evidence package requirement")
     ok("evidence package export requirements present")
+
+    require_all(text, ROUTE_CONTRACT_REQUIREMENTS, "route contract requirement")
+    ok("single-owner route contract and handoff fields present")
 
     require_all(text, DEFAULT_EXPORT_REQUIREMENTS, "default export routing requirement")
     require_all(text, DUAL_MCP_AUTO_EXPORT_REQUIREMENTS, "Dual-MCP auto search/export default requirement")

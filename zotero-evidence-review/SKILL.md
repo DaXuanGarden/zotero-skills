@@ -7,7 +7,7 @@ metadata:
   workflow: academic-research
   requires: zotero-mcp
   optional: pubmed-mcp
-  version: 3.0.0
+  version: 3.1.0
 ---
 
 # Zotero Evidence Review Skill
@@ -17,6 +17,19 @@ metadata:
 Use Zotero MCP tools to search the user's Zotero library intelligently, and use PubMed MCP tools as a biomedical expansion and metadata-standardization layer whenever they are visible in the active Agent IDE session. This skill combines **semantic search** (concept matching via embeddings) with **keyword/structured search**, performs **paragraph evidence and citation analysis** from draft text, verifies **citations against full text**, and generates Markdown + EndNote-compatible RIS outputs for ordinary literature search, target literature search, paragraph citation matching, and paragraph polishing workflows unless the user explicitly chooses chat-only/no-export mode.
 
 For paragraph citation-support requests, the default is one complete **Paragraph Citation Package Workflow** rather than two separate workflows: paragraph → claim extraction → existing numbered citation repair when supplied references are present → one Zotero local search pass → evidence matrix → citation placement → revised/diff paragraph → Zotero metadata + PDF links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown evidence report → EndNote RIS. Chat-only paragraph analysis is an explicit opt-out mode.
+
+## 0.1 Route contract: one request, one evidence owner
+
+Use this compact contract before calling an MCP tool. It keeps the three Zotero writing skills complementary and prevents a single request from producing competing corpora or reports:
+
+| User need | Primary owner | This Skill does | Handoff / stop condition |
+|---|---|---|---|
+| Find and learn peer papers before writing | `zotero-literature-learning` | Do not start a second corpus; consume its `MATERIALS_PACKAGE` only when claim support is requested | Stop after `handoff.done_when` or return to this Skill for claim verification/RIS |
+| Support a concrete claim or paragraph | `zotero-evidence-review` | Search, inspect, verify, place citations, canonicalize metadata, and export | Every selected record has an inspected source status and a RIS action |
+| Decide what to fix across a manuscript | `zotero-manuscript-thinking` | Do not silently rewrite the whole paper; consume `style_profile`/`argument_profile` and issue a prioritized plan | Stop at `P0–P3` plan or hand off one concrete action |
+| Verify one source against one claim | `zotero-evidence-review` | Read the cited item/PDF and classify support | Return `fully supported`, `partially supported`, `contradicted`, or `not addressed` |
+
+The route is part of the output contract. Record `route`, `source_layer`, `inspection_status`, `claim_ids`, `output_files`, and `stop_reason` in the report or chat summary. If the request changes route (for example, from style learning to citation support), record the handoff instead of silently restarting discovery.
 
 ---
 
