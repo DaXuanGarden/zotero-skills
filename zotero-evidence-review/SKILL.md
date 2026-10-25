@@ -1,14 +1,14 @@
 ---
 name: zotero-evidence-review
-description: Search, analyze, verify, and export Zotero-grounded evidence packages with Markdown evidence reports and EndNote-compatible RIS references. Paste a paragraph and ask for its citations; the skill will split sentences, search Zotero first, expand to PubMed when available, verify support, and export a traceable RIS. Requires Zotero MCP to be configured.
+description: Search, analyze, verify, and export Zotero-grounded evidence packages with Markdown evidence reports, a sentence-level Citation Insertion Sheet, evidence-backed manuscript polishing, and EndNote-compatible RIS references. Paste a paragraph and ask for citations; the skill will split sentences, search Zotero first, expand to PubMed when available, verify support, polish wording without widening claims, and export a traceable RIS. Requires Zotero MCP to be configured.
 license: MIT
 compatibility: codex,opencode,zcode
 metadata:
   workflow: academic-research
   requires: zotero-mcp
   optional: pubmed-mcp
-  version: 3.6.0
-  references: references/method-parameter-search.md,references/recall-first-retrieval.md,references/endnote-section-collections.md,references/writing-options-card.md
+  version: 3.7.0
+  references: references/method-parameter-search.md,references/recall-first-retrieval.md,references/endnote-section-collections.md,references/writing-options-card.md,references/citation-insertion-sheet.md
 ---
 
 # Zotero Evidence Review Skill
@@ -17,7 +17,7 @@ metadata:
 
 Use Zotero MCP tools to search the user's Zotero library intelligently, and use PubMed MCP tools as a biomedical expansion and metadata-standardization layer whenever they are visible in the active Agent IDE session. This skill combines **semantic search** (concept matching via embeddings) with **keyword/structured search**, performs **paragraph evidence and citation analysis** from draft text, verifies **citations against full text**, and generates Markdown + EndNote-compatible RIS outputs for ordinary literature search, target literature search, paragraph citation matching, and paragraph polishing workflows unless the user explicitly chooses chat-only/no-export mode. When a rewrite request asks for alternatives, it uses the shared [WRITING_OPTIONS_CARD](references/writing-options-card.md) so every candidate has a rhetorical angle, evidence level, citation set, and explicit selection status.
 
-For paragraph citation-support requests, the default is one complete **Paragraph Citation Package Workflow** rather than two separate workflows: paragraph → claim extraction → existing numbered citation repair when supplied references are present → one Zotero local search pass → evidence matrix → citation placement → optional WRITING_OPTIONS_CARD → revised/diff paragraph → Zotero metadata + PDF links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown evidence report → EndNote RIS. Chat-only paragraph analysis is an explicit opt-out mode.
+For paragraph citation-support requests, the default is one complete **Paragraph Citation Package Workflow** rather than two separate workflows: paragraph → claim extraction → existing numbered citation repair when supplied references are present → one Zotero local search pass → evidence matrix → citation placement → **evidence-backed manuscript polishing** → **Citation Insertion Sheet** → optional WRITING_OPTIONS_CARD → revised/diff paragraph → Zotero metadata + PDF links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown evidence report → EndNote RIS. Chat-only paragraph analysis and explicit `preserve wording` requests are opt-out modes for the corresponding layers.
 
 ## 0.1 Route contract: one request, one evidence owner
 
@@ -34,6 +34,32 @@ The route is part of the output contract. Record `route`, `source_layer`, `inspe
 
 ---
 
+## 0.2 默认稿件交付契约：证据驱动润色 + 引文插入表
+
+对英文段落执行“找引文、补引用、使用技能、根据文献优化、润色、polish、improve wording、field-native、rewrite based on literature、insert citations”等请求时，完成证据核查后**默认同时执行证据驱动的英文润色**。这层润色不是另起一个无证据的语言任务，而是把证据等级、研究设计、术语边界和同领域写法一起反映到可投稿的英文中。只有用户明确说“保留原文措辞 / 只找引文 / 不润色 / citation-only”时才跳过润色层。
+
+默认交付顺序固定为：
+
+1. `Copy-ready Manuscript Text`：保留原文语言，完成语法、逻辑、领域惯用表达和证据强度校准，并在句内放入选定引文。
+2. `Citation Insertion Sheet`：逐句给出插入锚点、可复制的作者–年份引文、快速检索词、canonical record、PMID/DOI、证据角色和 RIS 动作。
+3. `Annotated Recommended Text`：说明每处改写、证据边界、引用作用和审稿风险。
+4. `Diff / Change Log`：列出原短语、改后短语、改动类型、原因和证据等级。
+5. `Claim–Evidence Matrix`、`SENTENCE_CITATION_MATRIX`、`Citation Support Ledger`、参考文献表和 RIS。
+
+### 引用样式与插入规则
+
+- 默认 `citation_style = author_year`，可接受 `numbered_vancouver`、`apa_like` 或用户提供的期刊样式；用户未指定时不要擅自改成编号制。
+- 作者–年份的可复制字符串与检索词分开保存，例如 `copy_ready_citation = (Mir et al., 2013)`，`search_tokens = Mir 2013`。
+- 插入锚点必须写到句子或从句之后（例如 `after “incident NAFLD”`），不能只写“本段末尾”。一个引文只覆盖它实际支持的 claim。
+- Citation Insertion Sheet 使用 canonical record 的 DOI/PMID/Zotero key 追踪同一条记录；RIS 是给 Word/EndNote/Zotero 的稳定导入交接，不默认直接修改用户的 Word 或 Zotero 库。
+- 末尾给出一行操作说明：Word + Zotero 用 `Author Year` 搜索后插入；EndNote 导入 RIS 后用 `Insert Citation` 搜索；手动稿件直接复制 `copy-ready citation`。编号制由 Word/EndNote 在最终文档中自动重排。
+
+### 证据驱动英文润色的边界
+
+- A/B 证据允许中等强度陈述；C 必须使用 plausibility、may、consistent with 等桥接措辞；D 明确写成当前研究结果；E 删除、验证或改为 knowledge gap。
+- 语言润色不得扩大原始 claim，不得把观察关联写成因果，不得把短睡眠、睡眠质量或复合生活方式指标改写成 insomnia，也不得把外部文献写成当前研究结果的证明。
+- 润色至少检查四层：grammar/clarity、field-native phrasing、argument flow、evidence calibration；每一层都要在 `Diff / Change Log` 中留下可读原因。
+
 ## 素材学习入口
 
 当用户要求“先收集素材、阅读 Zotero 全文、学习同领域论文写法，再开始改稿”时，优先交接给 `zotero-literature-learning`。它负责候选筛选、摘要/全文分层阅读、peer corpus 和 Evidence/Style/Argument Profile；本 Skill 继续负责逐条证据支持、引用核实和 RIS。不要让两个 Skill 为同一任务各自建立一套文献出口。
@@ -49,7 +75,7 @@ Route the user's request before choosing tools. Use the input shape and explicit
 | `target_literature_search` | Topic/question asks which papers use a data source, method, phenotype, cohort, disease area, or research direction; user wants literature discovery, screening, search report, MD, RIS, or EndNote export, and no manuscript paragraph is supplied | **Module 1.8: Target Literature Search and Export** |
 | `paragraph` | A pasted manuscript paragraph, draft section, or multi-sentence passage that asks for chat-only evidence analysis, with no citation/export/full-workflow trigger | **Module 2: Paragraph Evidence & Citation Analysis** |
 | `manuscript_strategy` | Requests for a whole-manuscript view, language/表达 quality, field-native wording, peer-paper or target-venue style calibration, Methods/Results/Introduction/Discussion logic, reproducibility, result narration, argument spine, contribution, novelty, reviewer-risk, revision priority, or "从整体上看看/跳出来看"; also a full manuscript or repeated local revisions that trigger the checkpoint conditions below | **Module 2.8: Manuscript-Level Thinking Checkpoint**, implemented by the companion `zotero-manuscript-thinking` Skill |
-| `package` | Requests using `/zotero-evidence-review`, saved files, EndNote/RIS export, evidence package, "使用技能", "完整工作流", "找证据", "找引文", "补引用", "推荐引用", "citation", "refs", "参考文献", "文献引用", "生成报告", "保存结果", "导出参考文献", or a paragraph/search request that asks for citation placement, reusable writing outputs, or file outputs | **Paragraph Citation Package Workflow (Module 2 + Module 2.5): analysis stage, then export stage with automatic PubMed expansion after Zotero local search when available** |
+| `package` | Requests using `/zotero-evidence-review`, saved files, EndNote/RIS export, evidence package, "使用技能", "完整工作流", "找证据", "找引文", "补引用", "推荐引用", "citation", "refs", "参考文献", "文献引用", "生成报告", "保存结果", "导出参考文献", or a paragraph/search request that asks for citation placement, reusable writing outputs, file outputs, or evidence-backed polishing (`润色`, `英文表达`, `地道`, `改进写作`, `改写`, `根据文献优化`, `基于调研润色`, `polish`, `improve wording`, `field-native`, `rewrite based on literature`, `make it more academic`, `insert citations`) | **Paragraph Citation Package Workflow (Module 2 + Module 2.5): analysis stage, evidence-backed polishing and Citation Insertion Sheet, then export stage with automatic PubMed expansion after Zotero local search when available** |
 | `reference_update` | A paragraph or manuscript passage with existing numbered citations/references, or requests such as "检查参考文献", "更新参考文献", "编号引用", "6不支持", "citation 6 does not support", "replace citation", "refresh RIS", "regenerate RIS" | **Module 2.2: Existing Numbered Citation Repair**, then **Module 2.5 Evidence Package Export** when files/RIS are requested or implied; treat this as a full reference-update workflow unless the user explicitly opts out |
 | `verify` | Words such as "verify", "核实", "check", "confirm" plus a specific citation/paper and a concrete claim, quote, statistic, or citation-supported statement | **Module 3: Citation Verification Protocol** |
 | `health` | "library status", "库状态", "health check", "健康检查", "preflight", "index status", or questions about Zotero database readiness | **Module 0.5: Library Health Check** |
@@ -96,7 +122,7 @@ Use these defaults for every non-health, non-verify workflow:
 3. **Ordinary search output**: Module 1 ordinary Zotero search default output is **Search Report + RIS**. Use a `LITERATURE_SEARCH_REPORT`-compatible search report without paragraph-only sections, and write Search RIS from inspected included records.
 4. **Target search output**: Module 1.8 target literature search default output is `LITERATURE_SEARCH_REPORT` + Search RIS, with Core / Strong Related / Method Background / Disease GWAS Only / Noise / Verify classification and exclusion reasons.
 5. **Method-parameter output**: Module 1.2 writes `LITERATURE_SEARCH_REPORT` + Search RIS by default and adds the `METHOD_PARAMETER_EVIDENCE` section. That section must contain inspected source passages, section/page locations, and Zotero item/PDF links. Do not add paragraph-writing sections unless the user also supplies a manuscript paragraph.
-6. **Paragraph output**: Module 2 + Module 2.5 paragraph citation matching, paragraph polishing, and citation insertion default output is `EVIDENCE_REVIEW_REPORT` + Citation RIS, including Copy-ready Manuscript Text, Annotated Recommended Text, Citation Support Ledger, and diff/wording changes.
+6. **Paragraph output**: Module 2 + Module 2.5 paragraph citation matching, paragraph polishing, and citation insertion default output is `EVIDENCE_REVIEW_REPORT` + Citation RIS, including Copy-ready Manuscript Text, the sentence-level Citation Insertion Sheet, Annotated Recommended Text, a Diff / Change Log, Citation Support Ledger, and evidence-backed wording changes.
 7. **PubMed truth boundary**: PubMed expansion can be recorded as `Completed` only after an actual PubMed search ran and selected PMID metadata was inspected. If PubMed tools are absent or fail, record the planned/attempted query and use `⚠️ Tool unavailable; search not executed` or `Failed; query reported`; never create PubMed-only RIS records from planned, failed, or uninspected PubMed results.
 8. **No route mixing**: search reports, target literature search reports, and method-parameter reports never include Copy-ready Manuscript Text, sentence-level citation placement, or paragraph diff unless the user supplies a manuscript paragraph. Paragraph evidence packages never use Search RIS as a substitute for claim-level Citation RIS.
 
@@ -813,6 +839,8 @@ When the request is a citation-support or export request, this module is the ana
 3. **Two-layer analysis from the same evidence pool**
    - **Layer A: Claim-evidence matrix** — map each claim to the best available citation(s), assign exactly one source layer and one A-E evidence level, record support strength, and mark gap status.
    - **Layer B: Sentence-level citation recommendations** — map each sentence to the citation(s) that should be inserted, carry forward the same source layer and A-E evidence level, and explain why.
+   - **Layer C: Evidence-backed manuscript polishing** — after Layer A/B, revise grammar, field-native phrasing, argument flow, and claim strength while preserving the original meaning and evidence boundary. This layer is mandatory for English paragraph citation packages unless the user explicitly opts out.
+   - **Citation Insertion Sheet** — for every eligible citation, record the exact insertion anchor, copy-ready citation string, search tokens, canonical record, PMID/DOI, evidence role, support verdict, and RIS action. The sheet is the operational handoff for Word, Zotero, EndNote, and manual insertion.
    - **SENTENCE_CITATION_MATRIX** — create one stable row for every input sentence, even when the sentence is a current-study result, common knowledge, an interpretive bridge, or an unsupported gap. Each row must be traceable through `sentence_id → claim_id → citation → RIS action`.
    - **CITATION_COVERAGE_SUMMARY** — report sentence counts, citation-required coverage, unsupported sentences, and any citation candidate that cannot be traced to a matrix row or Citation Support Ledger row.
    - Do not use a different strength label or source boundary in Layer B than the level assigned in Layer A. If sentence-level wording combines multiple claims, use the most conservative evidence level and explicitly separate current-study wording from external-evidence wording.
@@ -823,6 +851,8 @@ When the request is a citation-support or export request, this module is the ana
    - Provide a revised paragraph showing citation insertions and necessary wording changes.
    - Mark deletions with `~~strikethrough~~` and additions with `**bold**`.
    - Keep unchanged text unmarked so the user can see exactly what changed.
+   - Add a separate Citation Insertion Sheet with stable `sentence_id`, insertion anchor, copy-ready citation, search tokens, canonical record, PMID/DOI, evidence role, support verdict, and RIS action.
+   - Add a Diff / Change Log covering grammar/clarity, field-native phrasing, argument flow, evidence calibration, terminology alignment, and citation placement.
    - End with a change summary in this format: `改动：+N词/-M词，修改原因：[简短说明]`.
 5. **Gap summary + package/external handoff**
    - Summarize claims with no adequate Zotero evidence.
@@ -844,7 +874,7 @@ Use the unified evidence level above as the primary strength label for every cla
 - **Terminology alignment**: Zotero sources consistently use a different term or construct.
 - **Gap**: no adequate Zotero evidence found.
 
-The former writing-suggestion categories are not shown as a standalone section; fold them into the sentence-level "Citation rationale" column.
+The former writing-suggestion categories are not shown as a standalone section; fold citation rationale into the sentence-level table, while keeping the actual evidence-backed rewrite visible in Copy-ready Manuscript Text and the Diff / Change Log.
 
 ### Output Format
 
@@ -1034,7 +1064,7 @@ paragraph → claim extraction → existing numbered citation repair when suppli
 
 For completeness-oriented requests, replace “one Zotero local search pass” with the Module 1.9 recall-first sequence and include its `Recall Audit` before selection. “Found one supporting paper” is not a stopping condition.
 
-The default deliverable is exactly two files inside a skill-named, topic-specific output folder:
+The default deliverable is exactly two files inside a skill-named, topic-specific output folder. The Markdown report contains the Citation Insertion Sheet; it is not a third evidence file:
 
 ```text
 zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_evidence_review.md
@@ -1319,7 +1349,7 @@ Required output structure:
 
 ### Copy-ready vs Annotated Output
 
-Every evidence package must separate manuscript-ready prose from evidence-review annotations.
+Every evidence package must separate manuscript-ready prose from evidence-review annotations, and must expose the operational citation handoff separately from both.
 
 `Copy-ready Manuscript Text` is the text users can copy directly into a manuscript:
 
@@ -1330,6 +1360,13 @@ Every evidence package must separate manuscript-ready prose from evidence-review
 - If evidence is insufficient, use hedge wording, knowledge-gap wording, or remove the unsupported claim.
 - If a concept, citation, DOI/PMID, or claim is unverified, do not write it as established fact.
 - Use only citations that are recommended and not blocked by metadata/citation warnings.
+
+`Citation Insertion Sheet` is the operational citation handoff layer:
+
+- It is mandatory for paragraph citation packages unless no eligible citations are recommended.
+- It uses one row per citation placement, with `sentence_id`, `insertion_anchor`, `copy_ready_citation`, `search_tokens`, `canonical_record`, `PMID`, `DOI`, `evidence_role`, `support_verdict`, and `RIS_action`.
+- `copy_ready_citation` is the text to paste into an author–year manuscript; `search_tokens` are the short terms to type into Zotero/EndNote. Do not substitute a DOI or Zotero key for the visible citation string.
+- A global Author–Year Quick Lookup table must list each included/optional record once, so a user can find all occurrences of the same paper quickly.
 
 `Annotated Recommended Text` is the evidence-review explanation layer:
 
@@ -1347,7 +1384,10 @@ Required output structure:
 
 > {manuscript-ready text only; no workflow notes or internal caveats}
 
-## 3. 注释版推荐文本（Annotated Recommended Text）
+## 3. Citation Insertion Sheet
+{sentence-level citation handoff; use the CITATION_INSERTION_SHEET template}
+
+## 4. 注释版推荐文本（Annotated Recommended Text）
 | Sentence / clause | Recommended text | Source layer | Evidence level | Citation rationale | Caveat / reviewer risk |
 |-------------------|------------------|--------------|----------------|--------------------|------------------------|
 | ... | ... | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | A / B / C / D / E | ... | ... |
@@ -1362,19 +1402,21 @@ The report must use Chinese-first user-facing headings and analytical prose by d
 2. `Critical Warnings`
 3. `核心结论`
 4. `可直接使用的稿件文本（Copy-ready Manuscript Text）`
-5. `注释版推荐文本（Annotated Recommended Text）`
-6. `主张—证据矩阵`
-7. `引文放置建议`
-8. `Evidence Logic Chain`
-9. `参考文献表`
-10. `Search Reproducibility`
-11. `Zotero 检索总结`
-12. `PubMed 扩展检索`
-13. `综合写作建议`
-14. `Claims to Revise or Remove`
-15. `证据缺口与审稿风险`
-16. `元数据质量控制`
-17. `导出文件`
+5. `Citation Insertion Sheet`
+6. `注释版推荐文本（Annotated Recommended Text）`
+7. `Diff / Change Log`
+8. `主张—证据矩阵`
+9. `引文放置建议`
+10. `Evidence Logic Chain`
+11. `参考文献表`
+12. `Search Reproducibility`
+13. `Zotero 检索总结`
+14. `PubMed 扩展检索`
+15. `综合写作建议`
+16. `Claims to Revise or Remove`
+17. `证据缺口与审稿风险`
+18. `元数据质量控制`
+19. `导出文件`
 
 Add source and export-standardization detail to the `Reference Table` and `Metadata Quality Control` so the reader can tell whether evidence came from Zotero, PubMed, or both, and whether the RIS was standardized from PMID/PubMed, DOI metadata, or inspected source metadata.
 
@@ -1395,7 +1437,7 @@ Search reproducibility report rules:
 Reference canonicalization report rules:
 
 - `Reference Canonicalization Gate` must be completed before `Metadata Quality Control` and before RIS export decisions are finalized.
-- The gate may appear as an explicit subsection inside `元数据质量控制（Metadata Quality Control）` rather than as a separate top-level report section, so the public report preserves the required 17-section order.
+- The gate may appear as an explicit subsection inside `元数据质量控制（Metadata Quality Control）` rather than as a separate top-level report section, so the public report preserves the required 19-section order.
 - Every selected reference must check DOI, PMID, title, first author, and year.
 - DOI- or PMID-identical records must be merged into one canonical record, with duplicate Zotero keys recorded.
 - PubMed-vs-Zotero conflicts must be marked `Possible metadata mismatch` and unresolved mismatch must not enter RIS.
@@ -1407,7 +1449,7 @@ Citation support ledger rules:
 - The ledger must contain `Claim / sentence`, `Recommended citation`, `Source layer`, `Evidence level`, `Inspection route`, `Evidence location`, `Support verdict`, `RIS action`, and `Required wording/action` columns.
 - Allowed `Inspection route` values are `Zotero metadata`, `Zotero full text`, `Zotero abstract`, `PubMed details`, `PubMed abstract`, or `Not inspected`.
 - Allowed `Support verdict` values are `supports`, `partly supports`, `background only`, `contradicts`, `not addressed`, and `not inspected`.
-- All citations in Copy-ready Manuscript Text, Annotated Recommended Text, Citation Placement, Reference Table, Reference Canonicalization Gate, or RIS must have a matching ledger row.
+- All citations in Copy-ready Manuscript Text, Citation Insertion Sheet, Annotated Recommended Text, Citation Placement, Reference Table, Reference Canonicalization Gate, or RIS must have a matching ledger row.
 - `not inspected`, `contradicts`, and `not addressed` rows must not enter RIS by default and must use `RIS action = Exclude` or `Verify` unless the user explicitly overrides after seeing the warning.
 - `background only` rows may use `RIS action = Optional`, or `Include` only when the recommended wording makes the background role explicit.
 - Existing Numbered Citation Repair rows must propagate `Original citation number`, mapped claim, `Support verdict`, action, replacement candidate, and `RIS action` into Citation Support Ledger rows. Unsupported numbered citations must also appear in Critical Warnings or Claims to Revise or Remove.
@@ -1415,7 +1457,9 @@ Citation support ledger rules:
 Copy-ready and annotated text rules:
 
 - `Copy-ready Manuscript Text` must be directly copyable into the manuscript and must not contain internal review notes, workflow explanations, tool-status comments, or `citation should be verified` wording.
+- `Citation Insertion Sheet` must be present for eligible citations and must trace each row to `sentence_id → claim_id → ledger → RIS action`.
 - `Annotated Recommended Text` must explain citation placement, source layer, evidence level, caveats, and reviewer risk in a table.
+- `Diff / Change Log` must identify each substantive wording change and state whether it addresses grammar/clarity, field-native phrasing, argument flow, evidence calibration, terminology, or citation placement.
 - Unsupported or unverified concepts must not be stated as facts in copy-ready text.
 - Caveats, verification needs, PubMed failures, and metadata concerns belong in `Annotated Recommended Text`, `Gaps and Reviewer-risk Assessment`, or `Metadata Quality Control`, not inside copy-ready prose.
 
@@ -1557,9 +1601,9 @@ The skill must run this internal QA prompt immediately before writing Markdown/R
 ```text
 你是一名科研 evidence package QA 工程师。请在 zotero-evidence-review skill 写入 Markdown 和 RIS 前执行自检。
 检查：
-1. Report 是否包含 Status、Critical Warnings、Copy-ready Manuscript Text；
+1. Report 是否包含 Status、Critical Warnings、Copy-ready Manuscript Text、Citation Insertion Sheet 和 Diff / Change Log；
 2. Claim–Evidence Matrix 是否包含 Evidence level 和 Source layer；
-3. Citation Support Ledger 是否覆盖所有推荐引文/RIS候选，并记录 Inspection route、Evidence location、Support verdict、RIS action；
+3. Citation Support Ledger 是否覆盖所有推荐引文/RIS候选，并记录 Inspection route、Evidence location、Support verdict、RIS action；Citation Insertion Sheet 是否逐行追溯到同一 ledger 行；
 4. 是否把 current-study finding 错写成 external evidence；
 5. 是否存在 direct causality、BMI independence、horizontal pleiotropy 等过度表述；
 6. PubMed status 是否真实反映工具执行情况；
@@ -1577,8 +1621,10 @@ Pre-write QA gate checklist:
 - `Status`: Markdown report metadata and export section contain exactly one status from `Ready`, `Caution`, `Partial`, `Superseded`, or `Unknown`; final chat will repeat the same status.
 - `Critical Warnings`: the section exists immediately after metadata/use status; it either contains a table with `Affected claim`, `Risk`, `Required action`, or exactly `No critical warnings`; warnings are consistent with package status.
 - `Copy-ready Manuscript Text`: copy-ready text exists, preserves manuscript language, contains no internal QA/tool notes, and excludes unverifiable or unsupported assertions.
+- `Citation Insertion Sheet`: every eligible citation placement has a sentence anchor, copy-ready citation string, search tokens, canonical record, identifier fields, support verdict, and RIS action; repeated records have one global quick-lookup row.
+- `Evidence-backed polishing`: English prose has an explicit wording pass for grammar/clarity, field-native phrasing, argument flow, and evidence calibration; the Diff / Change Log records the reason for each material change.
 - `Claim evidence level`: every Claim–Evidence Matrix row has `Evidence level` using `A`, `B`, `C`, `D`, or `E`; Citation Placement and Reviewer-risk Assessment preserve the same level.
-- `Citation Support Ledger`: every citation in copy-ready/annotated text, Citation Placement, Reference Table, Reference Canonicalization Gate, and RIS has a ledger row with inspection route, evidence location, support verdict, RIS action, and required wording/action; `not inspected`, `contradicts`, and `not addressed` rows are excluded from RIS or marked `Verify`.
+- `Citation Support Ledger`: every citation in copy-ready text, Citation Insertion Sheet, annotated text, Citation Placement, Reference Table, Reference Canonicalization Gate, and RIS has a ledger row with inspection route, evidence location, support verdict, RIS action, and required wording/action; `not inspected`, `contradicts`, and `not addressed` rows are excluded from RIS or marked `Verify`.
 - `Source layer`: every claim-level row distinguishes `Current study`, `Zotero external evidence`, `PubMed external evidence`, `Interpretive bridge`, or `Unsupported gap`; current-study findings are not described as proved by external literature.
 - `Overclaim control`: direct causality, BMI independence, horizontal pleiotropy, mediation/mechanism, and genetic-prioritization claims are hedged unless directly supported; E-level claims are removed, marked for verification, or strongly hedged rather than written as established facts.
 - `PubMed status`: `Completed` is used only when PubMed search actually executed and relevant metadata was inspected; unavailable/failed/not-executed cases use the exact allowed status and include the planned or attempted query.
@@ -1963,6 +2009,15 @@ Use these named templates whenever a module references an appendix template. For
 | Q01 | zotero_semantic | ... | Completed / Failed / Not executed | ... | ... | ... | retain / revise / stop |
 ```
 
+### QUICK_CITATION_INSERTION_GUIDE
+
+```markdown
+## 快速插入引文
+1. Word + Zotero：按 Citation Insertion Sheet 的 `search_tokens` 搜索 canonical record，确认作者/年份后插入到 `insertion_anchor`；不要手改 Zotero field。
+2. EndNote：先导入 Citation RIS，再用 `Insert Citation` 搜索 `search_tokens`；最终编号和参考文献表由 EndNote/Word 生成。
+3. 手动稿件：复制 `copy_ready_citation`；同时保留 `canonical_record`、PMID/DOI 作为核对凭据。
+```
+
 ### ENDNOTE_IMPORT_HANDOFF
 
 ```markdown
@@ -2063,6 +2118,40 @@ Rules:
 - Mark current-study findings as `Current study` and evidence level `D` unless external literature directly replicates the same finding in a comparable study.
 - External evidence used only for mechanism/background must be represented as `Interpretive bridge` or evidence level C/D, not as proof of the current-study finding.
 - Evidence level C or D requires hedge wording in manuscript recommendations; evidence level E requires removal, verification, or strong hedging.
+
+### CITATION_INSERTION_SHEET
+
+```markdown
+## Citation Insertion Sheet
+- citation_style: author_year / numbered_vancouver / apa_like / user_supplied
+- default_action: paste `copy_ready_citation` into the manuscript, then use Zotero/EndNote to resolve the canonical record
+- numbering_note: final numbered citations are generated by Word/EndNote after import; this sheet preserves sentence anchors for auditability
+
+| sentence_id | insertion_anchor | copy_ready_citation | search_tokens | canonical_record | PMID | DOI | evidence_role | support_verdict | RIS_action |
+|-------------|------------------|---------------------|---------------|------------------|------|-----|---------------|-----------------|------------|
+| S01 | after “...” | (Author et al., 2024) | Author 2024 | Author 2024 (KEY) | PMID / — | DOI / — | direct / background / method / bridge | supports / partly supports / background only | Include / Optional / Verify / Exclude |
+
+### Author–Year Quick Lookup
+| first_author_year | copy_ready_citation | search_tokens | canonical_record | PMID | DOI | uses |
+|-------------------|----------------------|---------------|------------------|------|-----|------|
+| Author 2024 | (Author et al., 2024) | Author 2024 | Author 2024 (KEY) | PMID / — | DOI / — | S01, S04 |
+```
+
+Rules:
+- Create one row for every citation placement in Copy-ready Manuscript Text, even when the same paper appears in multiple sentences.
+- `insertion_anchor` must identify the clause or sentence ending where the citation belongs; `after paragraph` is not sufficient.
+- `copy_ready_citation` follows `citation_style`; for `author_year`, use the exact punctuation selected by the user or the neutral form `(Author et al., 2024)`.
+- `search_tokens` must be short, human-searchable terms such as `Mir 2013`, not a hidden Zotero key.
+- `canonical_record`, PMID, DOI, support verdict, and RIS action must match the Citation Support Ledger and Reference Canonicalization Gate.
+- Include only eligible `Include`/`Optional` citations in the copy-ready text. `Verify`/`Exclude` records stay in the annotated tables and must not appear as settled citations.
+- The global quick lookup table contains each canonical record once and lists all sentence IDs where it is used.
+
+### Diff / Change Log
+| sentence_id | original_phrase | revised_phrase | change_type | reason | evidence_level | citation_effect |
+|-------------|-----------------|----------------|-------------|--------|----------------|-----------------|
+| S01 | ... | ... | grammar/clarity / field-native phrasing / argument flow / evidence calibration / terminology / citation placement | ... | A / B / C / D / E | added / moved / removed / unchanged |
+
+改动摘要：+N词/-M词；主要原因：...
 
 ### WRITING_SUGGESTIONS_TABLE
 
@@ -2257,6 +2346,7 @@ Rules:
 | Package status | Ready / Caution / Partial / Superseded / Unknown |
 | Status rationale | {one sentence explaining the main trigger for this status} |
 | User guidance | {可直接用于写作 / 必须使用 hedge wording / 不建议作为最终证据包 / 仅保留历史记录 / 需要人工检查} |
+| Citation style | {author_year / numbered_vancouver / apa_like / user_supplied} |
 | Related prior packages | {none / path + date + topic slug + relationship: Potentially supersedes / Complementary to / Related; supersession unclear} |
 | Run relationship rationale | {topic slug similarity; core keyword overlap; selected references overlap; DOI/PMID overlap; manuscript section relationship} |
 | 来源 | Zotero 本地库；PubMed: {Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported / Not executed only for explicit chat-only or non-PubMed workflows} |
@@ -2277,17 +2367,27 @@ No critical warnings
 ## 4. 可直接使用的稿件文本（Copy-ready Manuscript Text）
 > {manuscript-ready text only; preserve the manuscript's original language unless translation is requested; hedge according to A-E evidence level; do not include workflow notes, internal caveats, or verification reminders}
 
-## 5. 注释版推荐文本（Annotated Recommended Text）
+## 5. Citation Insertion Sheet
+{sentence-level citation handoff; use the CITATION_INSERTION_SHEET template}
+
+## 6. 注释版推荐文本（Annotated Recommended Text）
 | Sentence / clause | Recommended text | Issue type / writing issue | Source layer | Evidence level | Citation rationale | Caveat / reviewer risk |
 |-------------------|------------------|----------------------------|--------------|----------------|--------------------|------------------------|
 | ... | ... | weak opening / overconfident framing / current-study vs external-evidence confusion / unsupported numbered citation / none | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | A / B / C / D / E | ... | ... |
 
-## 6. 主张—证据矩阵（Claim–Evidence Matrix）
+## 7. Diff / Change Log
+| sentence_id | original_phrase | revised_phrase | change_type | reason | evidence_level | citation_effect |
+|-------------|-----------------|----------------|-------------|--------|----------------|-----------------|
+| S01 | ... | ... | grammar/clarity / field-native phrasing / argument flow / evidence calibration / terminology / citation placement | ... | A / B / C / D / E | added / moved / removed / unchanged |
+
+改动摘要：+N词/-M词；主要原因：...
+
+## 8. 主张—证据矩阵（Claim–Evidence Matrix）
 | # | Claim | Source layer | Evidence level | Zotero evidence | PubMed evidence | Evidence status | Confidence | Risk | Recommended action | Recommended citation |
 |---|-------|--------------|----------------|-----------------|-----------------|-----------------|------------|------|--------------------|----------------------|
 | 1 | ... | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | A / B / C / D / E | Author Year / none | PubMed confirms / not searched / no direct evidence | supported / partly supported / current-study only / bridge only / gap / needs verification | High / Medium / Low | Low / Medium / High | keep / hedge / move to annotated text / remove / verify / mark as knowledge gap | Author Year / none |
 
-## 7. 引文放置建议（Citation Placement）
+## 9. 引文放置建议（Citation Placement）
 | 句子 / 位置 | Original citation number | 推荐引文 | 用途 | Source layer | Evidence level | 措辞建议 |
 |-------------|--------------------------|----------|------|--------------|----------------|----------|
 | ... | 6 / 18 / none | Author Year | background / direct / method / caveat / bridge | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | A / B / C / D / E | ... |
@@ -2338,17 +2438,17 @@ The matrix is the sentence-level source of truth for placement. The Citation Sup
 |--------------------------|--------------------|--------------------------------|-----------------|----------------------|----------------|--------------------------------------------------------------------|-----------------------|----------------------------------------|----------------------------------------|------------|--------|
 | 6 | Wang 2022 Nat Genet sedentary-behavior GWAS | sedentary behavior contributes directionally to PCOS susceptibility | partial / no | partially supported / not addressed for this claim | C / E | Replace / reframe as background | Shao 2026 / other direct PCOS-sedentary or MR reproductive-health genetics source | yes | yes | Exclude / Optional | Supports sedentary-behavior GWAS/background, not the specific PCOS directional claim unless text is reframed |
 
-## 8. Evidence Logic Chain
+## 10. Evidence Logic Chain
 | Step | Current-study element | External evidence link | Source layer | Evidence level | Inference limit |
 |------|-----------------------|------------------------|--------------|----------------|-----------------|
 | 1 | {e.g., SMR/TWAS/MAGMA/colocalization/enrichment/current finding} | {citation or none} | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | A / B / C / D / E | {what can and cannot be inferred} |
 
-## 9. 参考文献表（Reference Table）
+## 11. 参考文献表（Reference Table）
 | # | Citation | Year | Study type | Main use | Evidence source | Zotero | PDF | DOI | PMID | Collection |
 |---|----------|------|------------|----------|-----------------|--------|-----|-----|------|------------|
 | 1 | Author et al., *Journal* | 2024 | Systematic review | ... | Zotero / PubMed / Zotero + PubMed | [Item](zotero://select/items/0_KEY) | [PDF](zotero://open-pdf/library/items/ATTACHMENT_KEY) | [DOI](https://doi.org/10.xxxx/xxxx) | [PMID](https://pubmed.ncbi.nlm.nih.gov/PMID/) | Collection name |
 
-## 10. Search Reproducibility
+## 12. Search Reproducibility
 ### Recall Audit
 - recall_status: saturated / partial / blocked / scope_limited
 - scope: ...
@@ -2368,12 +2468,12 @@ The matrix is the sentence-level source of truth for placement. The Citation Sup
 | PubMed | {broad MeSH/title-abstract query} | pubmed_broad | {max_results} | Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported / Not executed | {included_count} | included PMIDs: {PMIDs or none}; raw hits: {}; new unique IDs: {}; new direct candidates: {}; failed reason: {if any} |
 | PubMed | {design/method query} | pubmed_design_or_method | {max_results} | Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported / Not executed | {included_count} | included PMIDs: {PMIDs or none}; raw hits: {}; new unique IDs: {}; new direct candidates: {}; failed reason: {if any} |
 
-## 11. Zotero 检索总结（Zotero Search Summary）
+## 13. Zotero 检索总结（Zotero Search Summary）
 | 检索路径 | Query | Hits | Included | 备注 |
 |----------|-------|-----:|---------:|------|
 | Semantic search | ... | 0 | 0 | ... |
 
-## 12. PubMed 扩展检索（PubMed Expansion）
+## 14. PubMed 扩展检索（PubMed Expansion）
 日期：{YYYY-MM-DD}
 数据库：PubMed
 状态：Completed / ⚠️ Tool unavailable; search not executed / Failed; query reported
@@ -2384,7 +2484,7 @@ The matrix is the sentence-level source of truth for placement. The Citation Sup
 |---|----------|------|-----|------------|--------------|----------------|
 | 1 | Author et al., Year | [PMID](https://pubmed.ncbi.nlm.nih.gov/PMID/) | [DOI](https://doi.org/10.xxxx/xxxx) | Yes / No / Possible mismatch | ... | Use / Consider importing / Exclude |
 
-## 13. 综合写作建议（Integrated Writing Advice）
+## 15. 综合写作建议（Integrated Writing Advice）
 ### 原始主张
 {original text}
 
@@ -2400,17 +2500,17 @@ The matrix is the sentence-level source of truth for placement. The Citation Sup
 ### 为什么这样表述更安全
 ...
 
-## 14. Claims to Revise or Remove
+## 16. Claims to Revise or Remove
 | Claim | Problem | Evidence level | Source layer | Required revision |
 |-------|---------|----------------|--------------|-------------------|
 | ... | unsupported / overconfident / weak opening / current-study miscast as external evidence / unsupported numbered citation / metadata unresolved | A / B / C / D / E | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | hedge / remove / verify / replace citation / reframe as background / move to gap statement |
 
-## 15. 证据缺口与审稿风险（Gaps and Reviewer-risk Assessment）
+## 17. 证据缺口与审稿风险（Gaps and Reviewer-risk Assessment）
 | Affected claim / sentence | Risk | Severity | Evidence basis | Suggested fix |
 |---------------------------|------|----------|----------------|---------------|
 | ... | ... | High / Moderate / Low | Source layer: Current study / Interpretive bridge / Unsupported gap; Evidence level A / B / C / D / E; ... | ... |
 
-## 16. 元数据质量控制（Metadata Quality Control）
+## 18. 元数据质量控制（Metadata Quality Control）
 
 ### Reference Canonicalization Gate
 | Selected reference | Original citation number | Canonical identifier | DOI | PMID | Title check | First author check | Year check | Canonical Zotero key | Duplicate keys | Duplicate check result | Metadata source of truth | RIS action | Reason |
@@ -2422,7 +2522,7 @@ The matrix is the sentence-level source of truth for placement. The Citation Sup
 |----------|--------------------------|------------------|-------------------|-------------------|-----------------|----------------------------|------------|
 | Author Year | 6 / none | DOI / PMID / pages / none | Possible metadata mismatch: Zotero DOI ... vs PubMed DOI ... / none | Possible duplicate with Author Year / none | Zotero / PubMed / Zotero + PubMed | PMID/PubMed / DOI / Zotero metadata / PubMed metadata | Include / exclude / needs manual check |
 
-## 17. 导出文件（Export File）
+## 19. 导出文件（Export File）
 - Markdown report: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_evidence_review.md`
 - EndNote RIS: `zotero-evidence-output/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}/{brief_topic_slug}_{YYYY-MM-DD_HHMMSS}_references.ris`
 - Evidence source: Zotero local library and PubMed expansion are separate evidence steps; combined results are deduplicated by DOI/PMID/title when available.
