@@ -74,6 +74,11 @@ PROMPTS = [
         f"""/zotero-evidence-review 只读路由验证，不要生成文件：如果用户请求“帮我给这段话补引用并润色：慢性炎症通过激活 JAK-STAT 信号通路促进动脉粥样硬化斑块形成，而 IL-6 受体阻断剂可显著降低心血管事件风险。”，请说明应走 Paragraph Citation Package Workflow，默认生成 EVIDENCE_REVIEW_REPORT + Citation RIS。\n{COMMON_GUARDRAIL}\n请只输出预期路由、claim extraction、Zotero-first search、PubMed expansion、Citation Support Ledger、Copy-ready Manuscript Text、diff paragraph、Citation RIS 纳入规则、以及预期相对路径格式 `zotero-evidence-output/{{brief_topic_slug}}_{{YYYY-MM-DD_HHMMSS}}/{{brief_topic_slug}}_{{YYYY-MM-DD_HHMMSS}}_evidence_review.md` 和 `_references.ris`；不要实际写入 Markdown/RIS。""",
     ),
     SmokePrompt(
+        "zotero-direct-paragraph-citation",
+        "Zotero direct paragraph citation request",
+        f"""/zotero-evidence-review 帮我找到这个段落每句话合适的引文，并生成可导入 EndNote 的 RIS：慢性炎症可能通过激活 JAK-STAT 信号通路促进动脉粥样硬化斑块形成。IL-6 受体阻断剂与较低的心血管事件风险相关。\n{COMMON_GUARDRAIL}\n请验证零配置入口：不要要求用户先拆句、提供 claim ID、选择模块或编写检索词；保留段落原文语义，自动建立 sentence_id 和 claim_id，按 Zotero semantic search、Zotero structured search、PubMed broad search、PubMed design/method search 分步检索；逐句输出 citation_need、证据等级、support verdict、evidence location、author check 和 RIS action。请说明每条推荐引文必须经过 metadata/abstract/full-text inspection，搜索摘要片段不能单独作为证据；输出 SENTENCE_CITATION_MATRIX、CITATION_COVERAGE_SUMMARY、Markdown evidence report 和 Citation RIS 的预期结构，不要实际检索或写文件。""",
+    ),
+    SmokePrompt(
         "pubmed-readiness",
         "PubMed MCP readiness/status check",
         f"""/pubmed-literature-search 做一次 PubMed MCP readiness check。\n{COMMON_GUARDRAIL}\n请只报告当前会话是否能看到 PubMed MCP tools，例如 search、details、extract、related、fulltext detection/download；不要执行下载；如果没有 status 工具，就用最小只读能力检查说明。""",

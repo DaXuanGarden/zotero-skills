@@ -309,6 +309,14 @@ RECALL_FIRST_REQUIREMENTS = [
     "endnote-workflow",
     "bib-formatter",
     "direct library write: not supported",
+    "Precision gate for “准确又好” citation matching",
+    "Preserve meaning before searching",
+    "Rank by claim fit",
+    "Inspect before recommending",
+    "Select narrowly",
+    "Calibrate the wording",
+    "Check sentence coverage",
+    "missing scope constraint would materially change the evidence set",
 ]
 ENDNOTE_COLLECTION_REQUIREMENTS = [
     "references/endnote-section-collections.md",
@@ -375,6 +383,12 @@ DEFAULT_EXPORT_REQUIREMENTS = [
     "不导出",
     "chat only",
     "Module 2 → Module 2.5",
+    "Zero-friction paragraph entry",
+    "帮我找这个段落的引文",
+    "给这段找参考文献",
+    "find citations for this paragraph",
+    "Do not ask the user to choose a module",
+    "Preserve the paragraph language",
 ]
 DUAL_MCP_AUTO_EXPORT_REQUIREMENTS = [
     "Dual-MCP Auto Search and Export Defaults",

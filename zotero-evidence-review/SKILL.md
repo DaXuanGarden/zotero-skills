@@ -1,13 +1,13 @@
 ---
 name: zotero-evidence-review
-description: Search, analyze, verify, and export Zotero-grounded evidence packages with Markdown evidence reports and EndNote-compatible RIS references. Requires Zotero MCP to be configured.
+description: Search, analyze, verify, and export Zotero-grounded evidence packages with Markdown evidence reports and EndNote-compatible RIS references. Paste a paragraph and ask for its citations; the skill will split sentences, search Zotero first, expand to PubMed when available, verify support, and export a traceable RIS. Requires Zotero MCP to be configured.
 license: MIT
 compatibility: codex,opencode,zcode
 metadata:
   workflow: academic-research
   requires: zotero-mcp
   optional: pubmed-mcp
-  version: 3.5.0
+  version: 3.6.0
   references: references/method-parameter-search.md,references/recall-first-retrieval.md,references/endnote-section-collections.md,references/writing-options-card.md
 ---
 
@@ -60,8 +60,11 @@ Route the user's request before choosing tools. Use the input shape and explicit
 
 **Manuscript-strategy precedence**: when a request contains both a broad package trigger such as `使用完整工作流` and a whole-manuscript goal such as `整体审视`, `语言表达`, `语言地道`, `同领域论文写法`, `target venue`, `Methods`, `Results`, `Introduction/Discussion`, `可复现`, `结果叙事`, `主线`, `贡献`, `审稿风险`, or `修订优先级`, route to `manuscript_strategy` / Module 2.8 first. Run citation package export only for the concrete evidence actions selected by the checkpoint.
 
+**Zero-friction paragraph entry**: when the user invokes `/zotero-evidence-review` and pastes a paragraph with wording such as `帮我找这个段落的引文`, `给这段找参考文献`, `帮我补引用`, `find citations for this paragraph`, or `find references for each sentence`, treat the request as unambiguous citation-support work. Do not ask the user to choose a module, repeat the workflow, or provide claim IDs. Preserve the paragraph language and run the default **Paragraph Citation Package Workflow** automatically. Unless the user explicitly opts out of files, produce the Markdown evidence report, sentence-level citation matrix, Citation Support Ledger, and EndNote-compatible RIS.
+
 1. **Slash command and simple-request entry**: `/zotero-evidence-review` is the recommended user-facing entry point. Treat it as a request to run this skill and auto-route from the user's short request; do not require the user to name modules or repeat the full workflow. When the short request asks for ordinary literature search, target literature search, evidence, citation support, paragraph polishing, reusable writing output, or an evidence package, default to the appropriate export workflow and write the Markdown report plus RIS unless the user explicitly opts out. When the request asks for a whole-manuscript diagnosis or revision strategy, route to Module 2.8 and the companion `zotero-manuscript-thinking` Skill before local rewriting.
 2. **Paragraph-first, package by default for citation work**: if the user provides a paragraph, run Module 2 first. If the same request includes `/zotero-evidence-review`, `使用技能`, `完整工作流`, "find evidence", "find/add/recommend citations", `找证据`, `找引文`, `补引用`, `推荐引用`, `citation`, `refs`, `参考文献`, `文献引用`, or any request for saved/reusable writing outputs, continue automatically to the Paragraph Citation Package Workflow / Module 2.5 and write the Markdown report plus RIS file. If the paragraph is identified as part of a larger manuscript and the request changes the argument, contribution, conclusion, or section role, run the compact Module 2.8 checkpoint before presenting the copy-ready text; do not run a full checkpoint for a standalone paragraph with no manuscript context.
+2. **Paragraph-first, package by default for citation work**: if the user provides a paragraph, run Module 2 first. If the same request includes `/zotero-evidence-review`, `使用技能`, `完整工作流`, "find evidence", "find/add/recommend citations", `找证据`, `找引文`, `找这个段落的引文`, `给这段找参考文献`, `补引用`, `推荐引用`, `citation`, `refs`, `参考文献`, `文献引用`, or any request for saved/reusable writing outputs, continue automatically to the Paragraph Citation Package Workflow / Module 2.5 and write the Markdown report plus RIS file. If the paragraph is identified as part of a larger manuscript and the request changes the argument, contribution, conclusion, or section role, run the compact Module 2.8 checkpoint before presenting the copy-ready text; do not run a full checkpoint for a standalone paragraph with no manuscript context.
 3. **Existing numbered citation repair first**: if the user provides manuscript text plus a numbered reference list, or explicitly says an existing citation number does not support the claim, route to **Module 2.2: Existing Numbered Citation Repair** before ordinary package export. Preserve the user's supplied citation numbers in the audit tables, but do not promise to preserve final manuscript numbering after RIS import; EndNote/Word will renumber according to the final included reference list and citation style.
 4. **Reference-update requests default to the complete workflow**: requests containing `检查参考文献`, `更新参考文献`, `编号引用`, `replace citation`, `refresh RIS`, or `regenerate RIS` are not chat-only spot checks by default. Run claim mapping, support verification, replacement search when needed, metadata canonicalization, and final Markdown + RIS export unless the user explicitly opts out.
 5. **Target literature search separation**: if the user asks "which papers use X", "find papers about X", "search Zotero for X", "export a literature list/report/RIS", or equivalent, and does not provide a manuscript paragraph to revise, route to `target_literature_search`, not the Paragraph Citation Package Workflow. This mode writes a Markdown search report and Search RIS by default, but it must not require Copy-ready Manuscript Text, sentence-level citation placement, or paragraph diff output.
@@ -697,6 +700,20 @@ Zotero semantic (`zotero_semantic`) → Zotero structured/keyword (`zotero_struc
 ```
 
 Do not stop after the first supporting paper. Record every lane's query, raw hit count, unique IDs, inspected records, newly discovered direct-support candidates and tool status. Run at least one semantic and one structured Zotero lane; when PubMed is available, run at least two independent PubMed query families. Stop only after two consecutive query rounds add no new direct-support candidate and no new concept block, or when the declared scope/time limit is reached. The saved report must include `Recall Audit`, `recall_status`, `coverage_gaps`, and a reason for stopping. If PubMed is unavailable or fails, the status is `partial`/`blocked`, never `saturated`.
+
+### Precision gate for “准确又好” citation matching
+
+High recall creates candidates; it does not decide what belongs in the manuscript. After retrieval, apply this precision gate separately to every sentence and claim:
+
+1. **Preserve meaning before searching**: keep the sentence's population/object, exposure or method, outcome/process, direction, study design, tissue/context, time frame, and uncertainty. Expand abbreviations and synonyms for retrieval, but never broaden the manuscript claim silently.
+2. **Use independent query families**: build one Zotero semantic query, one short Zotero structured query, one PubMed broad MeSH/title-abstract query, and one PubMed design/method or population query when PubMed is available. Do not make one over-constrained query the only route.
+3. **Rank by claim fit**: directness to the exact claim > population/context match > design/evidence match > inspected full text or abstract > metadata confidence > recency. Semantic similarity, journal prestige, citation count, and recency alone cannot justify inclusion.
+4. **Inspect before recommending**: a search hit or abstract snippet is a discovery lead. A recommended citation must have inspected Zotero metadata/abstract/full text or inspected PubMed details/abstract, an evidence location, a support verdict, and a sentence/claim mapping.
+5. **Select narrowly**: recommend the smallest set of high-value citations that directly supports the sentence. Use `Include` for direct support, `Optional` for explicit background/bridge context, and `Verify` or `Exclude` for partial, contradictory, unaddressed, or uninspected records. Never cite a review as if it directly tested an empirical claim when the primary study is available.
+6. **Calibrate the wording**: A/B evidence can support moderately confident association wording; C requires plausibility or context wording; D must remain current-study wording; E must be removed, verified, or strongly hedged. If no paper supports the sentence as written, report the gap and propose a narrower sentence instead of forcing a citation.
+7. **Check sentence coverage**: every sentence receives a `sentence_id`, `citation_need`, and author check in `SENTENCE_CITATION_MATRIX`; every included RIS record maps back to at least one sentence and claim. A package is not `Ready` if the citation-required coverage is incomplete.
+
+The default direct-paragraph request therefore needs only the paragraph. Section, target journal, date range, and preferred number of citations are optional refinements; do not block the first pass on their absence. If a missing scope constraint would materially change the evidence set, state the assumption in the report and ask one focused follow-up after returning the initial evidence map.
 
 The candidate pool and final support set are separate. Keep near misses and excluded records in the Markdown audit with reasons, but put only `Include`/`Optional` records that pass canonicalization and claim-level support into Citation RIS. Preserve `retrieved_by: Zotero | PubMed | Zotero + PubMed` after deduplication so the report shows where a citation came from.
 
@@ -1843,6 +1860,14 @@ Potential free MCP servers that may be useful when installed:
 ## Usage Examples
 
 Use short prompts. `/zotero-evidence-review` is the easiest way to call this skill; the workflow is chosen automatically from the request.
+
+### Zero-friction paragraph citation request
+
+You can invoke the skill and paste only the paragraph. No manual claim IDs, search terms, or module selection are required:
+
+> "/zotero-evidence-review 帮我找到这个段落每句话合适的引文，并生成可导入 EndNote 的 RIS：\n> {粘贴段落}"
+
+The skill will automatically split the paragraph into sentences, extract claims, search Zotero with semantic and structured lanes, run PubMed expansion when the MCP is visible, inspect selected metadata/abstract/full text, produce the `SENTENCE_CITATION_MATRIX` and `CITATION_COVERAGE_SUMMARY`, and write the Markdown report plus Citation RIS. If the user says only `帮我找这段的参考文献` without naming a file format, use the same package default; add `只在聊天输出` or `不要生成文件` to opt out of files.
 
 ### Search
 

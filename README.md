@@ -27,11 +27,21 @@
 
 段落证据工作现在还会产出一张逐句矩阵：每句话都有稳定的 `sentence_id`，并沿着 `sentence_id → claim_id → citation → RIS action` 回溯。这样可以区分“需要外部引用”“本研究结果”“常识”“解释性桥接”和“证据缺口”，也能发现一篇文献被误用来覆盖整段的情况。矩阵旁边的 `CITATION_COVERAGE_SUMMARY` 会给出覆盖率、未映射主张和孤立 RIS 候选；覆盖链不完整时，报告不会标记为 `Ready`。
 
+最简调用方式就是只给段落：
+
+```text
+/zotero-evidence-review 帮我找到这个段落每句话合适的引文，并生成可导入 EndNote 的 RIS：
+
+{粘贴段落}
+```
+
+不需要手动拆句、写检索词或提供 claim ID。Skill 会默认先查 Zotero，再在 PubMed MCP 可见时扩展检索；它会逐条检查证据位置和支持强度，最后输出逐句引用矩阵、Markdown 报告和 Citation RIS。只想看聊天结果时，加上 `只在聊天输出，不要生成文件`。
+
 当你希望同一句话有多个写法时，三个 Skill 共享 `WRITING_OPTIONS_CARD`：先做意义和证据门禁，再给出最多三个带有明确角度的候选，最后由作者选择。默认候选是 `Conservative`（保留原意）、`Field-native`（依据同领域语料校准）和 `Logic-forward`（重排论证顺序）。每个候选都显示 `claim_delta`、证据等级、引用集合、适用场景和风险；未选择前不会把第一版当作最终稿。
 
 | 场景 | 推荐入口 | 复制即用提示词 | 典型产物 |
 |---|---|---|---|
-| 写论文时给一段草稿找证据、补引用 | `/zotero-evidence-review` | `帮我给下面这段草稿找证据并补引用，使用完整工作流，生成 Markdown evidence report 和 EndNote RIS：...` | `zotero-evidence-output/.../*_evidence_review.md` + `*_references.ris` |
+| 写论文时给一段草稿找证据、补引用 | `/zotero-evidence-review` | `帮我找到这个段落每句话合适的引文：...`（只粘贴段落即可） | `zotero-evidence-output/.../*_evidence_review.md` + `*_references.ris` |
 | 从全文角度检查语言、Methods/Results、Introduction/Discussion 和主线 | `/zotero-manuscript-thinking` | `请检查语言精确度、Methods/Results/Introduction/Discussion 逻辑和全文主线，找出 P0/P1 问题，并给出下一轮修改顺序，不要直接重写全文。` | `MANUSCRIPT_STRATEGIC_REVIEW`（结构与语言诊断；不自动生成 RIS） |
 | 先从 Zotero 收集并学习同领域素材，再开始改稿 | `/zotero-literature-learning` | `先从 Zotero 找 3–5 篇同领域、同文章类型的论文，读取摘要/全文，学习 Introduction/Methods/Results 的写法，形成素材包，再交给下游 Skill。` | `MATERIALS_LEARNING_REPORT` + corpus/evidence/style/argument profiles + handoff |
 | 写作卡住时学习专业表达或方法术语 | `/zotero-literature-learning` | `这句话太啰嗦；请从 Zotero 找同领域、同章节的高匹配片段，比较表达后给出 2–3 个保守版本，并核对 annotation 是否准确。` | `WRITING_BLOCK_LEARNING` + writing block card + author checks |
@@ -110,7 +120,7 @@ python3 scripts/write_endnote_collection_package.py \
 | 项目 | 当前状态 |
 |---|---|
 | Skill | `zotero-evidence-review` / `zotero-literature-learning` / `zotero-manuscript-thinking` / `pubmed-literature-search` |
-| 当前版本 | Zotero evidence `3.5.0`；literature learning `0.4.0`；manuscript-thinking `0.6.0`；PubMed `1.0.0` |
+| 当前版本 | Zotero evidence `3.6.0`；literature learning `0.4.0`；manuscript-thinking `0.6.0`；PubMed `1.0.0` |
 | 兼容性 | Codex / OpenCode / ZCode |
 | 主要依赖 | Zotero 7+、zotero-mcp、Python 3.10+；PubMed 检索 skill 需要 PubMed MCP（推荐 PancrePal） |
 | 安装目标 | Codex 全局、ZCode 全局、OpenCode 全局、项目级 `.opencode/skills` |
