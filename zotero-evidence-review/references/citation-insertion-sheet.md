@@ -28,6 +28,15 @@ search_tokens: Mir 2013
 
 Create one row per placement. If one paper is used in three sentences, create three placement rows and one row in the global Author–Year Quick Lookup table. Only `Include` and explicitly acceptable `Optional` records may appear in copy-ready text; `Verify` and `Exclude` remain annotated.
 
+## Manual Citation Fast Path
+
+The evidence report is intentionally ordered for manual author–year insertion:
+
+1. Copy the `Copy-ready Manuscript Text`.
+2. Read the immediately following `Claim–Evidence Matrix` to confirm the sentence/clause, claim, support verdict, evidence level, and insertion anchor.
+3. Search Zotero or EndNote with `search_tokens`, then paste or insert `copy_ready_citation` at the listed anchor.
+4. Use this sheet as the final checklist; keep PMID/DOI/Zotero keys for verification and deduplication only.
+
 ## User handoff
 
 - Word + Zotero: search `search_tokens`, confirm the canonical author/year record, and insert at `insertion_anchor`.
