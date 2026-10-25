@@ -7,7 +7,7 @@ metadata:
   workflow: academic-research
   requires: zotero-mcp
   optional: pubmed-mcp
-  version: 3.4.0
+  version: 3.5.0
   references: references/method-parameter-search.md,references/recall-first-retrieval.md,references/endnote-section-collections.md,references/writing-options-card.md
 ---
 
@@ -797,7 +797,12 @@ When the request is a citation-support or export request, this module is the ana
 3. **Two-layer analysis from the same evidence pool**
    - **Layer A: Claim-evidence matrix** — map each claim to the best available citation(s), assign exactly one source layer and one A-E evidence level, record support strength, and mark gap status.
    - **Layer B: Sentence-level citation recommendations** — map each sentence to the citation(s) that should be inserted, carry forward the same source layer and A-E evidence level, and explain why.
+   - **SENTENCE_CITATION_MATRIX** — create one stable row for every input sentence, even when the sentence is a current-study result, common knowledge, an interpretive bridge, or an unsupported gap. Each row must be traceable through `sentence_id → claim_id → citation → RIS action`.
+   - **CITATION_COVERAGE_SUMMARY** — report sentence counts, citation-required coverage, unsupported sentences, and any citation candidate that cannot be traced to a matrix row or Citation Support Ledger row.
    - Do not use a different strength label or source boundary in Layer B than the level assigned in Layer A. If sentence-level wording combines multiple claims, use the most conservative evidence level and explicitly separate current-study wording from external-evidence wording.
+   - Use the exact `citation_need` values `citation_required`, `citation_optional`, `current_study`, `common_knowledge`, `interpretive_bridge`, or `unsupported`. A sentence may be marked `current_study` without an external citation, but it must still receive a matrix row and an author check.
+   - A citation is sentence-level coverage only when the cited record is linked to the sentence's `claim_ids`, has an inspected evidence route, and has a non-blocked `RIS action`. Do not count a search hit, an uninspected record, or a citation attached elsewhere in the paragraph as coverage.
+   - Never use one citation to imply support for every sentence in a paragraph. If a citation supports only one clause, split the sentence or map the citation only to that sentence/claim.
 4. **Diff paragraph**
    - Provide a revised paragraph showing citation insertions and necessary wording changes.
    - Mark deletions with `~~strikethrough~~` and additions with `**bold**`.
@@ -917,6 +922,19 @@ Use this output shape:
 - Separate current-study findings from external evidence in manuscript wording: write current results as `In our analysis...` or `The present study identified...`, then use external citations only as `Previous studies show...` or `These findings are consistent with...` bridge support.
 - Use the same Zotero result pool for both Layer A and Layer B; only search again if the user explicitly requests deeper follow-up.
 - Do not fabricate missing support. Mark gaps clearly. In chat-only mode, hand off to external search only after asking; in the full Paragraph Citation Package Workflow, continue to Module 2.5 and report PubMed expansion status honestly.
+
+### Sentence coverage contract
+
+In addition to the claim matrix and citation ledger, create a visible `SENTENCE_CITATION_MATRIX` for every paragraph package. This is the sentence-level source of truth for deciding whether each sentence needs a citation and whether the proposed citation is eligible for RIS export.
+
+- Use the exact `citation_need` values `citation_required`, `citation_optional`, `current_study`, `common_knowledge`, `interpretive_bridge`, or `unsupported`.
+- Create exactly one stable row per input sentence (`S01`, `S02`, …), preserve sentence order, and link each row to one or more `claim_ids`.
+- A `citation_required` sentence must have an eligible inspected citation or an explicit unsupported/verify decision. Search hits, uninspected records, and citations attached to another sentence do not count as coverage.
+- Carry `source_layer`, `evidence_level`, `support_verdict`, and `RIS action` from the mapped claim and Citation Support Ledger; do not invent a stronger sentence-level label.
+- `current_study`, `common_knowledge`, and `citation_optional` may use `—` for recommended citations, but still require an author check. Current-study sentences must remain framed as results of the present study.
+- Never use one paper to imply support for every sentence in a paragraph. If a paper supports only one clause, split the sentence or map the record only to the supported sentence/claim.
+- Add `CITATION_COVERAGE_SUMMARY` with total sentences, citation-required sentences, covered sentences, unsupported/verify sentences, unmapped claims, orphan RIS candidates, and an overall status of `complete`, `partial`, `blocked`, or `not_applicable`.
+- Do not mark the package `Ready` when a citation-required sentence is unmapped, when an eligible citation has no sentence/claim trace, or when required metadata remains uninspected.
 
 ## 2.2 Existing Numbered Citation Repair
 
@@ -2250,6 +2268,32 @@ No critical warnings
 |-------------|--------------------------|----------|------|--------------|----------------|----------|
 | ... | 6 / 18 / none | Author Year | background / direct / method / caveat / bridge | Current study / Zotero external evidence / PubMed external evidence / Interpretive bridge / Unsupported gap | A / B / C / D / E | ... |
 
+### SENTENCE_CITATION_MATRIX
+| sentence_id | Original sentence | claim_ids | citation_need | source_layer | evidence_level | Recommended citations | Support verdict | Evidence location | Wording action | RIS action | Author check |
+|-------------|-------------------|-----------|---------------|--------------|----------------|-----------------------|-----------------|-------------------|----------------|------------|--------------|
+| S01 | ... | C01 | citation_required / citation_optional / current_study / common_knowledge / interpretive_bridge / unsupported | Zotero external evidence / PubMed external evidence / Current study / Interpretive bridge / Unsupported gap | A / B / C / D / E | Author Year (KEY) / — | supports / partly supports / background only / contradicts / not addressed / not inspected | Zotero full text p. X / PubMed abstract / none | keep / hedge / reframe / split sentence / remove / verify | Include / Optional / Exclude / Verify | confirm placement / confirm current-study framing / confirm gap |
+
+### CITATION_COVERAGE_SUMMARY
+| Metric | Count / status | Rule |
+|--------|----------------|------|
+| Input sentences | N | Every sentence has one `sentence_id` |
+| Sentences with `citation_required` | N | Each has an eligible citation or an explicit gap decision |
+| Citation-required sentences covered | N / N (%) | Sentence → claim → inspected source → eligible RIS action is complete |
+| Current-study sentences | N | Written as current-study findings; external citations cannot prove them |
+| Optional/common-knowledge/bridge sentences | N | Citation decision is explicit even when no RIS record is needed |
+| Unsupported or verify sentences | N | Must be hedged, split, removed, or sent to external search |
+| Unmapped claims | N | Must be zero before package status can be `Ready` |
+| RIS candidates without a sentence/claim mapping | N | Must be zero; otherwise set `Partial` and exclude the orphan record |
+| Coverage status | complete / partial / blocked / not_applicable | `Ready` requires `complete` when citation work is requested |
+
+Rules:
+- Create exactly one row per input sentence and preserve input order. `sentence_id` values must be stable within the package (`S01`, `S02`, …).
+- `claim_ids` must point to the Claim–Evidence Matrix. A sentence with two independent claims must list both claims; no claim may disappear from the sentence matrix.
+- `citation_required` requires an eligible citation or an explicit unsupported/verify gap decision. `current_study`, `common_knowledge`, and `citation_optional` may legitimately use `—`.
+- `source_layer` and `evidence_level` must match the mapped claim rows. For mixed sentences, use the most conservative level and state the boundary in `Wording action`.
+- `Support verdict`, `RIS action`, and inspection route must agree with the Citation Support Ledger. `not inspected`, `contradicts`, and `not addressed` cannot use `RIS action = Include`.
+- `Evidence location` must identify a page, section, abstract element, annotation, or `none`; a search-result snippet alone is insufficient.
+
 ### Citation Support Ledger
 | Claim / sentence | Recommended citation | Source layer | Evidence level | Inspection route | Evidence location | Support verdict | RIS action | Required wording/action |
 |------------------|----------------------|--------------|----------------|------------------|-------------------|-----------------|------------|-------------------------|
@@ -2262,6 +2306,8 @@ Ledger rules:
 - `not inspected`, `contradicts`, and `not addressed` must not enter RIS by default; use `RIS action = Exclude` or `Verify`.
 - `background only` may be `Optional` or included only when the manuscript wording explicitly frames the source as background/context rather than direct support.
 - If Existing Numbered Citation Repair is present, propagate `Original citation number`, `Support verdict`, action, replacement candidate, and `RIS action` into the relevant ledger rows.
+
+The matrix is the sentence-level source of truth for placement. The Citation Support Ledger remains the record-level source of truth for metadata, support verdict, and RIS eligibility.
 
 ### Existing Numbered Citation Repair
 | Original citation number | Supplied reference | Claim supported by this number | Support verdict | Verification verdict | Evidence level | Action: Keep / Replace / Remove / Verify / Add supporting citation | Replacement candidate | Original citation number preserved for audit | Final numbering handled by EndNote/Word | RIS action | Reason |

@@ -268,6 +268,15 @@ EVIDENCE_PACKAGE_REQUIREMENTS = [
     "Missing metadata",
     "duplicate warning",
     "metadata quality-control section",
+    "SENTENCE_CITATION_MATRIX",
+    "CITATION_COVERAGE_SUMMARY",
+    "sentence_id → claim_id → citation → RIS action",
+    "citation_required",
+    "citation_optional",
+    "current_study",
+    "common_knowledge",
+    "interpretive_bridge",
+    "RIS candidates without a sentence/claim mapping",
 ]
 
 ROUTE_CONTRACT_REQUIREMENTS = [
@@ -525,6 +534,33 @@ CITATION_SUPPORT_LEDGER_HEADER = (
     "| Claim / sentence | Recommended citation | Source layer | Evidence level | "
     "Inspection route | Evidence location | Support verdict | RIS action | Required wording/action |"
 )
+SENTENCE_CITATION_MATRIX_REQUIREMENTS = [
+    "### SENTENCE_CITATION_MATRIX",
+    "sentence_id",
+    "Original sentence",
+    "claim_ids",
+    "citation_need",
+    "Recommended citations",
+    "Support verdict",
+    "Evidence location",
+    "Wording action",
+    "Author check",
+    "Create exactly one row per input sentence",
+    "search-result snippet alone is insufficient",
+]
+CITATION_COVERAGE_SUMMARY_REQUIREMENTS = [
+    "### CITATION_COVERAGE_SUMMARY",
+    "Input sentences",
+    "Sentences with `citation_required`",
+    "Citation-required sentences covered",
+    "Unmapped claims",
+    "RIS candidates without a sentence/claim mapping",
+    "Coverage status",
+    "complete",
+    "partial",
+    "blocked",
+    "not_applicable",
+]
 QA_SELF_CHECK_REQUIREMENTS = [
     "Evidence Package QA Self-Check Prompt",
     "Run pre-write QA self-check, then write the two files",
@@ -720,6 +756,10 @@ def main() -> None:
 
     require_all(text, EVIDENCE_PACKAGE_REQUIREMENTS, "evidence package requirement")
     ok("evidence package export requirements present")
+
+    require_all(text, SENTENCE_CITATION_MATRIX_REQUIREMENTS, "sentence-level citation matrix requirement")
+    require_all(text, CITATION_COVERAGE_SUMMARY_REQUIREMENTS, "citation coverage summary requirement")
+    ok("sentence-level citation matrix and coverage summary requirements present")
 
     require_all(text, ROUTE_CONTRACT_REQUIREMENTS, "route contract requirement")
     ok("single-owner route contract and handoff fields present")

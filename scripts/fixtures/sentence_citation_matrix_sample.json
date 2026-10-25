@@ -1,0 +1,72 @@
+{
+  "paragraph_id": "discussion-01",
+  "sentences": [
+    {
+      "sentence_id": "S01",
+      "original_sentence": "Prior studies have linked sedentary behavior with metabolic risk.",
+      "claim_ids": ["C01"],
+      "citation_need": "citation_required",
+      "source_layer": "Zotero external evidence",
+      "evidence_level": "A",
+      "recommended_citations": ["Smith 2024 (ZOT1)"],
+      "support_verdict": "supports",
+      "evidence_location": "Zotero full text, Results, p. 4",
+      "wording_action": "keep",
+      "ris_action": "Include",
+      "author_check": "confirm citation placement"
+    },
+    {
+      "sentence_id": "S02",
+      "original_sentence": "In our analysis, the genetic association was stronger among women.",
+      "claim_ids": ["C02"],
+      "citation_need": "current_study",
+      "source_layer": "Current study",
+      "evidence_level": "D",
+      "recommended_citations": [],
+      "support_verdict": "not addressed",
+      "evidence_location": "none",
+      "wording_action": "retain current-study framing",
+      "ris_action": "Exclude",
+      "author_check": "confirm this is a result of the present study"
+    },
+    {
+      "sentence_id": "S03",
+      "original_sentence": "This pattern is biologically plausible given the reported inflammatory pathway.",
+      "claim_ids": ["C03"],
+      "citation_need": "interpretive_bridge",
+      "source_layer": "Interpretive bridge",
+      "evidence_level": "C",
+      "recommended_citations": ["Chen 2023 (PMID: 12345678)"],
+      "support_verdict": "background only",
+      "evidence_location": "PubMed abstract, Background",
+      "wording_action": "keep cautious bridge wording",
+      "ris_action": "Optional",
+      "author_check": "confirm the citation is used as plausibility context"
+    },
+    {
+      "sentence_id": "S04",
+      "original_sentence": "The association proves a BMI-independent causal effect.",
+      "claim_ids": ["C04"],
+      "citation_need": "unsupported",
+      "source_layer": "Unsupported gap",
+      "evidence_level": "E",
+      "recommended_citations": [],
+      "support_verdict": "not inspected",
+      "evidence_location": "none",
+      "wording_action": "remove or verify; avoid causal wording",
+      "ris_action": "Verify",
+      "author_check": "author must resolve the causal and BMI-independent claim"
+    }
+  ],
+  "coverage": {
+    "input_sentences": 4,
+    "citation_required": 1,
+    "citation_required_covered": 1,
+    "current_study": 1,
+    "optional_or_common_or_bridge": 2,
+    "unsupported_or_verify": 1,
+    "unmapped_claims": [],
+    "orphan_ris_candidates": [],
+    "status": "partial"
+  }
+}

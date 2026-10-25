@@ -25,6 +25,8 @@
 
 `zotero-literature-learning` 负责前半段，`zotero-manuscript-thinking` 负责整体诊断与修订顺序，`zotero-evidence-review` 负责具体 claim 的支持、核实和 RIS。三者共享 handoff，不各自重复建立文献出口。
 
+段落证据工作现在还会产出一张逐句矩阵：每句话都有稳定的 `sentence_id`，并沿着 `sentence_id → claim_id → citation → RIS action` 回溯。这样可以区分“需要外部引用”“本研究结果”“常识”“解释性桥接”和“证据缺口”，也能发现一篇文献被误用来覆盖整段的情况。矩阵旁边的 `CITATION_COVERAGE_SUMMARY` 会给出覆盖率、未映射主张和孤立 RIS 候选；覆盖链不完整时，报告不会标记为 `Ready`。
+
 当你希望同一句话有多个写法时，三个 Skill 共享 `WRITING_OPTIONS_CARD`：先做意义和证据门禁，再给出最多三个带有明确角度的候选，最后由作者选择。默认候选是 `Conservative`（保留原意）、`Field-native`（依据同领域语料校准）和 `Logic-forward`（重排论证顺序）。每个候选都显示 `claim_delta`、证据等级、引用集合、适用场景和风险；未选择前不会把第一版当作最终稿。
 
 | 场景 | 推荐入口 | 复制即用提示词 | 典型产物 |
@@ -108,7 +110,7 @@ python3 scripts/write_endnote_collection_package.py \
 | 项目 | 当前状态 |
 |---|---|
 | Skill | `zotero-evidence-review` / `zotero-literature-learning` / `zotero-manuscript-thinking` / `pubmed-literature-search` |
-| 当前版本 | Zotero evidence `3.4.0`；literature learning `0.4.0`；manuscript-thinking `0.6.0`；PubMed `1.0.0` |
+| 当前版本 | Zotero evidence `3.5.0`；literature learning `0.4.0`；manuscript-thinking `0.6.0`；PubMed `1.0.0` |
 | 兼容性 | Codex / OpenCode / ZCode |
 | 主要依赖 | Zotero 7+、zotero-mcp、Python 3.10+；PubMed 检索 skill 需要 PubMed MCP（推荐 PancrePal） |
 | 安装目标 | Codex 全局、ZCode 全局、OpenCode 全局、项目级 `.opencode/skills` |
