@@ -7,17 +7,17 @@ metadata:
   workflow: academic-research
   requires: zotero-mcp
   optional: pubmed-mcp
-  version: 3.3.0
-  references: references/method-parameter-search.md,references/recall-first-retrieval.md,references/endnote-section-collections.md
+  version: 3.4.0
+  references: references/method-parameter-search.md,references/recall-first-retrieval.md,references/endnote-section-collections.md,references/writing-options-card.md
 ---
 
 # Zotero Evidence Review Skill
 
 ## Overview
 
-Use Zotero MCP tools to search the user's Zotero library intelligently, and use PubMed MCP tools as a biomedical expansion and metadata-standardization layer whenever they are visible in the active Agent IDE session. This skill combines **semantic search** (concept matching via embeddings) with **keyword/structured search**, performs **paragraph evidence and citation analysis** from draft text, verifies **citations against full text**, and generates Markdown + EndNote-compatible RIS outputs for ordinary literature search, target literature search, paragraph citation matching, and paragraph polishing workflows unless the user explicitly chooses chat-only/no-export mode.
+Use Zotero MCP tools to search the user's Zotero library intelligently, and use PubMed MCP tools as a biomedical expansion and metadata-standardization layer whenever they are visible in the active Agent IDE session. This skill combines **semantic search** (concept matching via embeddings) with **keyword/structured search**, performs **paragraph evidence and citation analysis** from draft text, verifies **citations against full text**, and generates Markdown + EndNote-compatible RIS outputs for ordinary literature search, target literature search, paragraph citation matching, and paragraph polishing workflows unless the user explicitly chooses chat-only/no-export mode. When a rewrite request asks for alternatives, it uses the shared [WRITING_OPTIONS_CARD](references/writing-options-card.md) so every candidate has a rhetorical angle, evidence level, citation set, and explicit selection status.
 
-For paragraph citation-support requests, the default is one complete **Paragraph Citation Package Workflow** rather than two separate workflows: paragraph → claim extraction → existing numbered citation repair when supplied references are present → one Zotero local search pass → evidence matrix → citation placement → revised/diff paragraph → Zotero metadata + PDF links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown evidence report → EndNote RIS. Chat-only paragraph analysis is an explicit opt-out mode.
+For paragraph citation-support requests, the default is one complete **Paragraph Citation Package Workflow** rather than two separate workflows: paragraph → claim extraction → existing numbered citation repair when supplied references are present → one Zotero local search pass → evidence matrix → citation placement → optional WRITING_OPTIONS_CARD → revised/diff paragraph → Zotero metadata + PDF links → automatic PubMed expansion as a second evidence source when available → combined evidence synthesis and deduplication → reference export standardization by PMID/DOI → metadata QC → Markdown evidence report → EndNote RIS. Chat-only paragraph analysis is an explicit opt-out mode.
 
 ## 0.1 Route contract: one request, one evidence owner
 
@@ -1011,6 +1011,12 @@ Do not create extra JSON, BibTeX, EndNote XML, DOI lists, or log files unless th
 
 The RIS file is the single citation handoff between this Skill and EndNote. Before presenting it, run `scripts/ris_lint.py` with `--fail-on-warnings` when the file is available and include an `ENDNOTE_IMPORT_HANDOFF` block with record count, canonical metadata source, deduplication rule, linter status and import instructions. This Skill never edits an EndNote `.enl`, `.Data` or `sdb.eni` file. The user confirms the destination library and performs the import in EndNote.
 
+### 2.5A Multi-option writing card
+
+When the request asks for multiple rewrites, different rhetorical angles, or a more field-native alternative, read [WRITING_OPTIONS_CARD](references/writing-options-card.md) and add a `WRITING_OPTIONS_CARD` to the Markdown report. Generate at most three candidates after the meaning gate and claim/evidence mapping. Each candidate must include `option_id`, `option_name`, `rhetorical_angle`, `target_section`, `rhetorical_job`, `copy_ready_text`, `claim_delta`, `evidence_level`, `citation_set`, `style_basis`, `why_this_works`, `when_to_choose`, `risks`, and `author_check`. Keep `selection_status: pending` until the author chooses; do not silently promote the first candidate to final text.
+
+All candidates share facts, numbers, units, directions, study design, and evidence boundaries unless `claim_delta` says otherwise. Bind each candidate's citations to the Citation Support Ledger. After selection, set `selected_option_id`, mark selected supported citations `RIS action = Include`, mark citations used only by unselected candidates `RIS action = Optional`, and run `POST_WRITE_AUDIT`. Uninspected, contradictory, or not-addressed sources remain `Verify` or `Exclude`.
+
 PubMed-only records do not have a Zotero item key. Report their DOI/PMID and a `zotero_import_status: pending` value rather than fabricating a `zotero://select/items/...` link. If the user explicitly asks to sync selected records into Zotero, use `zotero_add_by_doi` (preferred) or the documented DOI/URL import path, then refresh the search database and re-fetch metadata before returning the new Zotero key. Do not add, tag, move, or delete Zotero items by default.
 
 The installed `format-references-endnote` Skill is an optional downstream document converter for explicit `[PMID: ...]` markers; it is not the discovery layer and must not replace a mixed Zotero + PubMed RIS with a PubMed-only re-fetch. The installed `endnote-workflow` Skill is a separate Windows/EndNote 20 DOCX workflow and is read-only with respect to the library. `bib-formatter` can validate or reformat RIS but does not import records.
@@ -1302,6 +1308,9 @@ Required output structure:
 
 ```markdown
 ## 2. 可直接使用的稿件文本（Copy-ready Manuscript Text）
+### WRITING_OPTIONS_CARD（仅在用户要求多个版本时）
+{候选版本、比较表、selection_status 和 selected_option_id；候选正文不得混入内部审计说明}
+
 > {manuscript-ready text only; no workflow notes or internal caveats}
 
 ## 3. 注释版推荐文本（Annotated Recommended Text）
@@ -1951,6 +1960,32 @@ Use these named templates whenever a module references an appendix template. For
 | Candidate | DOI / PMID | Zotero item key | zotero_import_status | Action |
 |---|---|---|---|---|
 | Author Year | DOI / PMID | pending | pending / imported / failed | import by DOI only after explicit request |
+```
+
+### WRITING_OPTIONS_CARD
+
+```markdown
+## WRITING_OPTIONS_CARD
+- task_id: ...
+- input_scope: ...
+- target_section: ...
+- corpus_status: inspected / partial / unavailable
+- calibration_confidence: high / medium / low / none
+- selection_status: pending / selected / author-rejected
+- selected_option_id: A / B / C / none
+
+| Option | Rhetorical angle | What changes | Claim delta | Evidence level | Citation set | When to choose | Main risk |
+|---|---|---|---|---|---|---|---|
+| A | ... | ... | none | ... | ... | ... | ... |
+| B | ... | ... | none | ... | ... | ... | ... |
+| C | ... | ... | none | ... | ... | ... | ... |
+
+### Option A — ...
+- rhetorical_job: ...
+- copy_ready_text: ...
+- style_basis: ...
+- why_this_works: ...
+- author_check: ...
 ```
 
 ### REFS_BLOCK

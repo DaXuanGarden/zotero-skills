@@ -47,6 +47,7 @@ REQUIRED_TEMPLATES = (
     "ZOTERO_IMPORT_HANDOFF",
     "ENDNOTE_IMPORT_HANDOFF",
     "ENDNOTE_COLLECTION_MANIFEST",
+    "WRITING_OPTIONS_CARD",
 )
 REQUIRED_HEADINGS = [
     "## 0. Intent Detection",
@@ -252,6 +253,11 @@ EVIDENCE_PACKAGE_REQUIREMENTS = [
     "reference export standardization by PMID/DOI",
     "Zotero local library and PubMed expansion are separate evidence steps",
     "Generated Evidence Package:",
+    "WRITING_OPTIONS_CARD",
+    "option_id",
+    "rhetorical_angle",
+    "selection_status: pending",
+    "RIS action = Optional",
     "zotero://select/items/0_",
     "zotero://open-pdf/library/items/",
     "https://doi.org/",

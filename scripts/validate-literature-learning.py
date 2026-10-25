@@ -15,7 +15,7 @@ SCHEMA = ROOT / "zotero-literature-learning" / "references" / "materials-package
 REQUIRED_PHRASES = (
     "name: zotero-literature-learning",
     "requires: zotero-mcp",
-    "version: 0.3.0",
+    "version: 0.4.0",
     "Stage 0 — 定义学习任务",
     "Stage 1 — Zotero 候选检索",
     "Stage 2 — 元数据与可访问性筛选",
@@ -55,6 +55,12 @@ REQUIRED_PHRASES = (
     "learning_decision",
     "learning_decisions.md",
     "POST_WRITE_MATERIALS_AUDIT",
+    "WRITING_OPTIONS_CARD",
+    "option_id",
+    "rhetorical_angle",
+    "claim_delta",
+    "selection_status: pending",
+    "候选比较表",
     "不复制同行原句",
     "不生成 RIS",
     "corpus_status: unavailable",
@@ -90,6 +96,13 @@ def main() -> None:
     for phrase in ("annotation", "functionally annotated", "pathway-enrichment", "prioritize candidate", "gene-, tissue-, and pathway-level analyses"):
         if phrase not in methods_text:
             fail(f"methods language reference missing: {phrase}")
+    options_reference = SKILL.parent / "references" / "writing-options-card.md"
+    if not options_reference.exists():
+        fail(f"missing writing-options reference: {options_reference}")
+    options_text = options_reference.read_text(encoding="utf-8")
+    for phrase in ("WRITING_OPTIONS_CARD", "Conservative", "Field-native", "Logic-forward", "RIS action = Optional", "POST_WRITE_AUDIT"):
+        if phrase not in options_text:
+            fail(f"writing-options reference missing: {phrase}")
     if not re.search(r"\| Source ID \| Zotero key \| DOI/PMID \| Relevance", text):
         fail("missing corpus ledger table")
     if not re.search(r"\| Pattern ID \| Source ID \| Location \| Pattern type", text):

@@ -6,9 +6,9 @@ compatibility: codex,opencode,zcode
 metadata:
   parent_skill: zotero-evidence-review
   workflow: manuscript-level-diagnosis
-  version: 0.5.0
+  version: 0.6.0
   optional: zotero-mcp, pubmed-mcp
-  reference: references/domain-style-calibration.md
+  reference: references/domain-style-calibration.md,references/writing-options-card.md
 ---
 
 # Zotero Manuscript Thinking
@@ -17,7 +17,7 @@ metadata:
 
 当用户要求“像本领域高水平论文一样自然”“参考同领域代表性文章”“像某个期刊/会议的写法”时，启动可选的 `Domain Style Calibration`：从 Zotero/PubMed 或用户指定的 3–5 篇可核验论文中提取段落功能、句子功能、术语、claim verb、引用归属和信息节奏等模式，再对照用户自己的稿件。它学习的是可解释的写作决策，不复制原文，也不把“高分”当作未经证明的事实。
 
-它可以独立调用，也可以作为 `zotero-evidence-review` 在段落证据分析或引用修复后的 manuscript-level checkpoint。默认只输出诊断和优先级计划，不自动改写整篇论文，不自动承诺新实验。 如果用户尚未收集可核验的 peer corpus，先交给 `zotero-literature-learning` 建立素材包；本 Skill 消费其 `style_profile`、`evidence_profile` 和 `argument_profile`，不重复做无目标的批量检索。用户出现“知道意思但不会写、句子太啰嗦、方法名拿不准、Results 不知道如何推进”等卡点时，先触发 `WRITING_BLOCK_LEARNING`，再决定是否进入全文诊断。
+它可以独立调用，也可以作为 `zotero-evidence-review` 在段落证据分析或引用修复后的 manuscript-level checkpoint。默认只输出诊断和优先级计划，不自动改写整篇论文，不自动承诺新实验。 如果用户尚未收集可核验的 peer corpus，先交给 `zotero-literature-learning` 建立素材包；本 Skill 消费其 `style_profile`、`evidence_profile` 和 `argument_profile`，不重复做无目标的批量检索。用户出现“知道意思但不会写、句子太啰嗦、方法名拿不准、Results 不知道如何推进”等卡点时，先触发 `WRITING_BLOCK_LEARNING`，再决定是否进入全文诊断。用户要求“给几个版本”“从不同角度写”时，读取 [WRITING_OPTIONS_CARD](references/writing-options-card.md)，输出可比较的候选和选择交接，不把某一版静默标为最终答案。
 
 ## 0.1 修订顺序：先保意义，再校准领域语言
 
@@ -48,7 +48,7 @@ meaning gate → section logic → peer-style calibration (if requested) → lan
 | 层级 | 主要问题 | 默认交付 |
 |---|---|---|
 | `language` | 句子是否准确、自然、连贯、符合学术语域，是否因改写改变了证据强度 | Copy-ready 文本 + 语言问题表 |
-| `writing_block` | 写作者知道科学内容但卡在句式、段落功能、方法命名或结果推进 | `WRITING_BLOCK_LEARNING` + 2–3 个保守候选 + author check |
+| `writing_block` | 写作者知道科学内容但卡在句式、段落功能、方法命名或结果推进 | `WRITING_BLOCK_LEARNING` + `WRITING_OPTIONS_CARD` + 2–3 个候选 + author check |
 | `domain_style_calibration` | 与同领域、同文体、同目标期刊/会议的可核验论文比较写作模式；可作用于 Methods/Results 等各 section | Domain Style Calibration + 对照后的 Copy-ready 文本 |
 | `introduction_logic` | 背景、已知、具体 gap、方法适配、研究目标和贡献是否逐段推进 | Introduction logic map + 修改顺序 |
 | `methods_logic` | 设计、样本、变量、流程、统计和质量控制是否足以让读者复现，并与 Results 对齐 | Methods Logic Map + reproducibility audit |
@@ -347,6 +347,10 @@ boundary: 结果不能推出什么？
 
 对用户要求修改的章节先做一次轻量语言 pass，生成语言问题表和一版保守的 Copy-ready text。只修复会影响理解、科学精确度或学术自然度的问题；不要在全文结构未稳定时追求逐词完美。把每个改动标记为“语言变化”或“可能改变科学含义”，后者必须进入 Author check。
 
+### Step 3A.1：需要选择时生成多方案卡片
+
+当用户要求多个版本、不同角度或领域化表达时，按 [WRITING_OPTIONS_CARD](references/writing-options-card.md) 生成最多三个候选。先完成 meaning gate 和 section logic，再分别给出 `Conservative`、`Field-native`、`Logic-forward` 或章节专用角度；每个候选都必须带 `option_id`、`rhetorical_angle`、`claim_delta`、`evidence_level`、`citation_set`、`style_basis`、`when_to_choose`、`risks` 和 `author_check`。在作者选择前设置 `selection_status: pending`，选择后才生成最终 copy-ready 文本并运行最小 `POST_WRITE_AUDIT`。
+
 ### Step 3B：针对各章节做 section logic pass
 
 - 若包含 Introduction，输出 `Introduction Logic Map`，确认具体 gap、方法适配和 contribution 在段落之间递进；
@@ -444,8 +448,9 @@ priority_score = reviewer_risk (1–5) × argument_leverage (1–5) × feasibili
 13. `Reviewer Stress Test`；
 14. `Prioritized Revision Plan`；
 15. `Revision Decision Log`：每项改动的原句/动作、证据边界、peer pattern（如有）、`author_check` 和完成条件；
-16. `Handoff and Stop Conditions`；
-17. `Unresolved Unknowns`。
+16. `WRITING_OPTIONS_CARD`（用户要求多个版本时）与候选比较表；
+17. `Handoff and Stop Conditions`；
+18. `Unresolved Unknowns`。
 
 局部改写也必须返回一个最小 `POST_WRITE_AUDIT`：`claim_unchanged`、`numbers_units_direction_unchanged`、`citation_ownership_preserved`、`methods_results_aligned`、`new_unsupported_claim` 和 `author_check`。任何一项无法确认都写 `unknown`，不以“更地道”代替回查。
 
@@ -496,6 +501,7 @@ priority_score = reviewer_risk (1–5) × argument_leverage (1–5) × feasibili
 - 不把结构诊断误报为投稿 readiness、统计有效性或独立同行评审。
 - 如果 Zotero/PubMed 不可用，继续做结构诊断，但把证据状态写为 `not inspected`，不伪造检索完成。
 - 如果输入材料互相矛盾，优先标记冲突并停止扩展结论；不要用措辞掩盖冲突。
+- 多方案必须共享数字、方向、研究设计和证据边界；任何 claim delta 都必须显式标记并要求作者确认。
 - 同一问题连续两轮没有新证据或新行动时停止，避免重复建议。
 
 ## 8. 触发示例

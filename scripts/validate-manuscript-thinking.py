@@ -86,6 +86,9 @@ REQUIRED_PHRASES = [
     "Revision Decision Log",
     "annotation",
     "gene-, tissue-, and pathway-level analyses",
+    "WRITING_OPTIONS_CARD",
+    "selection_status: pending",
+    "claim_delta",
 ]
 
 
@@ -124,6 +127,13 @@ def main() -> None:
     ):
         if phrase not in reference_text:
             fail(f"domain style calibration reference missing: {phrase}")
+    options_reference = SKILL.parent / "references" / "writing-options-card.md"
+    if not options_reference.exists():
+        fail(f"missing writing-options reference: {options_reference}")
+    options_text = options_reference.read_text(encoding="utf-8")
+    for phrase in ("WRITING_OPTIONS_CARD", "Conservative", "Field-native", "Logic-forward", "RIS action = Include", "POST_WRITE_AUDIT"):
+        if phrase not in options_text:
+            fail(f"writing-options reference missing: {phrase}")
     if "scope-limited checkpoint" not in text or "files_not_read" not in text:
         fail("missing incomplete-input reporting")
     if not re.search(r"\| ID \| Location \| Problem \| Evidence / basis \| Risk \| Leverage \| Priority \| Action type \| Next owner \| Done when \|", text):

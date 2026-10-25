@@ -90,6 +90,7 @@ def main() -> None:
         ("Validate zotero-literature-learning skill", [PYTHON, "scripts/validate-literature-learning.py"]),
         ("Validate zotero-manuscript-thinking skill", [PYTHON, "scripts/validate-manuscript-thinking.py"]),
         ("Validate pubmed-literature-search skill", [PYTHON, "scripts/validate-pubmed-skill.py"]),
+        ("Validate shared writing-options contract", [PYTHON, "scripts/validate-writing-options.py"]),
         ("Self-test literature search package writer", [PYTHON, "scripts/write_literature_search_package.py", "--self-test"]),
         ("Self-test EndNote collection package writer", [PYTHON, "scripts/write_endnote_collection_package.py", "--self-test"]),
     ]

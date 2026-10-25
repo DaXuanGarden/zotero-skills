@@ -25,12 +25,15 @@
 
 `zotero-literature-learning` 负责前半段，`zotero-manuscript-thinking` 负责整体诊断与修订顺序，`zotero-evidence-review` 负责具体 claim 的支持、核实和 RIS。三者共享 handoff，不各自重复建立文献出口。
 
+当你希望同一句话有多个写法时，三个 Skill 共享 `WRITING_OPTIONS_CARD`：先做意义和证据门禁，再给出最多三个带有明确角度的候选，最后由作者选择。默认候选是 `Conservative`（保留原意）、`Field-native`（依据同领域语料校准）和 `Logic-forward`（重排论证顺序）。每个候选都显示 `claim_delta`、证据等级、引用集合、适用场景和风险；未选择前不会把第一版当作最终稿。
+
 | 场景 | 推荐入口 | 复制即用提示词 | 典型产物 |
 |---|---|---|---|
 | 写论文时给一段草稿找证据、补引用 | `/zotero-evidence-review` | `帮我给下面这段草稿找证据并补引用，使用完整工作流，生成 Markdown evidence report 和 EndNote RIS：...` | `zotero-evidence-output/.../*_evidence_review.md` + `*_references.ris` |
 | 从全文角度检查语言、Methods/Results、Introduction/Discussion 和主线 | `/zotero-manuscript-thinking` | `请检查语言精确度、Methods/Results/Introduction/Discussion 逻辑和全文主线，找出 P0/P1 问题，并给出下一轮修改顺序，不要直接重写全文。` | `MANUSCRIPT_STRATEGIC_REVIEW`（结构与语言诊断；不自动生成 RIS） |
 | 先从 Zotero 收集并学习同领域素材，再开始改稿 | `/zotero-literature-learning` | `先从 Zotero 找 3–5 篇同领域、同文章类型的论文，读取摘要/全文，学习 Introduction/Methods/Results 的写法，形成素材包，再交给下游 Skill。` | `MATERIALS_LEARNING_REPORT` + corpus/evidence/style/argument profiles + handoff |
 | 写作卡住时学习专业表达或方法术语 | `/zotero-literature-learning` | `这句话太啰嗦；请从 Zotero 找同领域、同章节的高匹配片段，比较表达后给出 2–3 个保守版本，并核对 annotation 是否准确。` | `WRITING_BLOCK_LEARNING` + writing block card + author checks |
+| 同一句话需要多个角度 | `/zotero-manuscript-thinking` 或 `/zotero-evidence-review` | `请给这句话提供 Conservative、Field-native 和 Logic-forward 三个版本，绑定各自证据、风险和适用场景，先不要替我选择。` | `WRITING_OPTIONS_CARD` + 候选比较表 + selection_status |
 | 参考同领域代表性论文校准地道表达 | `/zotero-manuscript-thinking` | `请从 Zotero 选 3–5 篇同领域、同文章类型的代表性论文，比较这段 Introduction 的段落推进、术语和 claim verbs，再给保守改写；不要复制原文。` | `Domain Style Calibration` + peer-pattern 对照表 + copy-ready 文本 |
 | 校准 Methods/Results 的地道写法与证据边界 | `/zotero-manuscript-thinking` | `请从 Zotero 选同领域、同研究设计的论文，检查我的 Methods 是否可复现、Results 是否按主要发现推进，并核对 Methods–Results–图表一致性；先给 Logic Map，再润色。` | `Methods Logic Map` + `Results Logic Map` + reproducibility/alignment audit |
 | 已有编号引用，怀疑某些引用不支持原句 | `/zotero-evidence-review` | `帮我检查并更新下面这段已有编号引用，逐条判断引用是否支持原句，修复不支持的引用，并生成最终 RIS：...` | 引用支持/不支持表、改写段落、最终 RIS |
@@ -105,7 +108,7 @@ python3 scripts/write_endnote_collection_package.py \
 | 项目 | 当前状态 |
 |---|---|
 | Skill | `zotero-evidence-review` / `zotero-literature-learning` / `zotero-manuscript-thinking` / `pubmed-literature-search` |
-| 当前版本 | Zotero evidence `3.3.0`；literature learning `0.3.0`；manuscript-thinking `0.5.0`；PubMed `1.0.0` |
+| 当前版本 | Zotero evidence `3.4.0`；literature learning `0.4.0`；manuscript-thinking `0.6.0`；PubMed `1.0.0` |
 | 兼容性 | Codex / OpenCode / ZCode |
 | 主要依赖 | Zotero 7+、zotero-mcp、Python 3.10+；PubMed 检索 skill 需要 PubMed MCP（推荐 PancrePal） |
 | 安装目标 | Codex 全局、ZCode 全局、OpenCode 全局、项目级 `.opencode/skills` |

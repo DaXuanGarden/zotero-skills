@@ -1,0 +1,43 @@
+{
+  "task_id": "example-results-001",
+  "input_scope": "one Results sentence",
+  "target_section": "Results",
+  "corpus_status": "inspected",
+  "calibration_confidence": "medium",
+  "selection_status": "pending",
+  "selected_option_id": null,
+  "options": [
+    {
+      "option_id": "A",
+      "option_name": "Conservative",
+      "rhetorical_angle": "finding-first",
+      "target_section": "Results",
+      "rhetorical_job": "state the observed association",
+      "copy_ready_text": "The exposure was associated with the outcome.",
+      "claim_delta": "none",
+      "evidence_level": "D",
+      "citation_set": [],
+      "style_basis": "genre-neutral",
+      "why_this_works": "Preserves the original claim and avoids causal wording.",
+      "when_to_choose": "Use when the result and evidence boundary are already settled.",
+      "risks": "May be less specific than the full result.",
+      "author_check": "Confirm the exact effect estimate and direction before insertion."
+    },
+    {
+      "option_id": "B",
+      "option_name": "Field-native",
+      "rhetorical_angle": "quantitative-anchor-first",
+      "target_section": "Results",
+      "rhetorical_job": "lead with the estimate and then state its interpretation",
+      "copy_ready_text": "The exposure was associated with the outcome (estimate, 95% CI).",
+      "claim_delta": "none",
+      "evidence_level": "D",
+      "citation_set": [],
+      "style_basis": "genre-neutral",
+      "why_this_works": "Puts the quantitative anchor where readers expect it.",
+      "when_to_choose": "Use when the section is organized around estimates.",
+      "risks": "Requires the author to verify the exact estimate and interval.",
+      "author_check": "Confirm the estimate, interval, and table/figure link."
+    }
+  ]
+}
