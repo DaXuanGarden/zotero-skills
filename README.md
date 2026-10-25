@@ -25,7 +25,7 @@
 
 `zotero-literature-learning` 负责前半段，`zotero-manuscript-thinking` 负责整体诊断与修订顺序，`zotero-evidence-review` 负责具体 claim 的支持、核实和 RIS。三者共享 handoff，不各自重复建立文献出口。
 
-段落证据工作现在还会产出一张逐句矩阵：每句话都有稳定的 `sentence_id`，并沿着 `sentence_id → claim_id → citation → RIS action` 回溯。这样可以区分“需要外部引用”“本研究结果”“常识”“解释性桥接”和“证据缺口”，也能发现一篇文献被误用来覆盖整段的情况。矩阵旁边的 `CITATION_COVERAGE_SUMMARY` 会给出覆盖率、未映射主张和孤立 RIS 候选；覆盖链不完整时，报告不会标记为 `Ready`。
+段落证据工作现在还会产出一张逐句矩阵：每句话都有稳定的 `sentence_id`，并沿着 `sentence_id → claim_id → citation → RIS action` 回溯。这样可以区分“需要外部引用”“本研究结果”“常识”“解释性桥接”和“证据缺口”，也能发现一篇文献被误用来覆盖整段的情况。矩阵旁边的 `CITATION_COVERAGE_SUMMARY` 会给出覆盖率、未映射主张和孤立 RIS 候选；覆盖链不完整时，报告不会标记为 `Ready`。段落请求还默认提供 `Copy-ready Manuscript Text`、`Citation Insertion Sheet`（插入锚点、可复制作者–年份引文、Zotero/EndNote 搜索词、PMID/DOI）和 `Diff / Change Log`；明确说“只找引文/保留原文措辞”时才跳过润色层。
 
 最简调用方式就是只给段落：
 
@@ -41,7 +41,7 @@
 
 | 场景 | 推荐入口 | 复制即用提示词 | 典型产物 |
 |---|---|---|---|
-| 写论文时给一段草稿找证据、补引用 | `/zotero-evidence-review` | `帮我找到这个段落每句话合适的引文：...`（只粘贴段落即可） | `zotero-evidence-output/.../*_evidence_review.md` + `*_references.ris` |
+| 写论文时给一段草稿找证据、补引用 | `/zotero-evidence-review` | `帮我找到这个段落每句话合适的引文：...`（只粘贴段落即可） | `*_evidence_review.md`（含 Copy-ready、Citation Insertion Sheet、Diff）+ `*_references.ris` |
 | 从全文角度检查语言、Methods/Results、Introduction/Discussion 和主线 | `/zotero-manuscript-thinking` | `请检查语言精确度、Methods/Results/Introduction/Discussion 逻辑和全文主线，找出 P0/P1 问题，并给出下一轮修改顺序，不要直接重写全文。` | `MANUSCRIPT_STRATEGIC_REVIEW`（结构与语言诊断；不自动生成 RIS） |
 | 先从 Zotero 收集并学习同领域素材，再开始改稿 | `/zotero-literature-learning` | `先从 Zotero 找 3–5 篇同领域、同文章类型的论文，读取摘要/全文，学习 Introduction/Methods/Results 的写法，形成素材包，再交给下游 Skill。` | `MATERIALS_LEARNING_REPORT` + corpus/evidence/style/argument profiles + handoff |
 | 写作卡住时学习专业表达或方法术语 | `/zotero-literature-learning` | `这句话太啰嗦；请从 Zotero 找同领域、同章节的高匹配片段，比较表达后给出 2–3 个保守版本，并核对 annotation 是否准确。` | `WRITING_BLOCK_LEARNING` + writing block card + author checks |
