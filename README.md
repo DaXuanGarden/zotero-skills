@@ -120,7 +120,7 @@ python3 scripts/write_endnote_collection_package.py \
 | 项目 | 当前状态 |
 |---|---|
 | Skill | `zotero-evidence-review` / `zotero-literature-learning` / `zotero-manuscript-thinking` / `pubmed-literature-search` |
-| 当前版本 | Zotero evidence `3.6.0`；literature learning `0.4.0`；manuscript-thinking `0.6.0`；PubMed `1.0.0` |
+| 当前版本 | Zotero evidence `3.9.0`；literature learning `0.4.0`；manuscript-thinking `0.6.0`；PubMed `1.0.0` |
 | 兼容性 | Codex / OpenCode / ZCode |
 | 主要依赖 | Zotero 7+、zotero-mcp、Python 3.10+；PubMed 检索 skill 需要 PubMed MCP（推荐 PancrePal） |
 | 安装目标 | Codex 全局、ZCode 全局、OpenCode 全局、项目级 `.opencode/skills` |
@@ -167,13 +167,13 @@ python3 scripts/write_endnote_collection_package.py \
 草稿段落 → /zotero-evidence-review 生成 Evidence Package → 阅读 Markdown report 的 Bottom Line / Copy-ready Text → 检查 Citation Support Ledger → 只导入 RIS action = Include 的 RIS → 在 Word/EndNote 中重排编号 → 投稿前运行 python3 scripts/check-all.py
 ```
 
-阅读 Evidence Package 时优先看 5 个位置：
+手动插引只需三步：
 
-1. `Critical Warnings`：是否有不能直接使用的证据风险。
-2. `Copy-ready Manuscript Text`：可复制进稿件的建议文本。
-3. `Citation Support Ledger`：每个 claim/sentence 的推荐引用、证据位置、支持结论和 RIS action。
-4. `Reference Table` / `Metadata Quality Control`：作者、年份、DOI、PMID、重复项和标准化来源。
-5. `Export File`：实际生成的 Markdown 与 RIS 相对路径。
+1. 复制 `Copy-ready Manuscript Text`。
+2. 紧随其后的 `Claim–Evidence Matrix` 中查看中文 `主张摘要（中文）`、单一证据等级、支持结论和 `insertion_anchor`。
+3. 在 `Citation Insertion Sheet` 中用 `search_tokens` 搜索 Zotero/EndNote，并在对应锚点插入 `copy_ready_citation`。
+
+其余内容属于审计附录：`Citation Support Ledger` 记录证据位置和 RIS action；`Reference Table` / `Metadata Quality Control` 记录标准化元数据；`Export File` 列出最终路径。
 
 不要把 PubMed 搜索结果 snippet 直接当作可引用证据；PubMed-only RIS 需要 PMID Inspection Ledger 显示 completed inspection。不要把 Citation Support Ledger 当作语义真值证明；高风险 claim 仍需人工或全文复核。
 

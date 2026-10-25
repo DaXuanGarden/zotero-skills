@@ -14,6 +14,7 @@ REQUIRED_SECTIONS = (
     "Metadata and Use Status",
     "Critical Warnings",
     "Copy-ready Manuscript Text",
+    "Claim–Evidence Matrix",
     "Citation Insertion Sheet",
     "Annotated Recommended Text",
     "Diff / Change Log",
@@ -44,6 +45,20 @@ DIFF_FIELDS = (
     "evidence_level",
     "citation_effect",
 )
+MATRIX_FIELDS = (
+    "sentence_id",
+    "claim_id",
+    "Revised sentence / clause",
+    "主张摘要（中文）",
+    "Recommended citation",
+    "Evidence role",
+    "Evidence level",
+    "Source layer",
+    "Support verdict",
+    "insertion_anchor",
+    "Manual action",
+)
+COMPOUND_LEVEL_RE = re.compile(r"(?<![A-Za-z])(?:A/B|A/C|B/C|C/D|D/E)(?![A-Za-z])")
 
 
 def section_present(text: str, name: str) -> bool:
@@ -62,6 +77,20 @@ def validate_report(path: Path) -> list[str]:
     for field in DIFF_FIELDS:
         if field not in text:
             errors.append(f"missing diff/change-log field: {field}")
+    matrix_heading = re.search(r"^##\s+.*Claim[–-]Evidence Matrix.*$", text, flags=re.MULTILINE | re.IGNORECASE)
+    if not matrix_heading:
+        errors.append("missing Claim–Evidence Matrix heading")
+    else:
+        matrix_block = text[matrix_heading.end():]
+        next_heading = re.search(r"^##\s+", matrix_block, flags=re.MULTILINE)
+        if next_heading:
+            matrix_block = matrix_block[: next_heading.start()]
+        header_line = next((line for line in matrix_block.splitlines() if line.strip().startswith("|") and line.strip().endswith("|")), "")
+        for field in MATRIX_FIELDS:
+            if field not in header_line:
+                errors.append(f"missing claim-matrix field: {field}")
+        if COMPOUND_LEVEL_RE.search(matrix_block):
+            errors.append("claim matrix contains compound evidence level; use exactly one A-E level per row")
     if re.search(r"/(?:Users|home|private)/", text):
         errors.append("report contains an absolute local path")
     if "Citation Insertion Sheet" in text and "Author–Year Quick Lookup" not in text:

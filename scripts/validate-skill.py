@@ -71,21 +71,22 @@ REQUIRED_HEADINGS = [
 EVIDENCE_REPORT_SECTIONS = [
     "## 1. Metadata and Use Status",
     "## 2. Critical Warnings",
-    "## 3. 核心结论（Bottom Line）",
-    "## 4. 可直接使用的稿件文本（Copy-ready Manuscript Text）",
-    "## 5. 注释版推荐文本（Annotated Recommended Text）",
-    "## 6. 主张—证据矩阵（Claim–Evidence Matrix）",
-    "## 7. 引文放置建议（Citation Placement）",
-    "## 8. Evidence Logic Chain",
-    "## 9. 参考文献表（Reference Table）",
-    "## 10. Search Reproducibility",
-    "## 11. Zotero 检索总结（Zotero Search Summary）",
-    "## 12. PubMed 扩展检索（PubMed Expansion）",
-    "## 13. 综合写作建议（Integrated Writing Advice）",
-    "## 14. Claims to Revise or Remove",
-    "## 15. 证据缺口与审稿风险（Gaps and Reviewer-risk Assessment）",
-    "## 16. 元数据质量控制（Metadata Quality Control）",
-    "## 17. 导出文件（Export File）",
+    "## 3. 可直接使用的稿件文本（Copy-ready Manuscript Text）",
+    "## 4. 主张—证据矩阵（Claim–Evidence Matrix）",
+    "## 5. Citation Insertion Sheet",
+    "## 6. 注释版推荐文本（Annotated Recommended Text）",
+    "## 7. Diff / Change Log",
+    "## 8. 审计附录（Audit Appendix）",
+    "## 9. Evidence Logic Chain",
+    "## 10. 参考文献表（Reference Table）",
+    "## 11. Search Reproducibility",
+    "## 12. Zotero 检索总结（Zotero Search Summary）",
+    "## 13. PubMed 扩展检索（PubMed Expansion）",
+    "## 14. 综合写作建议（Integrated Writing Advice）",
+    "## 15. Claims to Revise or Remove",
+    "## 16. 证据缺口与审稿风险（Gaps and Reviewer-risk Assessment）",
+    "## 17. 元数据质量控制（Metadata Quality Control）",
+    "## 18. 导出文件（Export File）",
 ]
 LITERATURE_SEARCH_REPORT_SECTIONS = [
     "## 1. 检索任务",
@@ -509,8 +510,8 @@ PHASE10_REQUIREMENTS = [
     "Recommended citation",
 ]
 CLAIM_EVIDENCE_MATRIX_HEADER = (
-    "| # | Claim | Source layer | Evidence level | Zotero evidence | PubMed evidence | "
-    "Evidence status | Confidence | Risk | Recommended action | Recommended citation |"
+    "| sentence_id | claim_id | Revised sentence / clause | 主张摘要（中文） | Recommended citation | "
+    "Evidence role | Evidence level | Source layer | Support verdict | insertion_anchor | Manual action |"
 )
 NUMBERED_CITATION_REPAIR_HEADER = (
     "| Original citation number | Supplied reference | Claim supported by this number | "
@@ -941,17 +942,17 @@ def main() -> None:
         evidence_report_template,
         re.escape(CLAIM_EVIDENCE_MATRIX_HEADER),
         [
-            "#",
-            "Claim",
+            "sentence_id",
+            "claim_id",
+            "Revised sentence / clause",
+            "主张摘要（中文）",
+            "Recommended citation",
+            "Evidence role",
             "Source layer",
             "Evidence level",
-            "Zotero evidence",
-            "PubMed evidence",
-            "Evidence status",
-            "Confidence",
-            "Risk",
-            "Recommended action",
-            "Recommended citation",
+            "Support verdict",
+            "insertion_anchor",
+            "Manual action",
         ],
         "Claim–Evidence Matrix",
     )
@@ -1125,9 +1126,9 @@ def main() -> None:
         fail("final chat summary must include Critical Warnings")
     metadata_pos = evidence_report_template.find("## 1. Metadata and Use Status")
     critical_pos = evidence_report_template.find("## 2. Critical Warnings")
-    bottom_line_pos = evidence_report_template.find("## 3. 核心结论（Bottom Line）")
-    if not (metadata_pos != -1 and metadata_pos < critical_pos < bottom_line_pos):
-        fail("Critical Warnings must appear after metadata and before Bottom Line")
+    next_author_section_pos = evidence_report_template.find("## 3. 可直接使用的稿件文本（Copy-ready Manuscript Text）")
+    if not (metadata_pos != -1 and metadata_pos < critical_pos < next_author_section_pos):
+        fail("Critical Warnings must appear after metadata and before Copy-ready Manuscript Text")
     if "citation should be verified" not in text:
         fail("Copy-ready rules must explicitly forbid citation-should-be-verified wording")
     if "manuscript-ready text only" not in evidence_report_template:

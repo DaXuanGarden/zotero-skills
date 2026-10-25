@@ -56,11 +56,12 @@ MANUAL_STATUS_OVERRIDES = {
 PHASE10_SECTIONS = (
     "Metadata and Use Status",
     "Critical Warnings",
-    "核心结论",
     "Copy-ready Manuscript Text",
-    "Annotated Recommended Text",
     "Claim–Evidence Matrix",
-    "Citation Placement",
+    "Citation Insertion Sheet",
+    "Annotated Recommended Text",
+    "Diff / Change Log",
+    "审计附录",
     "Evidence Logic Chain",
     "Reference Table",
     "Search Reproducibility",
@@ -94,6 +95,8 @@ class PackageAudit:
     claim_matrix_has_source_layer: bool
     claim_matrix_has_recommended_action: bool
     claim_matrix_has_recommended_citation: bool
+    claim_matrix_has_chinese_summary: bool
+    claim_matrix_has_single_levels: bool
     evidence_logic_chain_present: bool
     claims_to_revise_present: bool
     reference_canonicalization_present: bool
@@ -223,7 +226,7 @@ def split_markdown_table(lines: list[str]) -> list[list[str]]:
 
 
 def extract_section_lines(text: str, heading_pattern: str) -> list[str]:
-    match = re.search(heading_pattern, text, flags=re.IGNORECASE)
+    match = re.search(heading_pattern, text, flags=re.IGNORECASE | re.MULTILINE)
     if not match:
         return []
     start = match.end()
@@ -400,6 +403,25 @@ def table_header_has(text: str, heading_pattern: str, required_terms: tuple[str,
     return all(term.lower() in header for term in required_terms)
 
 
+def claim_matrix_has_single_levels(text: str) -> bool:
+    lines = extract_section_lines(text, r"^##\s+.*Claim[–-]Evidence Matrix.*$")
+    rows = split_markdown_table(lines)
+    if len(rows) < 2:
+        return False
+    header = [cell.lower() for cell in rows[0]]
+    level_index = next((i for i, cell in enumerate(header) if "evidence level" in cell), None)
+    if level_index is None:
+        return False
+    allowed = {"A", "B", "C", "D", "E"}
+    for row in rows[1:]:
+        if level_index >= len(row):
+            continue
+        value = row[level_index].strip().strip("`").upper()
+        if value and value not in allowed:
+            return False
+    return True
+
+
 def section_order_ok(text: str, sections: tuple[str, ...]) -> bool:
     position = -1
     for section in sections:
@@ -463,8 +485,13 @@ def audit_package(input_dir: Path, folder: Path) -> PackageAudit | None:
         copy_ready_present=section_contains(text, r"^##\s+.*Copy-ready Manuscript Text.*$"),
         claim_matrix_has_evidence_level=table_header_has(text, r"^##\s+.*Claim[–-]Evidence Matrix.*$", ("evidence level",)),
         claim_matrix_has_source_layer=table_header_has(text, r"^##\s+.*Claim[–-]Evidence Matrix.*$", ("source layer",)),
-        claim_matrix_has_recommended_action=table_header_has(text, r"^##\s+.*Claim[–-]Evidence Matrix.*$", ("recommended action",)),
+        claim_matrix_has_recommended_action=(
+            table_header_has(text, r"^##\s+.*Claim[–-]Evidence Matrix.*$", ("recommended action",))
+            or table_header_has(text, r"^##\s+.*Claim[–-]Evidence Matrix.*$", ("manual action",))
+        ),
         claim_matrix_has_recommended_citation=table_header_has(text, r"^##\s+.*Claim[–-]Evidence Matrix.*$", ("recommended citation",)),
+        claim_matrix_has_chinese_summary=table_header_has(text, r"^##\s+.*Claim[–-]Evidence Matrix.*$", ("主张摘要（中文）",)),
+        claim_matrix_has_single_levels=claim_matrix_has_single_levels(text),
         evidence_logic_chain_present=section_contains(text, r"^##\s+.*Evidence Logic Chain.*$"),
         claims_to_revise_present=section_contains(text, r"^##\s+.*Claims to Revise or Remove.*$"),
         reference_canonicalization_present=section_contains(text, r"^#{2,3}\s+.*Reference Canonicalization Gate.*$"),
@@ -585,9 +612,13 @@ def collect_warnings(packages: list[PackageAudit]) -> list[str]:
         if not package.claim_matrix_has_source_layer:
             warnings.append(f"{package.folder}: Claim–Evidence Matrix missing Source layer column")
         if not package.claim_matrix_has_recommended_action:
-            warnings.append(f"{package.folder}: Claim–Evidence Matrix missing Recommended action column")
+            warnings.append(f"{package.folder}: Claim–Evidence Matrix missing Manual action / Recommended action column")
         if not package.claim_matrix_has_recommended_citation:
             warnings.append(f"{package.folder}: Claim–Evidence Matrix missing Recommended citation column")
+        if not package.claim_matrix_has_chinese_summary:
+            warnings.append(f"{package.folder}: Claim–Evidence Matrix missing 主张摘要（中文） column")
+        if not package.claim_matrix_has_single_levels:
+            warnings.append(f"{package.folder}: Claim–Evidence Matrix contains compound or invalid Evidence level values")
         if not package.evidence_logic_chain_present:
             warnings.append(f"{package.folder}: missing Evidence Logic Chain section")
         if not package.claims_to_revise_present:
