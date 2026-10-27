@@ -1,18 +1,52 @@
 # 📚 Zotero Skills
 
-> 面向 Codex / OpenCode / ZCode 的 Zotero 文献证据审查技能：让 AI 助手在你的 Zotero 文献库中检索、分析、核实引用，并给出可追溯的写作建议。
+> 面向 Codex 的 Zotero 文献证据审查与 EndNote 交接技能：在你的 Zotero 文献库中检索、分析、核实引用，生成可审计的 RIS，并按章节/段落交接到 EndNote。
 
 ![Codex](https://img.shields.io/badge/Codex-Skill-412991)
-![OpenCode](https://img.shields.io/badge/OpenCode-MCP-0175C2)
-![ZCode](https://img.shields.io/badge/ZCode-Skill-6f42c1)
 ![Zotero MCP](https://img.shields.io/badge/Zotero-MCP-CC2936)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ---
 
-## 0. 最短路径：按场景直接开始
+## 0. 核心两步：找引文 → 导入 EndNote
 
-如果已经通过 `zotero-evidence-review` 得到 RIS 和段落 assignments，可以用 `zotero-endnote-bridge` 将它们交接到 macOS EndNote。它先生成可检查的去重 master RIS、按章节/段落的 RIS、manifest 和 group map；需要真实写入时才显式启用带备份和 schema 检查的 SQLite adapter，并在导入后运行审计。
+这个仓库最常用的主线只需要两个提示词。第一步由 `zotero-evidence-review` 找到并核实引文；第二步由 `zotero-endnote-bridge` 把已经核实的 RIS 和 assignments 交接到 EndNote。两个模块的职责分开：EndNote bridge 不重新判断文献是否支持 claim。
+
+### 0.1 找引文并生成 EndNote 交接包
+
+```text
+/zotero-evidence-review 用完整工作流处理下面的段落：
+1. 先检索 Zotero 本地库；如果 PubMed MCP 在当前 Codex 会话可见，再扩展 PubMed 并去重；
+2. 逐句拆解 claim，说明每篇文献支持哪个 claim、证据位置、支持强度和 citation placement；
+3. 只把经过核实且 RIS action = Include 的文献放入最终 RIS；
+4. 生成 Markdown Evidence Package、canonical RIS，以及供 zotero-endnote-bridge 使用的 assignments JSON；
+5. 工具不可用或证据不足时明确标注，不要声称完成了未执行的检索。
+
+章节：Introduction
+段落 ID：Introduction-01
+段落标题：{段落标题}
+段落内容：
+{粘贴段落}
+```
+
+至少确认输出了 `*_evidence_review.md`、`*_references.ris` 和 assignments JSON，并检查 `Citation Support Ledger` 后再进入第二步。
+
+### 0.2 按章节/段落分组并导入 EndNote
+
+```text
+/zotero-endnote-bridge 请使用上一步生成的 canonical RIS 和 assignments JSON：
+1. 先执行 dry-run，检查去重结果、未分配记录、manifest、group-map 和每个分组 RIS；
+2. 创建 Introduction、Discussion、Methods 等顶层 group set，并在下面创建对应的段落/方法模块组；
+3. 不创建新的 My Groups 层级，不把 Introduction 的编号复用于 Discussion 或 Methods；
+4. 按 assignments 中的 priority 和 role 保留每篇文献在段落内的排序信息；
+5. 只有我明确要求 apply 时，才在关闭 EndNote 并完成备份后写入库；写入后先补全元数据，再同步 cache，最后运行 audit。
+
+canonical RIS：{path/to/references.ris}
+assignments JSON：{path/to/assignments.json}
+EndNote library：{path/to/My EndNote Library.enl}
+```
+
+实际写入前的命令行预检如下；输入 RIS 不会被修改：
 
 ```bash
 bash scripts/install-skill.sh --skill zotero-endnote-bridge --target codex --backup
@@ -23,7 +57,7 @@ python3 zotero-endnote-bridge/scripts/endnote_bridge.py \
 
 它支持 `Introduction/Introduction-01`、`Methods/Methods-01` 和 `Discussion/Discussion-01` 这样的两级归档；RIS 本身不携带嵌套 EndNote group set，因此 manifest 始终保留完整层级。macOS EndNote 库写入必须关闭 EndNote，并使用 `--apply --apply-sqlite`；其他平台使用生成的 RIS 手动导入。
 
-如果你已经安装好 skill，并且当前 Codex / ZCode / OpenCode 会话能看到 Zotero MCP（可选：PubMed MCP），最省事的用法是：**复制下面与你场景最接近的提示词，把主题、段落或参考文献替换成自己的内容即可。**
+如果已经安装好 skill，并且当前 Codex 会话能看到 Zotero MCP（PubMed MCP 为可选扩展），最省事的用法就是复制上面的两个提示词，替换段落、文件路径和库路径。
 
 默认行为已经调整为“检索也导出”：普通文献检索、目标文献检索、段落补引用/润色、PubMed 主题检索都会默认生成 Markdown 报告 + EndNote-compatible RIS。只想在聊天里快速看结果时，请在提示词开头明确写 `只在聊天输出，不要生成文件`。
 
@@ -34,7 +68,7 @@ python3 zotero-endnote-bridge/scripts/endnote_bridge.py \
 → 先做全文意义与章节逻辑 → 再做领域语言校准和局部改写 → 回查主张、数字、引用与 Methods–Results 对齐
 ```
 
-`zotero-literature-learning` 负责前半段，`zotero-manuscript-thinking` 负责整体诊断与修订顺序，`zotero-evidence-review` 负责具体 claim 的支持、核实和 RIS；`zotero-endnote-bridge` 接收已经核实的 RIS 和 assignments，把它们交接到 macOS EndNote。前四个写作/证据流程共享 handoff，EndNote bridge 位于最终交接层，不重新判断证据。
+`zotero-literature-learning` 负责前半段，`zotero-manuscript-thinking` 负责整体诊断与修订顺序，`zotero-evidence-review` 负责具体 claim 的支持、核实和 RIS；`zotero-endnote-bridge` 接收已经核实的 RIS 和 assignments，把它们交接到 macOS EndNote。前四个检索/写作流程共享 handoff，EndNote bridge 位于最终交接层，不重新判断证据。
 
 ### Skill map：五个入口分别负责什么
 
@@ -157,9 +191,9 @@ python3 scripts/write_endnote_collection_package.py \
 |---|---|
 | Skill | `zotero-evidence-review` / `zotero-literature-learning` / `zotero-manuscript-thinking` / `pubmed-literature-search` / `zotero-endnote-bridge` |
 | 当前版本 | Zotero evidence `3.9.0`；literature learning `0.4.0`；manuscript-thinking `0.6.0`；PubMed `1.0.0`；EndNote bridge `1.0.0` |
-| 兼容性 | Codex / OpenCode / ZCode |
+| 推荐运行环境 | Codex Desktop / Codex CLI |
 | 主要依赖 | Zotero 7+、zotero-mcp、Python 3.10+；PubMed 检索 skill 需要 PubMed MCP（推荐 PancrePal） |
-| 安装目标 | Codex 全局、ZCode 全局、OpenCode 全局、项目级 `.opencode/skills` |
+| 默认安装目标 | Codex 全局 `~/.codex/skills` |
 | 默认安全策略 | 健康检查只读；删除、批量修改、合并重复项等操作必须先确认 |
 
 ---
@@ -219,16 +253,16 @@ python3 scripts/write_endnote_collection_package.py \
 
 ### 3.1 前置条件
 
-请先确认：
+本仓库的 quickstart 只按 Codex 编写。请先确认：
 
 - 已安装并打开 **Zotero 7+**。
 - Zotero 中已启用本地访问：Zotero 设置 → 高级 → 允许其他应用程序访问 Zotero。
 - 已安装 **Python 3.10+**。
-- 已安装 Codex、OpenCode 或 ZCode。
+- 已安装 Codex，并准备在修改 MCP 配置后重启 Codex。
 - 已安装并配置 `zotero-mcp`（见 [第 5 节](#5-配置-zotero-mcp)），用于 `zotero-evidence-review`。
 - 如果需要 PubMed 扩展、PMID 标准化、related/review discovery、OA 全文检测，另行配置 PubMed MCP（见 [PubMed Expansion](#83-pubmed-expansion) 和 [`docs/PANCREPAL_PUBMED_MCP_GUIDE.md`](./docs/PANCREPAL_PUBMED_MCP_GUIDE.md)）；独立 `pubmed-literature-search` skill 需要 PubMed MCP。
 
-### 3.2 克隆仓库并安装到 Codex / ZCode / OpenCode
+### 3.2 克隆仓库并安装到 Codex
 
 ```bash
 git clone https://github.com/DaXuanGarden/zotero-skills.git
@@ -237,13 +271,12 @@ cd zotero-skills
 # 安装/更新全部 skill 到 Codex 全局目录，并清理旧的时间戳备份
 bash scripts/install-skill.sh --skill all-skills --target codex --prune-backups
 
-# 如果使用 ZCode 或 OpenCode，把 target 改成 zcode 或 opencode
-bash scripts/install-skill.sh --skill all-skills --target zcode --prune-backups
-
 # 验证 skill 文件结构与本地输出质量门禁
 python3 scripts/validate-skill.py
+python3 scripts/validate-manuscript-thinking.py
 python3 scripts/validate-pubmed-skill.py
 python3 scripts/validate-literature-learning.py
+python3 scripts/validate-endnote-bridge.py
 python3 scripts/check-all.py
 ```
 
@@ -263,10 +296,9 @@ python3 scripts/check-all.py
 | Phase 3 目标文献检索包 writer | `python3 scripts/write_literature_search_package.py --self-test` | fixture 能生成 `*_literature_search.md` 与 Search RIS，且 RIS 记录边界可校验 |
 | 历史/新生成 RIS 文件格式 | `python3 scripts/ris_lint.py zotero-evidence-output` | 扫描 `.ris` 是否含 Markdown、缺少 `TY  -` / `ER  -`、明显占位符或常见字段问题 |
 | 全仓库本地质量门 | `python3 scripts/check-all.py --output-warnings skip --smoke-prompts check` | 五个 skill validator、writer/bridge self-test、smoke prompt guardrail 全部通过 |
-| MCP 配置文件形态 | `python3 scripts/mcp_config_sanity.py --client auto` | 本机 ZCode/OpenCode 配置 JSON、MCP server command 路径和关键 env 形态可读 |
-| 已安装 skill 是否与仓库一致 | `python3 scripts/check-installed-skills.py --target all --mode warn` | 能发现 `~/.codex/skills`、`~/.zcode/skills`、OpenCode 全局、项目级 `.opencode/skills` 与仓库源码是否漂移 |
+| 当前 Codex skill 是否与仓库一致 | `python3 scripts/check-installed-skills.py --target codex --mode warn` | 能发现 `~/.codex/skills` 中五个 skill 是否缺失或漂移 |
 
-真正的 Zotero / PubMed 运行时能力必须在 Codex / ZCode / OpenCode 会话中用 smoke prompt 验证，因为只有当前会话的 MCP tool list 才能证明工具可调用：
+真正的 Zotero / PubMed 运行时能力必须在 Codex 会话中用 smoke prompt 验证，因为只有当前会话的 MCP tool list 才能证明工具可调用：
 
 ```bash
 python3 scripts/smoke_prompts.py --list
@@ -275,27 +307,24 @@ python3 scripts/smoke_prompts.py --prompt zotero-target-export-dry-run
 python3 scripts/smoke_prompts.py --prompt pubmed-readiness
 ```
 
-把打印出的 prompt 复制进新开的 Codex / ZCode / OpenCode 会话执行。若工具不可见或失败，正确结果应是报告 `unavailable` / `not executed`，而不是假装完成检索。
+把打印出的 prompt 复制进重启后的 Codex 会话执行。若工具不可见或失败，正确结果应是报告 `unavailable` / `not executed`，而不是假装完成检索。
 
-可选运行时诊断 gate 默认关闭，避免因为不同机器的本地 MCP 配置影响常规校验；需要排查 Zotero/PubMed MCP 时可显式开启：
+需要快速复核 Codex skill 安装和 MCP 工具可见性时，可运行：
 
 ```bash
-# 只读检查 ZCode/OpenCode MCP config 形态、command 路径和关键 env；不启动 MCP、不联网
-python3 scripts/check-all.py --output-warnings skip --mcp-config warn
-
-# 检查仓库 skill 与 ~/.codex/skills、~/.zcode/skills、OpenCode skill 副本是否漂移
-python3 scripts/check-all.py --output-warnings skip --installed-skills warn
+# 检查仓库 skill 与当前 Codex 安装副本是否漂移
+python3 scripts/check-installed-skills.py --target codex --mode warn
 
 # 校验或打印可复制的人工 MCP smoke-test prompts
 python3 scripts/check-all.py --output-warnings skip --smoke-prompts check
 python3 scripts/smoke_prompts.py
 ```
 
-也可以单独运行：`python3 scripts/mcp_config_sanity.py --client auto`、`python3 scripts/check-installed-skills.py --target all --mode warn`、`python3 scripts/smoke_prompts.py --check`。
+也可以单独运行：`python3 scripts/check-installed-skills.py --target codex --mode warn`、`python3 scripts/smoke_prompts.py --check`。
 
 ### 3.4 静态校验 vs 运行时 MCP 就绪
 
-静态校验通过只说明 skill 文本结构正确，不等于当前 Agent IDE 会话已经能调用 Zotero / PubMed。真正执行工作流前，请按下面的只读 checklist 快速确认：
+静态校验通过只说明 skill 文本结构正确，不等于当前 Codex 会话已经能调用 Zotero / PubMed。真正执行工作流前，请按下面的只读 checklist 快速确认：
 
 | 检查项 | 期望状态 | 不满足时的正确行为 |
 |---|---|---|
@@ -304,17 +333,16 @@ python3 scripts/smoke_prompts.py
 | PubMed MCP 工具可见（可选） | 当前会话能看到 `pubmed_search`、`pubmed_get_details`、`pubmed_extract_info`、`pubmed_find_related` 等 PubMed/NCBI 工具 | 报告 `PubMed: ⚠️ Tool unavailable; search not executed`，并给出可复制 query |
 | PubMed 已实际运行且元数据已检查 | PubMed search 有返回，候选 PMID 已用详情/抽取工具检查 | 只有此时才能写 `PubMed: Completed` 或生成 PubMed-only RIS |
 
-换句话说：validator 是仓库侧 guardrail；MCP readiness 是当前 Codex / ZCode / OpenCode 会话侧状态。PubMed 不可见不是 Zotero 检索失败，而是可选 PubMed 扩展层未接入。
+换句话说：validator 是仓库侧 guardrail；MCP readiness 是当前 Codex 会话侧状态。PubMed 不可见不是 Zotero 检索失败，而是可选 PubMed 扩展层未接入。修改 `~/.codex/config.toml` 或同步 skill 后，必须完全重启 Codex 或开启新会话。
 
-本仓库提供三个只读辅助脚本来定位“配置存在但当前会话不能稳定调用”的问题：
+本仓库提供两个与 Codex 工作流直接相关的只读辅助脚本：
 
-| 脚本 | 用途 | 是否调用 MCP/联网/改配置 |
-|---|---|---|
-| `python3 scripts/mcp_config_sanity.py --client auto` | 检查 `~/.zcode/v2/config.json`、`~/.zcode/cli/config.json`、`~/.config/opencode/opencode.json` 的 JSON 形态、`mcp`/`mcp.servers`/`mcpServers` 差异、command 路径、GUI PATH 风险、PubMed/Zotero 关键 env | 否 |
-| `python3 scripts/check-installed-skills.py --target all --mode warn` | 比较仓库 `SKILL.md` 与 `~/.zcode/skills`、OpenCode 全局、项目级 `.opencode/skills` 中的 installed copy 是否一致 | 否 |
-| `python3 scripts/smoke_prompts.py` | 打印可复制到 ZCode/OpenCode 的安全人工 smoke-test prompt，强调只读、分步调用、不可伪造结果 | 否 |
+| 脚本 | 用途 |
+|---|---|
+| `python3 scripts/check-installed-skills.py --target codex --mode warn` | 比较仓库中的五个 `SKILL.md` 与 `~/.codex/skills` 是否一致 |
+| `python3 scripts/smoke_prompts.py` | 打印只读的 Zotero/PubMed smoke-test prompt，验证当前 Codex 会话是否真的看见工具 |
 
-如果 `mcp_config_sanity.py` 提示 `mcpServers`，通常说明把 Claude 风格配置粘贴到了 ZCode/OpenCode 配置；如果提示 command 不是绝对路径，GUI 启动的 ZCode/OpenCode 可能拿不到 shell `PATH`。这些脚本只能检查本地文件和 prompt 文本，不能替代当前会话真实 MCP tool list；修改配置或同步 skill 后仍需完整重启客户端或开启新会话。
+这两个脚本不会启动 MCP、联网检索或修改配置；它们不能替代当前 Codex 工具列表本身。
 
 如果验证成功，会看到类似：
 
@@ -334,7 +362,7 @@ All validations passed.
 
 ### 3.5 安装后第一次完整试跑
 
-安装、MCP 配置和静态校验完成后，建议先用一个短段落做端到端试跑，确认当前 Agent 会话能看到 Zotero/PubMed 工具，并能正确生成 evidence package：
+安装、MCP 配置和静态校验完成后，建议先用一个短段落做端到端试跑，确认当前 Codex 会话能看到 Zotero/PubMed 工具，并能正确生成 evidence package：
 
 ```text
 /zotero-evidence-review 用完整工作流帮我给下面这段草稿找证据并补引用，生成 Markdown evidence report 和 EndNote RIS；如果 PubMed 工具不可用，请只报告 query，不要声称已完成 PubMed 检索：
@@ -369,35 +397,16 @@ Sedentary behaviour may be associated with cardiometabolic and reproductive heal
 ```bash
 # Codex 全局目录（当前 Codex 会话使用的 skill 目录）
 bash scripts/install-skill.sh --skill all-skills --target codex --prune-backups
-
-# ZCode 全局目录（推荐给 ZCode 用户；默认安装 zotero-evidence-review）
-bash scripts/install-skill.sh --target zcode --prune-backups
-
-# 安装独立 PubMed literature search skill
-bash scripts/install-skill.sh --skill pubmed-literature-search --target zcode --prune-backups
-
-# 一次安装全部 skill
-bash scripts/install-skill.sh --skill all-skills --target zcode --prune-backups
-
-# OpenCode 全局目录（推荐给 OpenCode 用户）
-bash scripts/install-skill.sh --target opencode --prune-backups
-
-# 当前仓库项目级 OpenCode skill 目录
-bash scripts/install-skill.sh --target project --prune-backups
-
-# 同时同步到 Codex + ZCode + OpenCode + 项目级目录
-bash scripts/install-skill.sh --target all --prune-backups
 ```
+
+安装脚本仍保留其他 target 以兼容旧环境，但本项目的推荐路径和后续验证都只针对 Codex。
 
 ### 4.2 目标路径
 
 | `--target` | 安装路径 |
 |---|---|
 | `codex` | `~/.codex/skills/<skill-name>` |
-| `zcode` | `~/.zcode/skills/<skill-name>` |
-| `opencode` | `~/.config/opencode/skills/<skill-name>` |
-| `project` | 当前仓库的 `.opencode/skills/<skill-name>` |
-| `all` | 同步到以上四个位置 |
+| 其他 target | 由安装脚本处理；不属于本 README 的 Codex quickstart |
 
 ### 4.3 备份与去重规则
 
@@ -423,21 +432,21 @@ python3 scripts/check-installed-skills.py --target codex --mode fail
 
 ### 4.4 更新后确认当前会话使用的是新 skill
 
-修改仓库中的 `SKILL.md` 不会自动更新已经安装到 `~/.codex/skills/`、`~/.zcode/skills/` 或 OpenCode 目录中的旧副本。每次修复 workflow、MCP guardrail 或输出模板后，请重新运行安装脚本同步目标目录，例如：
+修改仓库中的 `SKILL.md` 不会自动更新已经安装到 `~/.codex/skills/` 的旧副本。每次修复 workflow、MCP guardrail 或输出模板后，请重新运行安装脚本同步 Codex：
 
 ```bash
 bash scripts/install-skill.sh --skill all-skills --target codex --prune-backups
 ```
 
-同步后请完全重启 Codex / ZCode / OpenCode 或开启新会话；仅刷新当前聊天通常不会重新加载 skill 与 MCP tool 列表。若仍看到 `Tool skipped because a previous tool call in the scheduled sequence failed`，先检查同一批工具调用中第一个失败的 MCP 调用，并确认当前会话加载的是同步后的 skill 副本。
+同步后请完全重启 Codex 或开启新会话；仅刷新当前聊天通常不会重新加载 skill 与 MCP tool 列表。若仍看到 `Tool skipped because a previous tool call in the scheduled sequence failed`，先检查同一批工具调用中第一个失败的 MCP 调用，并确认当前会话加载的是同步后的 skill 副本。
 
 可用下面的只读命令确认 installed copy 是否与仓库一致：
 
 ```bash
-python3 scripts/check-installed-skills.py --target all --mode warn
+python3 scripts/check-installed-skills.py --target codex --mode warn
 ```
 
-若报告 `different`、`missing` 或 `timestamped backup copies remain`，先重新运行 `bash scripts/install-skill.sh --skill all-skills --target ... --prune-backups`，再重启客户端。
+若报告 `different`、`missing` 或 `timestamped backup copies remain`，先重新运行 `bash scripts/install-skill.sh --skill all-skills --target codex --prune-backups`，再重启 Codex。
 
 ---
 
@@ -468,107 +477,85 @@ zotero-mcp version
 
 如果命令找不到，请确认 `pipx` / `uv` 的 bin 目录已经加入 `PATH`。
 
-### 5.2 Agent IDE MCP 配置总原则
+### 5.2 Codex 的 MCP 配置文件
 
-`zotero-evidence-review` 只依赖“当前会话中可见的 MCP tools”，不绑定某一个客户端。OpenCode、ZCode、Claude Desktop、Cherry Studio 等 Agent IDE 都可以使用，但它们的配置文件路径和 JSON 结构并不相同，不能把某个客户端的示例原样复制到另一个客户端。
-
-| 客户端 | 常见配置位置 | MCP 配置形态 |
-|---|---|---|
-| OpenCode | `~/.config/opencode/opencode.json` | 顶层 `mcp`，server 名直接放在 `mcp` 下 |
-| ZCode v2 | `~/.zcode/v2/config.json` | 顶层 `mcp`，server 名直接放在 `mcp` 下 |
-| ZCode CLI 旧配置/兼容层 | `~/.zcode/cli/config.json` | `mcp.servers` |
-| Claude Desktop / 部分 GUI 客户端 | 客户端自己的配置文件 | 常见为 `mcpServers` |
-
-配置完成后必须重启对应 Agent IDE 或开启新会话；只要工具列表里能看到 Zotero / PubMed 相关 MCP tools，skill 就能调用。
-
-### 5.3 OpenCode MCP 配置示例
-
-OpenCode 配置文件通常位于：
+本 README 只记录 Codex 的配置方式。Codex 使用 TOML，配置文件是：
 
 ```text
-~/.config/opencode/opencode.json
+~/.codex/config.toml
 ```
 
-示例配置：
+不要把其他客户端的 JSON（例如 `mcpServers`）直接粘贴到这里。当前这台 Mac 的 Zotero 与 PubMed 配置如下；换机器时只需要把 `command` 改成对应的绝对路径：
 
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "mcp": {
-    "zotero": {
-      "type": "local",
-      "command": ["/path/to/zotero-mcp", "serve"],
-      "environment": {
-        "ZOTERO_LOCAL": "true"
-      },
-      "enabled": true
-    }
-  }
-}
+```toml
+[mcp_servers.zotero]
+type = "stdio"
+command = "/Users/daxuan/.local/bin/zotero-mcp"
+args = ["serve"]
+enabled = true
+
+[mcp_servers.zotero.env]
+ZOTERO_LOCAL = "true"
+
+[mcp_servers.pubmed]
+type = "stdio"
+command = "/Users/daxuan/.local/bin/pubmed-mcp"
+enabled = true
+
+[mcp_servers.pubmed.env]
+ABSTRACT_MODE = "deep"
+FULLTEXT_MODE = "enabled"
+MCP_TRANSPORT = "stdio"
 ```
 
-把 `/path/to/zotero-mcp` 替换为：
+两条 server 都是本机 `stdio` 进程。Zotero MCP 连接已打开的 Zotero Desktop（本地 API 默认使用 `127.0.0.1:23119`）；PubMed MCP 通过 NCBI E-utilities 访问 PubMed，并提供 PMID 详情、相关文献和全文可用性检查。修改 `config.toml` 后必须完全重启 Codex 或开启新会话。
+
+### 5.3 Zotero MCP：安装与检查
 
 ```bash
+pipx install "zotero-mcp-server[all]"
 which zotero-mcp
+zotero-mcp version
 ```
 
-输出的真实路径。
+在 Zotero Desktop 中打开“设置 → 高级 → 允许其他应用程序访问 Zotero”。确认 Codex 的 `command` 指向 `which zotero-mcp` 返回的绝对路径；当前已验证的 server 包是 `zotero-mcp-server 0.5.0`，语义索引位于 `~/.config/zotero-mcp/chroma_db`。
 
-### 5.4 ZCode MCP 配置方式
+来源链接：
 
-ZCode 有多个配置层。当前桌面版 / v2 主要读取：
+- [OpenAI Codex Zotero plugin](https://github.com/openai/plugins/tree/main/plugins/zotero)
+- [实际运行的 zotero-mcp server：54yyyu/zotero-mcp](https://github.com/54yyyu/zotero-mcp)
+- [zotero-mcp issues](https://github.com/54yyyu/zotero-mcp/issues)
 
-```text
-~/.zcode/v2/config.json
+### 5.4 PubMed MCP：安装与检查
+
+本项目采用 [PancrePal-xiaoyibao/mcp-pubmed-server-pancrpal](https://github.com/PancrePal-xiaoyibao/mcp-pubmed-server-pancrpal)。如果需要从头安装：
+
+```bash
+git clone https://github.com/PancrePal-xiaoyibao/mcp-pubmed-server-pancrpal.git ~/mcp-pubmed-server-pancrpal
+cd ~/mcp-pubmed-server-pancrpal
+npm install
+npm run build
 ```
 
-配置形态与 OpenCode 类似，使用顶层 `mcp`：
+Codex 通过一个稳定的 launcher 启动它，避免 GUI 会话找不到 Node.js 或项目路径：
 
-```json
-{
-  "mcp": {
-    "zotero": {
-      "type": "local",
-      "command": ["/path/to/zotero-mcp", "serve"],
-      "environment": {
-        "ZOTERO_LOCAL": "true"
-      },
-      "enabled": true
-    }
-  }
-}
+```bash
+mkdir -p ~/.local/bin
+cat > ~/.local/bin/pubmed-mcp <<'EOF'
+#!/usr/bin/env bash
+export ABSTRACT_MODE="${ABSTRACT_MODE:-deep}"
+export FULLTEXT_MODE="${FULLTEXT_MODE:-enabled}"
+export MCP_TRANSPORT="${MCP_TRANSPORT:-stdio}"
+exec /opt/homebrew/bin/node "$HOME/mcp-pubmed-server-pancrpal/dist/index.js"
+EOF
+chmod +x ~/.local/bin/pubmed-mcp
 ```
 
-部分 ZCode CLI / 旧配置仍可能使用：
+如果 Node.js 或仓库位置不同，请替换 launcher 中的绝对路径。匿名访问可以直接运行；批量检索时建议在本机环境中设置 `PUBMED_API_KEY` 和 `PUBMED_EMAIL`，不要把它们提交到 Git。
 
-```text
-~/.zcode/cli/config.json
-```
+来源链接：[README](https://github.com/PancrePal-xiaoyibao/mcp-pubmed-server-pancrpal/blob/main/README.md)、[配置源码](https://github.com/PancrePal-xiaoyibao/mcp-pubmed-server-pancrpal/blob/main/src/config.ts)、[工具定义](https://github.com/PancrePal-xiaoyibao/mcp-pubmed-server-pancrpal/blob/main/src/tools/definitions.ts)。
 
-并采用 `mcp.servers` 形态：
-
-```json
-{
-  "mcp": {
-    "servers": {
-      "zotero": {
-        "type": "stdio",
-        "command": "/path/to/zotero-mcp",
-        "args": ["serve"],
-        "environment": {
-          "ZOTERO_LOCAL": "true"
-        },
-        "enabled": true
-      }
-    }
-  }
-}
-```
-
-如果通过 ZCode 界面添加 MCP Server，也要确认最终写入的是当前 ZCode 实际读取的配置层。修改配置后请完全重启 ZCode；仅刷新当前聊天通常不会重新加载 MCP。
-
-更多配置细节见：[Zotero_MCP_OpenCode_Guide.md](./Zotero_MCP_OpenCode_Guide.md)。
+配置后重启 Codex，并在当前会话确认 Zotero/PubMed 工具可见。工具不可见时，Evidence Package 必须写 `PubMed: ⚠️ Tool unavailable; search not executed`，不能把未执行的 query 写成已完成检索。
 
 ---
 
@@ -599,7 +586,7 @@ zotero-mcp update-db --force-rebuild
 
 ## 7. 使用教程与提示词示例
 
-安装并配置完成后，在 OpenCode / ZCode 中直接对话即可。基于 Zotero 本地库找证据时用 `/zotero-evidence-review` 开头；直接检索 PubMed、检查 PMID 或导出 PubMed-only RIS 时用 `/pubmed-literature-search` 开头。
+安装并配置完成后，在 Codex 中直接对话即可。基于 Zotero 本地库找证据时用 `/zotero-evidence-review` 开头；直接检索 PubMed、检查 PMID 或导出 PubMed-only RIS 时用 `/pubmed-literature-search` 开头；完成核实后用 `/zotero-endnote-bridge` 交接到 EndNote。
 
 推荐短提示词：
 
@@ -635,7 +622,7 @@ zotero-mcp update-db --force-rebuild
 最常用的完整路径如下：
 
 ```text
-安装/同步 skill → 配置 Zotero MCP → 构建语义索引 → 在 ZCode/OpenCode 中发起请求 → intent routing → Zotero local search → paragraph/search evidence analysis → PubMed auto expansion when visible → citation support / PMID inspection ledgers → metadata QC → Markdown report + EndNote RIS
+安装/同步 skill → 配置 Zotero MCP → 构建语义索引 → 在 Codex 中发起请求 → intent routing → Zotero local search → paragraph/search evidence analysis → PubMed auto expansion when visible → citation support / PMID inspection ledgers → metadata QC → Markdown report + EndNote RIS → EndNote bridge 分组、刷新与审计
 ```
 
 | 需求类型 | 默认路线 | PubMed MCP 用法 | 文件输出 | 最省事提示词 |
@@ -743,7 +730,7 @@ Several genetic observations were consistent with a directional contribution of 
 
 ### 7.5 场景 E：Evidence Package 导出
 
-Evidence Package 是 **Paragraph Citation Package Workflow** 的导出阶段，由 OpenCode / ZCode agent 按 `zotero-evidence-review` workflow 执行：agent 负责 Zotero 本地检索、PubMed 可见时自动扩展、匹配质控、写入 Markdown 与 RIS。段落补引文/写作证据包没有独立生成 CLI；仓库脚本负责安装同步、静态校验、RIS lint 和 output audit。另一个场景“目标文献检索清单”有独立 Phase 3 writer，见 [8.4 Target Literature Search Package](#84-target-literature-search-package)。
+Evidence Package 是 **Paragraph Citation Package Workflow** 的导出阶段，由 Codex 按 `zotero-evidence-review` workflow 执行：Codex 负责 Zotero 本地检索、PubMed 可见时自动扩展、匹配质控、写入 Markdown 与 RIS。段落补引文/写作证据包没有独立生成 CLI；仓库脚本负责安装同步、静态校验、RIS lint 和 output audit。另一个场景“目标文献检索清单”有独立 Phase 3 writer，见 [8.4 Target Literature Search Package](#84-target-literature-search-package)。
 
 完整导出流程：
 
@@ -877,174 +864,22 @@ Zotero item key 不作为主要阅读对象展示，只隐藏在可点击链接�
 
 PubMed 是 Paragraph Citation Package Workflow 中的自动扩展步骤：段落引文导出、普通生物医学检索和目标文献检索时，skill 会在 Zotero local search 后自动尝试 PubMed expansion；只有当前环境确实配置并可见 PubMed-capable MCP 工具时，才能声称已完成 PubMed 检索。
 
-#### PubMed 工具配置
+#### Codex PubMed MCP 配置
 
-本仓库不内置 PubMed MCP server。**结论是：需要你先把 PubMed MCP server 配置到你正在使用的 Agent IDE；`zotero-evidence-review` 和 `pubmed-literature-search` 都只负责识别并调用当前会话中已经可见的 PubMed 工具。** README 只保留 quickstart 和协同原则；完整安装、构建、launcher、NCBI API key 与 smoke-test 细节请以 [`docs/PANCREPAL_PUBMED_MCP_GUIDE.md`](./docs/PANCREPAL_PUBMED_MCP_GUIDE.md) 为准。
+Codex 的 PubMed 配置、launcher 和 GitHub 来源已经集中在[第 5.4 节](#54-pubmed-mcp安装与检查)。这里仅保留工作流边界：`zotero-evidence-review` 会先检索 Zotero；只有当前 Codex 会话实际看见 PubMed MCP 工具时，才执行 PubMed 扩展、PMID inspection、related/review discovery 或全文可用性检查。
 
-不要把 OpenCode、ZCode、Claude Desktop、Cherry Studio 等客户端的 MCP 配置示例混用：它们的配置路径和 JSON 形态可能不同。常见区别如下：
+PubMed MCP server 不属于本仓库；本仓库的 skill 只负责调用已经配置并可见的工具。`zotero-evidence-review` 负责 Zotero + PubMed 的 claim-level 证据整合，`pubmed-literature-search` 负责 PubMed-first 检索。不要同时启用多个功能相同的 PubMed server。
 
-| 客户端 | 常见配置位置 | MCP 配置形态 |
-|---|---|---|
-| OpenCode | `~/.config/opencode/opencode.json` | 顶层 `mcp`，server 名直接放在 `mcp` 下 |
-| ZCode v2 | `~/.zcode/v2/config.json` | 顶层 `mcp`，server 名直接放在 `mcp` 下 |
-| ZCode CLI 旧配置/兼容层 | `~/.zcode/cli/config.json` | `mcp.servers` |
-| Claude Desktop / 部分 GUI 客户端 | 客户端自己的配置文件 | 常见为 `mcpServers` |
+推荐协同顺序：
 
-配置完成后必须完全重启对应 Agent IDE 或开启新会话；只要当前工具列表里能看到 PubMed / NCBI 相关 MCP tools，skill 就能调用。若工具不可见，Evidence Package 必须写 `PubMed: ⚠️ Tool unavailable; search not executed`，不能因为生成了 PubMed query 就声称已完成检索。
-
-可以把两件事理解为分层：
-
-| 层级 | 负责什么 | 是否由本 skill 内置 |
-|------|----------|--------------------|
-| PubMed MCP server | 连接 PubMed / NCBI、执行 search / fetch / fulltext / export 等工具调用 | 否，需要单独安装配置 |
-| `zotero-evidence-review` skill | 在 Zotero local search 后生成 PubMed query、调用可见 PubMed 工具、合并 Zotero/PubMed 结果、去重、写 Evidence Report + RIS | 是 |
-| `pubmed-literature-search` skill | 直接以 PubMed MCP 为主检索层，执行主题检索、PMID metadata inspection、related/review expansion、OA full-text triage，并可导出 PubMed review + RIS | 是 |
-
-当前已知可接入方案有两类：
-
-1. **PancrePal-xiaoyibao/mcp-pubmed-server-pancrpal**：Node.js 版，功能较完整，当前常见工具包括 `pubmed_search`、`pubmed_get_details`、`pubmed_extract_info`、`pubmed_find_related`、`pubmed_detect_fulltext`、`pubmed_download_fulltext`、`pubmed_system_status`、`pubmed_manage_cache`。适合 `zotero-evidence-review` 的默认 PubMed 扩展层。
-2. **andybrandt/mcp-simple-pubmed**：Python 版，部署更轻，适合基础 PubMed 搜索与论文详情/全文获取。
-
-二选一即可；不要在没有需要时同时启用多个 PubMed MCP，以免 agent 面对多个相似工具时路由混乱。
-
-##### Zotero + PubMed 推荐协同方式
-
-| 阶段 | 首选 MCP | 使用方式 |
-|---|---|---|
-| 本地证据检索 | Zotero MCP | 先用语义/关键词/collection/tag 检索用户本地库，保留 Zotero item、PDF、notes、annotations 与 collection 上下文。 |
-| 生物医学外部扩展 | PubMed MCP | 用 `pubmed_search` 扩展 Zotero 未覆盖的医学文献，并在报告中单独标记 `PubMed` 来源。 |
-| 关键文献追踪 | PubMed MCP | 对高相关 PMID 使用 `pubmed_find_related` 查 similar/reviews，避免只靠关键词遗漏综述或邻近机制。 |
-| 元数据标准化 | PubMed MCP + Zotero MCP | 有 PMID 时优先 `pubmed_get_details`，没有 PMID 但有 DOI 时走 DOI 元数据；Zotero 条目仍保留本地链接。 |
-| 全文/OA 检测 | PubMed MCP | 需要全文时先 `pubmed_detect_fulltext`，只有 OA 可用且有必要时再 `pubmed_download_fulltext`；下载物不自动等同 Zotero 附件。 |
-| RIS/EndNote 导出 | 可见工具优先 | 如果 PubMed MCP 当前暴露 RIS/NBIB/EndNote/BibTeX exporter，则优先用它处理 PubMed-only records；否则从 `pubmed_get_details` 已检查元数据生成 RIS。 |
-
-##### 获取并配置 NCBI API key
-
-PubMed MCP 可以匿名访问 PubMed，但匿名模式通常约 3 次/秒；配置 NCBI API key 后通常约 10 次/秒，更适合批量检索、详情抓取和全文/OA 检测。
-
-1. 打开 `https://account.ncbi.nlm.nih.gov/settings/`。
-2. 登录或注册 NCBI 账户。
-3. 找到 `API Key Management`，点击 `Create an API Key`。
-4. 复制生成的 key，并准备一个真实可联系邮箱作为 `PUBMED_EMAIL`。
-5. 不要把真实 key 提交到 Git 仓库；只写入本机 `.env` 或 Agent IDE 的用户级配置文件。
-
-##### 方案 A：PancrePal PubMed MCP（Node.js）
-
-```bash
-git clone https://github.com/PancrePal-xiaoyibao/mcp-pubmed-server-pancrpal.git ~/mcp-pubmed-server-pancrpal
-cd ~/mcp-pubmed-server-pancrpal
-npm install
-npm run build
-# 可选：匿名模式可不创建 .env；需要 API key 时再 cp .env.example .env 并填写 PUBMED_API_KEY / PUBMED_EMAIL
-ABSTRACT_MODE=deep FULLTEXT_MODE=enabled MCP_TRANSPORT=stdio node dist/index.js
-```
-
-上面的 `node dist/index.js` 适合在终端中做一次本地 smoke test。ZCode / OpenCode 尤其是 GUI 启动时可能不继承 shell 的 `PATH`，因此长期配置建议使用绝对路径 launcher，而不是直接写裸 `node`。
-
-创建 launcher 示例：
-
-```bash
-mkdir -p /Users/daxuan/.local/bin
-cat > /Users/daxuan/.local/bin/pubmed-mcp <<'EOF'
-#!/usr/bin/env bash
-export ABSTRACT_MODE="${ABSTRACT_MODE:-deep}"
-export FULLTEXT_MODE="${FULLTEXT_MODE:-enabled}"
-export MCP_TRANSPORT="${MCP_TRANSPORT:-stdio}"
-exec /opt/homebrew/bin/node /Users/daxuan/mcp-pubmed-server-pancrpal/dist/index.js
-EOF
-chmod +x /Users/daxuan/.local/bin/pubmed-mcp
-```
-
-请把 `/opt/homebrew/bin/node` 与 `/Users/daxuan/mcp-pubmed-server-pancrpal/dist/index.js` 替换为本机真实路径。看到类似 `PubMed MCP Server ... running on stdio`、`abstract=deep`、`fulltext=enabled` 后，再写入当前 Agent IDE 的 MCP 配置。下面示例使用匿名模式，不要求 `PUBMED_API_KEY` / `PUBMED_EMAIL`；如需 API key，可把这两个变量加入 `environment`。
-
-OpenCode / ZCode v2 使用顶层 `mcp`：
-
-```json
-{
-  "mcp": {
-    "pubmed": {
-      "type": "local",
-      "command": ["/Users/daxuan/.local/bin/pubmed-mcp"],
-      "environment": {
-        "ABSTRACT_MODE": "deep",
-        "FULLTEXT_MODE": "enabled",
-        "MCP_TRANSPORT": "stdio"
-      },
-      "enabled": true
-    }
-  }
-}
-```
-
-ZCode CLI 旧配置/兼容层可能使用 `mcp.servers`：
-
-```json
-{
-  "mcp": {
-    "servers": {
-      "pubmed": {
-        "type": "stdio",
-        "command": "/Users/daxuan/.local/bin/pubmed-mcp",
-        "args": [],
-        "environment": {
-          "ABSTRACT_MODE": "deep",
-          "FULLTEXT_MODE": "enabled",
-          "MCP_TRANSPORT": "stdio"
-        },
-        "enabled": true
-      }
-    }
-  }
-}
-```
-
-Claude Desktop / 部分 GUI 客户端常见为 `mcpServers`，请按对应客户端文档改写，不要把 `mcpServers` 原样粘贴到 OpenCode 或 ZCode v2。
-
-##### 方案 B：mcp-simple-pubmed（Python）
-
-```bash
-conda create -n simple-pubmed python=3.10
-conda activate simple-pubmed
-pip install mcp-simple-pubmed
-python -m mcp_simple_pubmed
-```
-
-Agent IDE 顶层 `mcp` 配置示例：
-
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "mcp": {
-    "zotero": {
-      "type": "local",
-      "command": ["/Users/daxuan/.local/bin/zotero-mcp", "serve"],
-      "environment": {
-        "ZOTERO_LOCAL": "true"
-      },
-      "enabled": true
-    },
-    "simple-pubmed": {
-      "type": "local",
-      "command": ["/opt/miniconda3/envs/simple-pubmed/bin/python", "-m", "mcp_simple_pubmed"],
-      "environment": {
-        "PUBMED_EMAIL": "你的邮箱地址",
-        "PUBMED_API_KEY": "你的NCBI API key"
-      },
-      "enabled": true
-    }
-  }
-}
-```
-
-请把 Python 路径替换为你机器上真实路径，可用下面命令查看：
-
-```bash
-conda run -n simple-pubmed which python
-```
+1. Zotero MCP：检索本地条目、PDF、notes、annotations 和 collection 上下文。
+2. PubMed MCP：补充本地库缺失的医学文献，并用 PMID 详情工具检查元数据。
+3. Evidence Review：合并去重、判断支持强度、生成 Citation Support Ledger 和 canonical RIS。
+4. EndNote bridge：读取已核实 RIS 与 assignments，按章节/段落分组并完成最终审计。
 
 ##### 配置后验证
 
-配置后重启 OpenCode / ZCode 会话，并检查 MCP 列表或当前工具清单里是否出现 PubMed/NCBI 相关工具。只有工具在当前会话可见时，报告里的 PubMed 状态才应写为 `Completed`。
+配置后重启 Codex，并检查当前工具清单里是否出现 PubMed/NCBI 相关工具。只有工具在当前会话可见时，报告里的 PubMed 状态才应写为 `Completed`。
 
 ```markdown
 ## 7. PubMed Expansion
@@ -1216,7 +1051,7 @@ zotero-skills/
 | `zotero-manuscript-thinking/SKILL.md` | 全文论证、证据边界和修订优先级 checkpoint；由核心 Zotero skill 按条件调用。 |
 | `pubmed-literature-search/SKILL.md` | 独立 PubMed MCP 文献检索 skill 定义文件。 |
 | `zotero-endnote-bridge/SKILL.md` + `README.md` | canonical RIS/assignments 到 macOS EndNote 的去重、章节/段落分组、元数据刷新、cache 同步和审计规范；不负责 claim 证据判断。 |
-| `scripts/install-skill.sh` | 安装/同步 skill 到 Codex、ZCode、OpenCode 或项目目录；可用 `--prune-backups` 清理本仓库产生的旧备份。 |
+| `scripts/install-skill.sh` | 安装/同步 skill 到 Codex（脚本也保留其他 target）；可用 `--prune-backups` 清理本仓库产生的旧备份。 |
 | `scripts/cleanup-installed-skills.py` | 默认只读盘点，按目标和仓库技能安全清理时间戳备份；必须显式加 `--apply` 才删除。 |
 | `scripts/validate-skill.py` | 静态验证 Zotero skill 的元数据、章节、模板和安全防护说明；不执行 Zotero/PubMed 工作流。 |
 | `scripts/validate-pubmed-skill.py` | 静态验证 PubMed literature search skill。 |
@@ -1224,15 +1059,15 @@ zotero-skills/
 | `scripts/check-all.py` | 本地质量门：validator、writer self-test、可选 output audit/RIS lint/MCP config/installed drift/smoke prompt check。 |
 | `scripts/write_literature_search_package.py` | Phase 3 target literature search package writer：从已检查候选 JSON/YAML 生成 `*_literature_search.md` 和 Search RIS。 |
 | `scripts/fixtures/literature_search_package_sample.json` | Phase 3 writer 的最小可运行 fixture。 |
-| `.opencode/skills/` | 运行 `bash scripts/install-skill.sh --target project` 后生成的项目级 OpenCode skill 目录。 |
-| `Zotero_MCP_OpenCode_Guide.md` | 更详细的 Zotero MCP 与 OpenCode 配置指南。 |
+| `.opencode/skills/` | 历史兼容目录；当前 Codex quickstart 不需要它。 |
+| `Zotero_MCP_OpenCode_Guide.md` | 历史兼容配置参考；当前 Codex 配置以本 README 第 5 节为准。 |
 | `docs/` | 规划、设计和历史文档；当前行为以 `README.md` 与 `zotero-evidence-review/SKILL.md` 为准。 |
 
 ---
 
 ## 11. 常见问题排查
 
-### 11.1 Codex / ZCode / OpenCode 看不到 skill
+### 11.1 Codex 看不到 skill
 
 请重新同步到对应目录：
 
@@ -1240,18 +1075,13 @@ zotero-skills/
 # Codex
 bash scripts/install-skill.sh --skill all-skills --target codex --prune-backups
 
-# ZCode
-bash scripts/install-skill.sh --target zcode --prune-backups
-
-# OpenCode
-bash scripts/install-skill.sh --target opencode --prune-backups
 ```
 
-然后重启或刷新 Codex / ZCode / OpenCode 会话。确认目录存在：
+然后完全重启 Codex 或开启新会话。确认目录存在：
 
 ```text
-~/.zcode/skills/zotero-evidence-review
-~/.config/opencode/skills/zotero-evidence-review
+~/.codex/skills/zotero-evidence-review
+~/.codex/skills/zotero-endnote-bridge
 ```
 
 ### 11.2 Zotero MCP 报 connection refused
@@ -1263,7 +1093,7 @@ bash scripts/install-skill.sh --target opencode --prune-backups
 1. 打开 Zotero。
 2. 在 Zotero 设置中启用“允许其他应用程序访问 Zotero”。
 3. 确认 MCP command 指向真实的 `zotero-mcp` 路径。
-4. 重启 OpenCode / ZCode 会话。
+4. 完全重启 Codex 或开启新会话。
 
 ### 11.3 语义搜索没有结果
 
@@ -1334,7 +1164,7 @@ git remote set-url origin https://github.com/DaXuanGarden/zotero-skills.git
 
 ## 12. 进阶文档
 
-- [Zotero_MCP_OpenCode_Guide.md](./Zotero_MCP_OpenCode_Guide.md)：Zotero MCP 安装、OpenCode 配置、语义索引、CLI 使用和常见问题。
+- [Zotero_MCP_OpenCode_Guide.md](./Zotero_MCP_OpenCode_Guide.md)：历史兼容配置参考；当前 Codex 的 Zotero MCP 配置以本 README 第 5 节为准。
 - [`docs/ZOTERO_EVIDENCE_REVIEW_OUTPUT_PLAN.md`](./docs/ZOTERO_EVIDENCE_REVIEW_OUTPUT_PLAN.md)：Evidence Package 输出设计和验收标准；部分文件名示例可能是历史规划，当前默认以 README/SKILL.md 为准。
 - [`docs/DEVELOPMENT_PLAN.md`](./docs/DEVELOPMENT_PLAN.md)：skill 设计与开发计划，包含已实现和历史规划内容。
 - [`docs/DEVELOPMENT_PLAN00.md`](./docs/DEVELOPMENT_PLAN00.md)：早期规划记录。
@@ -1350,7 +1180,7 @@ git remote set-url origin https://github.com/DaXuanGarden/zotero-skills.git
 - 新的 Zotero MCP 工作流；
 - 更严格的引用核实模板；
 - 中文学术写作场景；
-- OpenCode / ZCode 安装体验；
+- Codex 安装体验；
 - 自动同步、验证与测试脚本。
 
 提交前建议运行：
