@@ -1,0 +1,19 @@
+{
+  "assignments": [
+    {
+      "section": "Introduction",
+      "paragraph_id": "Introduction-01",
+      "paragraph_title": "Circadian and MASLD background",
+      "references": [
+        {"pmid": "123456", "priority": "P1", "role": "direct_support", "claim_ids": ["C01"]}
+      ]
+    },
+    {
+      "section": "Discussion",
+      "paragraph_id": "Discussion-01",
+      "references": [
+        {"doi": "10.1000/doi-only", "priority": "P2", "role": "background"}
+      ]
+    }
+  ]
+}

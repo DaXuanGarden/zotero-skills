@@ -12,6 +12,17 @@
 
 ## 0. 最短路径：按场景直接开始
 
+如果已经通过 `zotero-evidence-review` 得到 RIS 和段落 assignments，可以用 `zotero-endnote-bridge` 将它们交接到 macOS EndNote。它先生成可检查的去重 master RIS、按章节/段落的 RIS、manifest 和 group map；需要真实写入时才显式启用带备份和 schema 检查的 SQLite adapter，并在导入后运行审计。
+
+```bash
+bash scripts/install-skill.sh --skill zotero-endnote-bridge --target codex --backup
+python3 zotero-endnote-bridge/scripts/endnote_bridge.py \
+  --ris references.ris --assignments assignments.json \
+  --output-dir endnote-handoff --dry-run
+```
+
+它支持 `Introduction/Introduction-01`、`Methods/Methods-01` 和 `Discussion/Discussion-01` 这样的两级归档；RIS 本身不携带嵌套 EndNote group set，因此 manifest 始终保留完整层级。macOS EndNote 库写入必须关闭 EndNote，并使用 `--apply --apply-sqlite`；其他平台使用生成的 RIS 手动导入。
+
 如果你已经安装好 skill，并且当前 Codex / ZCode / OpenCode 会话能看到 Zotero MCP（可选：PubMed MCP），最省事的用法是：**复制下面与你场景最接近的提示词，把主题、段落或参考文献替换成自己的内容即可。**
 
 默认行为已经调整为“检索也导出”：普通文献检索、目标文献检索、段落补引用/润色、PubMed 主题检索都会默认生成 Markdown 报告 + EndNote-compatible RIS。只想在聊天里快速看结果时，请在提示词开头明确写 `只在聊天输出，不要生成文件`。

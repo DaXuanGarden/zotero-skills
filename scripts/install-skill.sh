@@ -3,13 +3,14 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/install-skill.sh [--skill zotero-evidence-review|zotero-manuscript-thinking|zotero-literature-learning|pubmed-literature-search|all-skills] [--target codex|zcode|opencode|project|all] [--backup] [--prune-backups]
+Usage: scripts/install-skill.sh [--skill zotero-evidence-review|zotero-endnote-bridge|zotero-manuscript-thinking|zotero-literature-learning|pubmed-literature-search|all-skills] [--target codex|zcode|opencode|project|all] [--backup] [--prune-backups]
 
 Install skills from this repository into a local skill directory.
 Defaults: all calls target Codex and install zotero-evidence-review.
 
 Skills:
   zotero-evidence-review     Zotero-grounded evidence review workflow (default)
+  zotero-endnote-bridge      RIS/assignment handoff to macOS EndNote with audit and backups
   zotero-manuscript-thinking Whole-manuscript argument and revision checkpoint
   zotero-literature-learning Zotero-grounded literature materials learning workflow
   pubmed-literature-search   PubMed MCP literature search workflow
@@ -76,7 +77,7 @@ case "$TARGET" in
 esac
 
 case "$SKILL" in
-  zotero-evidence-review|zotero-manuscript-thinking|zotero-literature-learning|pubmed-literature-search|all-skills) ;;
+  zotero-evidence-review|zotero-endnote-bridge|zotero-manuscript-thinking|zotero-literature-learning|pubmed-literature-search|all-skills) ;;
   *)
     echo "Invalid skill: $SKILL" >&2
     usage >&2
@@ -90,7 +91,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 skill_names() {
   case "$SKILL" in
     all-skills)
-      printf '%s\n' zotero-evidence-review zotero-literature-learning zotero-manuscript-thinking pubmed-literature-search
+      printf '%s\n' zotero-evidence-review zotero-endnote-bridge zotero-literature-learning zotero-manuscript-thinking pubmed-literature-search
       ;;
     *)
       printf '%s\n' "$SKILL"

@@ -90,10 +90,15 @@ def main() -> None:
         ("Validate zotero-literature-learning skill", [PYTHON, "scripts/validate-literature-learning.py"]),
         ("Validate zotero-manuscript-thinking skill", [PYTHON, "scripts/validate-manuscript-thinking.py"]),
         ("Validate pubmed-literature-search skill", [PYTHON, "scripts/validate-pubmed-skill.py"]),
+        ("Validate zotero-endnote-bridge skill", [PYTHON, "scripts/validate-endnote-bridge.py"]),
         ("Validate shared writing-options contract", [PYTHON, "scripts/validate-writing-options.py"]),
         ("Validate sentence-level citation matrix contract", [PYTHON, "scripts/validate-sentence-citation-matrix.py"]),
         ("Self-test literature search package writer", [PYTHON, "scripts/write_literature_search_package.py", "--self-test"]),
         ("Self-test EndNote collection package writer", [PYTHON, "scripts/write_endnote_collection_package.py", "--self-test"]),
+        ("Self-test Zotero-EndNote bridge", [PYTHON, "zotero-endnote-bridge/scripts/endnote_bridge.py", "--self-test"]),
+        ("Self-test Zotero-EndNote audit", [PYTHON, "zotero-endnote-bridge/scripts/endnote_audit.py", "--self-test"]),
+        ("Self-test Zotero-EndNote metadata script", [PYTHON, "zotero-endnote-bridge/scripts/endnote_metadata.py", "--self-test"]),
+        ("Test Zotero-EndNote bridge package", [PYTHON, "zotero-endnote-bridge/tests/test_bridge.py"]),
     ]
 
     if args.output_warnings == "skip":
