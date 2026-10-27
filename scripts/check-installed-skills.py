@@ -12,7 +12,13 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 HOME = Path.home()
-SKILLS = ("zotero-evidence-review", "zotero-literature-learning", "zotero-manuscript-thinking", "pubmed-literature-search")
+SKILLS = (
+    "zotero-evidence-review",
+    "zotero-literature-learning",
+    "zotero-manuscript-thinking",
+    "pubmed-literature-search",
+    "zotero-endnote-bridge",
+)
 
 
 @dataclass(frozen=True)

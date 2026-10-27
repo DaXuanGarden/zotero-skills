@@ -34,7 +34,31 @@ python3 zotero-endnote-bridge/scripts/endnote_bridge.py \
 → 先做全文意义与章节逻辑 → 再做领域语言校准和局部改写 → 回查主张、数字、引用与 Methods–Results 对齐
 ```
 
-`zotero-literature-learning` 负责前半段，`zotero-manuscript-thinking` 负责整体诊断与修订顺序，`zotero-evidence-review` 负责具体 claim 的支持、核实和 RIS。三者共享 handoff，不各自重复建立文献出口。
+`zotero-literature-learning` 负责前半段，`zotero-manuscript-thinking` 负责整体诊断与修订顺序，`zotero-evidence-review` 负责具体 claim 的支持、核实和 RIS；`zotero-endnote-bridge` 接收已经核实的 RIS 和 assignments，把它们交接到 macOS EndNote。前四个写作/证据流程共享 handoff，EndNote bridge 位于最终交接层，不重新判断证据。
+
+### Skill map：五个入口分别负责什么
+
+| Skill | 主要职责 | 典型输入 | 主要产物 |
+|---|---|---|---|
+| `zotero-evidence-review` | 在 Zotero 中检索、拆解 claim、核实证据、安排引文并导出 RIS | 段落、主张、已有引用、检索主题 | Evidence Review、Citation Support Ledger、canonical RIS |
+| `zotero-literature-learning` | 收集和分层阅读同领域文献，学习论证、方法和专业表达 | 研究主题、写作卡点、目标文章类型 | `MATERIALS_LEARNING_REPORT`、corpus/evidence/style/argument profiles |
+| `zotero-manuscript-thinking` | 检查全文主线、章节逻辑、Methods–Results 对齐和修订优先级 | 全文或章节草稿、研究设计、审稿意见 | `MANUSCRIPT_STRATEGIC_REVIEW`、Logic Map、P0/P1 修订队列 |
+| `pubmed-literature-search` | 直接使用 PubMed MCP 检索、检查 PMID、扩展 related/review 并导出 PubMed RIS | PubMed 主题、时间范围、PMID | PubMed report、PMID inspection ledger、PubMed RIS |
+| `zotero-endnote-bridge` | 对已核实 RIS 去重、按章节/段落分组、写入 EndNote、刷新元数据并审计 | canonical RIS + assignments JSON + EndNote `.enl` | master/per-group RIS、manifest、group map、metadata refresh、audit |
+
+推荐的交接顺序是：
+
+```text
+zotero-literature-learning（学习素材）
+        ↓
+zotero-manuscript-thinking（全文结构与修订顺序）
+        ↓
+zotero-evidence-review（claim 证据、引用位置、canonical RIS）
+        ↓
+zotero-endnote-bridge（去重、章节/段落组、元数据、EndNote 审计）
+
+pubmed-literature-search 可在证据不足时独立检索，或作为 PubMed-first 入口；它不替代 claim-level 证据核实。
+```
 
 段落证据工作现在还会产出一张逐句矩阵：每句话都有稳定的 `sentence_id`，并沿着 `sentence_id → claim_id → citation → RIS action` 回溯。这样可以区分“需要外部引用”“本研究结果”“常识”“解释性桥接”和“证据缺口”，也能发现一篇文献被误用来覆盖整段的情况。矩阵旁边的 `CITATION_COVERAGE_SUMMARY` 会给出覆盖率、未映射主张和孤立 RIS 候选；覆盖链不完整时，报告不会标记为 `Ready`。段落请求还默认提供 `Copy-ready Manuscript Text`、`Citation Insertion Sheet`（插入锚点、可复制作者–年份引文、Zotero/EndNote 搜索词、PMID/DOI）和 `Diff / Change Log`；明确说“只找引文/保留原文措辞”时才跳过润色层。
 
@@ -119,19 +143,20 @@ python3 scripts/write_endnote_collection_package.py \
 
 ## 1. 项目概览
 
-本仓库提供四个互补 skill：`zotero-evidence-review` 是核心 Zotero 本地证据审查工作流；`zotero-literature-learning` 负责从 Zotero 检索、筛选、阅读和抽取可迁移素材；`zotero-manuscript-thinking` 是在局部修改后抬头检查整篇论文的论证与修订策略子 Skill；`pubmed-literature-search` 是独立 PubMed MCP 文献检索工作流。证据审查 Skill 通过 Zotero MCP 连接本地 Zotero 文献库，支持从“找文献”到完整的 **Paragraph Citation Package Workflow**（段落 → 主张拆解 → Zotero 本地检索 → PubMed 可见时自动扩展 → 引文放置 → Markdown 证据报告 + EndNote RIS）再到“逐条核实引用是否真的支持主张”的证据审查工作流；manuscript-thinking 在需要时重建 paper contract、argument spine、claim–evidence–section map，并把 P0/P1 问题交给证据、审计、修订或语言模块；PubMed skill 可直接调用 PubMed MCP 进行主题检索、PMID 元数据检查、related/review discovery、OA 全文可用性检查，并默认导出 Markdown + RIS，除非显式 chat-only。
+本仓库提供五个互补 skill：`zotero-evidence-review` 是核心 Zotero 本地证据审查工作流；`zotero-literature-learning` 负责从 Zotero 检索、筛选、阅读和抽取可迁移素材；`zotero-manuscript-thinking` 是在局部修改后抬头检查整篇论文的论证与修订策略；`pubmed-literature-search` 是独立 PubMed MCP 文献检索工作流；`zotero-endnote-bridge` 是把已核实 RIS 和段落 assignments 交接到 macOS EndNote 的 companion skill。证据审查 Skill 通过 Zotero MCP 连接本地 Zotero 文献库，支持从“找文献”到完整的 **Paragraph Citation Package Workflow**（段落 → 主张拆解 → Zotero 本地检索 → PubMed 可见时自动扩展 → 引文放置 → Markdown 证据报告 + EndNote RIS）再到“逐条核实引用是否真的支持主张”的证据审查工作流；manuscript-thinking 在需要时重建 paper contract、argument spine、claim–evidence–section map，并把 P0/P1 问题交给证据、审计、修订或语言模块；PubMed skill 可直接调用 PubMed MCP 进行主题检索、PMID 元数据检查、related/review discovery、OA 全文可用性检查，并默认导出 Markdown + RIS，除非显式 chat-only；EndNote bridge 只负责交接、分组、元数据刷新和最终库审计，不判断文献是否支持 claim。
 
 推荐使用路径：
 
 - 需要基于本地 Zotero 库找证据、补引用、核实引文时，用 `zotero-evidence-review`。
 - 需要先收集、筛选、阅读和学习 Zotero 中的同领域论文，再进入写作时，用 `zotero-literature-learning`。
 - 需要直接检索 PubMed、检查 PMID、找 related/review 文献或导出 PubMed-only RIS 时，用 `pubmed-literature-search`。
+- 需要把已核实 RIS 交接到 macOS EndNote 时，用 `zotero-endnote-bridge`；它要求先 dry-run，再在关闭 EndNote、完成备份后显式 `--apply --apply-sqlite`，最后执行 metadata refresh、cache sync 和 audit。
 - 如果只想聊天查看结果，可明确说 `只在聊天输出` 或 `不要生成文件`；否则检索、补引用和润色都会默认生成相应报告与 RIS。
 
 | 项目 | 当前状态 |
 |---|---|
-| Skill | `zotero-evidence-review` / `zotero-literature-learning` / `zotero-manuscript-thinking` / `pubmed-literature-search` |
-| 当前版本 | Zotero evidence `3.9.0`；literature learning `0.4.0`；manuscript-thinking `0.6.0`；PubMed `1.0.0` |
+| Skill | `zotero-evidence-review` / `zotero-literature-learning` / `zotero-manuscript-thinking` / `pubmed-literature-search` / `zotero-endnote-bridge` |
+| 当前版本 | Zotero evidence `3.9.0`；literature learning `0.4.0`；manuscript-thinking `0.6.0`；PubMed `1.0.0`；EndNote bridge `1.0.0` |
 | 兼容性 | Codex / OpenCode / ZCode |
 | 主要依赖 | Zotero 7+、zotero-mcp、Python 3.10+；PubMed 检索 skill 需要 PubMed MCP（推荐 PancrePal） |
 | 安装目标 | Codex 全局、ZCode 全局、OpenCode 全局、项目级 `.opencode/skills` |
@@ -222,9 +247,9 @@ python3 scripts/validate-literature-learning.py
 python3 scripts/check-all.py
 ```
 
-`python3 scripts/validate-skill.py` 和 `python3 scripts/validate-pubmed-skill.py` 是静态校验工具：它们检查 skill frontmatter、依赖声明、章节、输出模板、Evidence Package/RIS 约束和外部工具安全防护说明；它们不会连接 Zotero、不会执行 PubMed 检索，也不会验证真实引文是否支持稿件主张。
+`scripts/validate-*.py` 是静态校验工具：`validate-skill.py`、`validate-literature-learning.py`、`validate-manuscript-thinking.py`、`validate-pubmed-skill.py` 和 `validate-endnote-bridge.py` 分别检查五个 skill 的 frontmatter、依赖声明、章节、输出模板、RIS/EndNote 约束和外部工具安全防护说明；它们不会连接 Zotero、不会执行 PubMed 检索，也不会验证真实引文是否支持稿件主张。
 
-`python3 scripts/check-all.py` 是只读本地质量门禁，会串行运行两个 skill validator、Phase 3 literature search writer self-test，并在输出目录存在时运行 output audit 和 RIS lint。默认模式等价于严格提交前检查：`python3 scripts/evidence_output_audit.py --fail-on-warnings` 与 `python3 scripts/ris_lint.py --fail-on-warnings` 都会把 warning 作为失败；如果历史 evidence package 触发 warning，应按报告逐项判断是旧产物问题还是需要更新模板。处理旧包噪音时可显式使用 `python3 scripts/check-all.py --output-warnings warn`（打印但不因 output warnings 失败）、`python3 scripts/check-all.py --output-warnings skip`（只跑 skill validators 和 writer self-test），或 `python3 scripts/check-all.py --ignore-output-warnings-before YYYY-MM-DD`（仍严格检查新包，但抑制 cutoff 之前旧包的 warnings；RIS errors 仍会失败）。
+`python3 scripts/check-all.py` 是只读本地质量门禁，会串行运行五个 skill validator、EndNote bridge 的脚本自测和 Phase 3 literature search writer self-test，并在输出目录存在时运行 output audit 和 RIS lint。默认模式等价于严格提交前检查：`python3 scripts/evidence_output_audit.py --fail-on-warnings` 与 `python3 scripts/ris_lint.py --fail-on-warnings` 都会把 warning 作为失败；如果历史 evidence package 触发 warning，应按报告逐项判断是旧产物问题还是需要更新模板。处理旧包噪音时可显式使用 `python3 scripts/check-all.py --output-warnings warn`（打印但不因 output warnings 失败）、`python3 scripts/check-all.py --output-warnings skip`（只跑 skill validators 和 writer self-test），或 `python3 scripts/check-all.py --ignore-output-warnings-before YYYY-MM-DD`（仍严格检查新包，但抑制 cutoff 之前旧包的 warnings；RIS errors 仍会失败）。
 
 ### 3.3 功能覆盖检查矩阵
 
@@ -234,9 +259,10 @@ python3 scripts/check-all.py
 |---|---|---|
 | Zotero evidence review skill 结构、段落证据包、target search、Search RIS / Citation RIS 规则 | `python3 scripts/validate-skill.py` | `zotero-evidence-review/SKILL.md` 的章节、模板、路由、RIS guardrail 和 Phase 3 writer handoff 符合仓库规范 |
 | PubMed literature search skill 结构和 PMID inspection guardrail | `python3 scripts/validate-pubmed-skill.py` | `pubmed-literature-search/SKILL.md` 的 PubMed 检索、PMID metadata inspection、RIS 模板结构有效 |
+| Zotero–EndNote bridge 结构、分组策略和安全边界 | `python3 scripts/validate-endnote-bridge.py` | bridge frontmatter、dry-run/apply、备份、审计、cache sync 和测试夹具完整 |
 | Phase 3 目标文献检索包 writer | `python3 scripts/write_literature_search_package.py --self-test` | fixture 能生成 `*_literature_search.md` 与 Search RIS，且 RIS 记录边界可校验 |
 | 历史/新生成 RIS 文件格式 | `python3 scripts/ris_lint.py zotero-evidence-output` | 扫描 `.ris` 是否含 Markdown、缺少 `TY  -` / `ER  -`、明显占位符或常见字段问题 |
-| 全仓库本地质量门 | `python3 scripts/check-all.py --output-warnings skip --smoke-prompts check` | 两个 skill validator、writer self-test、smoke prompt guardrail 全部通过 |
+| 全仓库本地质量门 | `python3 scripts/check-all.py --output-warnings skip --smoke-prompts check` | 五个 skill validator、writer/bridge self-test、smoke prompt guardrail 全部通过 |
 | MCP 配置文件形态 | `python3 scripts/mcp_config_sanity.py --client auto` | 本机 ZCode/OpenCode 配置 JSON、MCP server command 路径和关键 env 形态可读 |
 | 已安装 skill 是否与仓库一致 | `python3 scripts/check-installed-skills.py --target all --mode warn` | 能发现 `~/.codex/skills`、`~/.zcode/skills`、OpenCode 全局、项目级 `.opencode/skills` 与仓库源码是否漂移 |
 
@@ -336,7 +362,7 @@ Sedentary behaviour may be associated with cardiometabolic and reproductive heal
 
 ## 4. 安装目标与同步方式
 
-`bash scripts/install-skill.sh` 用于把仓库中的最新版 skill 同步到不同 skill 目录，避免“仓库版本已更新，但全局安装版本仍是旧版”的漂移问题。默认目标是 Codex，默认安装 `zotero-evidence-review`；可用 `--skill zotero-literature-learning` 安装 Zotero 素材学习层，或用 `--skill all-skills` 一次安装全部四个 skill。
+`bash scripts/install-skill.sh` 用于把仓库中的最新版 skill 同步到不同 skill 目录，避免“仓库版本已更新，但全局安装版本仍是旧版”的漂移问题。默认目标是 Codex，默认安装 `zotero-evidence-review`；可用 `--skill zotero-literature-learning` 或 `--skill zotero-endnote-bridge` 单独安装，也可以用 `--skill all-skills` 一次安装全部五个 skill。
 
 ### 4.1 安装到不同目标
 
@@ -381,7 +407,7 @@ bash scripts/install-skill.sh --target all --prune-backups
 zotero-evidence-review.backup-YYYYmmdd-HHMMSS
 ```
 
-然后再覆盖安装。需要保留回滚副本时使用 `--backup`；日常同步建议使用 `--prune-backups`，安装成功后会删除所选目标下该仓库技能产生的时间戳备份。它只处理 `zotero-evidence-review.backup-*`、`zotero-literature-learning.backup-*`、`zotero-manuscript-thinking.backup-*` 和 `pubmed-literature-search.backup-*`，不会触碰其它 Skill 或 Zotero 数据。
+然后再覆盖安装。需要保留回滚副本时使用 `--backup`；日常同步建议使用 `--prune-backups`，安装成功后会删除所选目标下该仓库技能产生的时间戳备份。它只处理本仓库五个 skill 的 `*.backup-*` 目录，包括 `zotero-endnote-bridge.backup-*`，不会触碰其它 Skill 或 Zotero 数据。
 
 只想先查看、不删除时运行：
 
@@ -1157,12 +1183,19 @@ zotero-skills/
 │   └── SKILL.md
 ├── pubmed-literature-search/
 │   └── SKILL.md
+├── zotero-endnote-bridge/
+│   ├── SKILL.md
+│   ├── README.md
+│   ├── references/
+│   ├── scripts/
+│   └── tests/
 ├── scripts/
 │   ├── install-skill.sh
 │   ├── cleanup-installed-skills.py
 │   ├── validate-skill.py
 │   ├── validate-manuscript-thinking.py
 │   ├── validate-pubmed-skill.py
+│   ├── validate-endnote-bridge.py
 │   ├── check-all.py
 │   ├── ris_lint.py
 │   ├── smoke_prompts.py
@@ -1182,10 +1215,12 @@ zotero-skills/
 | `zotero-literature-learning/SKILL.md` | Zotero MCP 素材收集、全文/摘要分层阅读、写作卡点学习、peer corpus 与 profile 交接。 |
 | `zotero-manuscript-thinking/SKILL.md` | 全文论证、证据边界和修订优先级 checkpoint；由核心 Zotero skill 按条件调用。 |
 | `pubmed-literature-search/SKILL.md` | 独立 PubMed MCP 文献检索 skill 定义文件。 |
+| `zotero-endnote-bridge/SKILL.md` + `README.md` | canonical RIS/assignments 到 macOS EndNote 的去重、章节/段落分组、元数据刷新、cache 同步和审计规范；不负责 claim 证据判断。 |
 | `scripts/install-skill.sh` | 安装/同步 skill 到 Codex、ZCode、OpenCode 或项目目录；可用 `--prune-backups` 清理本仓库产生的旧备份。 |
 | `scripts/cleanup-installed-skills.py` | 默认只读盘点，按目标和仓库技能安全清理时间戳备份；必须显式加 `--apply` 才删除。 |
 | `scripts/validate-skill.py` | 静态验证 Zotero skill 的元数据、章节、模板和安全防护说明；不执行 Zotero/PubMed 工作流。 |
 | `scripts/validate-pubmed-skill.py` | 静态验证 PubMed literature search skill。 |
+| `scripts/validate-endnote-bridge.py` | 静态验证 EndNote bridge 的 frontmatter、脚本、夹具和安全合同。 |
 | `scripts/check-all.py` | 本地质量门：validator、writer self-test、可选 output audit/RIS lint/MCP config/installed drift/smoke prompt check。 |
 | `scripts/write_literature_search_package.py` | Phase 3 target literature search package writer：从已检查候选 JSON/YAML 生成 `*_literature_search.md` 和 Search RIS。 |
 | `scripts/fixtures/literature_search_package_sample.json` | Phase 3 writer 的最小可运行 fixture。 |

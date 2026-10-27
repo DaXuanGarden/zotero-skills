@@ -20,6 +20,7 @@ SKILLS = (
     "zotero-literature-learning",
     "zotero-manuscript-thinking",
     "pubmed-literature-search",
+    "zotero-endnote-bridge",
 )
 
 TARGET_ROOTS = {
