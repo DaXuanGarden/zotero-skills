@@ -80,6 +80,16 @@ python3 zotero-endnote-bridge/scripts/endnote_bridge.py \
 | `pubmed-literature-search` | 直接使用 PubMed MCP 检索、检查 PMID、扩展 related/review 并导出 PubMed RIS | PubMed 主题、时间范围、PMID | PubMed report、PMID inspection ledger、PubMed RIS |
 | `zotero-endnote-bridge` | 对已核实 RIS 去重、按章节/段落分组、写入 EndNote、刷新元数据并审计 | canonical RIS + assignments JSON + EndNote `.enl` | master/per-group RIS、manifest、group map、metadata refresh、audit |
 
+### 当前版本与质量门
+
+| 模块 | 版本 | 本轮重点 |
+|---|---:|---|
+| `zotero-evidence-review` | 4.0.0 | 预期引文缺失时的 DOI/PMID/题名/作者年份救援阶梯、失败分类和锚点保留 |
+| `zotero-manuscript-thinking` | 0.7.0 | 五道润色质量门、专用叶子 Skill 路由和 `POST_WRITE_AUDIT` 接受条件 |
+| `zotero-literature-learning` | 0.4.0 | 同领域素材学习与可追溯 style/evidence/argument profile |
+| `pubmed-literature-search` | 1.0.0 | PubMed 题录检查、related/review 扩展和 RIS |
+| `zotero-endnote-bridge` | 1.0.0 | RIS 交接、章节/段落分组、元数据刷新与库审计 |
+
 推荐的交接顺序是：
 
 ```text
@@ -95,6 +105,26 @@ pubmed-literature-search 可在证据不足时独立检索，或作为 PubMed-fi
 ```
 
 段落证据工作现在还会产出一张逐句矩阵：每句话都有稳定的 `sentence_id`，并沿着 `sentence_id → claim_id → citation → RIS action` 回溯。这样可以区分“需要外部引用”“本研究结果”“常识”“解释性桥接”和“证据缺口”，也能发现一篇文献被误用来覆盖整段的情况。矩阵旁边的 `CITATION_COVERAGE_SUMMARY` 会给出覆盖率、未映射主张和孤立 RIS 候选；覆盖链不完整时，报告不会标记为 `Ready`。段落请求还默认提供 `Copy-ready Manuscript Text`、`Citation Insertion Sheet`（插入锚点、可复制作者–年份引文、Zotero/EndNote 搜索词、PMID/DOI）和 `Diff / Change Log`；明确说“只找引文/保留原文措辞”时才跳过润色层。
+
+### 检索失败时怎么救援
+
+如果用户已经给出作者–年份、DOI、PMID、题名片段或明确说“这篇文献找不到”，Skill 会先区分
+`tool_unavailable`、`query_error`、`zero_hits`、`metadata_unusable` 和 `support_gap`，再按
+`DOI → PMID → Zotero key → exact title → normalized title → author/year + distinctive title tokens`
+逐级定位。只有在保留 population/object 和 outcome 锚点的前提下，才会逐步扩展 legacy term、MeSH、
+表型同义词和研究设计词。基因名、方法名或作者名单独检索出来的记录只作为发现线索，不会直接进入
+证据集或 RIS。报告会保留 `failure_class`、`rescue_ladder_used`、`anchors_preserved`、
+`rescue_status` 和 `manual_next_query`，把“没搜到”与“工具没跑通”分开。
+
+### 润色质量低时怎么路由
+
+`zotero-manuscript-thinking` 负责先诊断 paper contract、段落任务和证据边界，再把最终措辞交给
+最具体的叶子 Skill：Introduction 用 `academic-introduction-polisher`，Discussion 用
+`academic-discussion-polisher`，英文医学句法/术语用 `medical-english-precision-editor`，中文
+学术表达和去 AI 化用 `writing-core`，补引文用 `academic-reference-matcher`，参考文献身份和
+DOI/去重用 `academic-ref-check`。每次改写都要经过 meaning、section logic、field-native、
+language precision、evidence-boundary 五道门，并返回 `POST_WRITE_AUDIT`；只要出现新的 unsupported
+claim、数字/方向漂移或 citation ownership 改变，就退回修改，不以“更像顶刊”作为通过条件。
 
 最简调用方式就是只给段落：
 
@@ -190,7 +220,7 @@ python3 scripts/write_endnote_collection_package.py \
 | 项目 | 当前状态 |
 |---|---|
 | Skill | `zotero-evidence-review` / `zotero-literature-learning` / `zotero-manuscript-thinking` / `pubmed-literature-search` / `zotero-endnote-bridge` |
-| 当前版本 | Zotero evidence `3.9.0`；literature learning `0.4.0`；manuscript-thinking `0.6.0`；PubMed `1.0.0`；EndNote bridge `1.0.0` |
+| 当前版本 | Zotero evidence `4.0.0`；literature learning `0.4.0`；manuscript-thinking `0.7.0`；PubMed `1.0.0`；EndNote bridge `1.0.0` |
 | 推荐运行环境 | Codex Desktop / Codex CLI |
 | 主要依赖 | Zotero 7+、zotero-mcp、Python 3.10+；PubMed 检索 skill 需要 PubMed MCP（推荐 PancrePal） |
 | 默认安装目标 | Codex 全局 `~/.codex/skills` |

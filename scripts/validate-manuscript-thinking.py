@@ -89,6 +89,16 @@ REQUIRED_PHRASES = [
     "WRITING_OPTIONS_CARD",
     "selection_status: pending",
     "claim_delta",
+    "polish-quality-gate.md",
+    "academic-introduction-polisher",
+    "academic-discussion-polisher",
+    "medical-english-precision-editor",
+    "academic-reference-matcher",
+    "academic-ref-check",
+    "accepted: pass",
+    "numbers_units_direction_unchanged: yes",
+    "citation_ownership_preserved: yes",
+    "new_unsupported_claim: no",
 ]
 
 
@@ -114,6 +124,18 @@ def main() -> None:
     reference = SKILL.parent / "references" / "domain-style-calibration.md"
     if not reference.exists():
         fail(f"missing domain style calibration reference: {reference}")
+    quality_gate = SKILL.parent / "references" / "polish-quality-gate.md"
+    if not quality_gate.exists():
+        fail(f"missing polish quality gate reference: {quality_gate}")
+    quality_text = quality_gate.read_text(encoding="utf-8")
+    for phrase in (
+        "Gate A — Meaning gate",
+        "Gate B — Section-logic gate",
+        "Gate E — Evidence and reviewer-risk gate",
+        "accepted: pass | revise | author_review",
+    ):
+        if phrase not in quality_text:
+            fail(f"polish quality gate reference missing: {phrase}")
     reference_text = reference.read_text(encoding="utf-8")
     for phrase in (
         "peer corpus",

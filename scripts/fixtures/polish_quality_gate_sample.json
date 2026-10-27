@@ -1,0 +1,30 @@
+{
+  "cases": [
+    {
+      "name": "clean_pass",
+      "meaning_gate": "pass",
+      "section_logic_gate": "pass",
+      "field_native_gate": "partial",
+      "language_precision_gate": "pass",
+      "evidence_boundary_gate": "pass",
+      "claim_unchanged": "yes",
+      "numbers_units_direction_unchanged": "yes",
+      "citation_ownership_preserved": "yes",
+      "new_unsupported_claim": "no",
+      "accepted": "pass"
+    },
+    {
+      "name": "rejects_overclaim",
+      "meaning_gate": "pass",
+      "section_logic_gate": "pass",
+      "field_native_gate": "partial",
+      "language_precision_gate": "pass",
+      "evidence_boundary_gate": "fail",
+      "claim_unchanged": "yes",
+      "numbers_units_direction_unchanged": "yes",
+      "citation_ownership_preserved": "no",
+      "new_unsupported_claim": "yes",
+      "accepted": "revise"
+    }
+  ]
+}

@@ -7,8 +7,8 @@ metadata:
   workflow: academic-research
   requires: zotero-mcp
   optional: pubmed-mcp
-  version: 3.9.0
-  references: references/method-parameter-search.md,references/recall-first-retrieval.md,references/endnote-section-collections.md,references/writing-options-card.md,references/citation-insertion-sheet.md,references/report-layout.md
+  version: 4.0.0
+  references: references/method-parameter-search.md,references/recall-first-retrieval.md,references/retrieval-rescue-protocol.md,references/endnote-section-collections.md,references/writing-options-card.md,references/citation-insertion-sheet.md,references/report-layout.md
 ---
 
 # Zotero Evidence Review Skill
@@ -753,6 +753,20 @@ The candidate pool and final support set are separate. Keep near misses and excl
 
 An empty Zotero result is a local-library result, not a literature-completeness result: continue to the PubMed lanes when PubMed is available. If Zotero MCP is disconnected, report the local lane as unavailable and keep any independently completed PubMed evidence clearly labeled; the package status is at least `Partial` when the user's requested scope required both sources.
 
+### Expected-citation rescue path
+
+When the user supplies an author–year citation, DOI, PMID, title fragment, or an expected paper that
+was not retrieved, read [references/retrieval-rescue-protocol.md](references/retrieval-rescue-protocol.md)
+before broadening the topic. Classify the first failure as `tool_unavailable`, `query_error`,
+`zero_hits`, `metadata_unusable`, or `support_gap`. Use the identifier-first ladder (DOI → PMID →
+Zotero key → exact title → normalized title → author/year plus distinctive title tokens), then relax
+one claim dimension at a time while retaining the population/object and outcome anchors. A gene-only,
+method-only, or author-only fallback is a discovery lead and must not enter the evidence set without
+restoring the original anchors. Add `failure_class`, `rescue_ladder_used`, `anchors_preserved`,
+`rescue_status`, and `manual_next_query` to the Recall Audit. `no_direct_match` means completed
+retrieval and inspection found no direct support; it is different from `blocked`, where a tool or
+access boundary prevented completion.
+
 ---
 
 ## 2. Paragraph Evidence & Citation Analysis
@@ -849,6 +863,8 @@ When the request is a citation-support or export request, this module is the ana
    - Run `zotero_semantic_search` first for conceptual matching.
    - If coverage is insufficient, run one keyword/structured fallback with `zotero_search_items` or `zotero_advanced_search` using the same claim set.
    - Deduplicate results and build one reusable candidate evidence pool.
+   - If an expected citation is missing, execute the retrieval rescue ladder before changing the topic;
+     keep rescue candidates separate from the direct-support set until metadata and claim support are inspected.
 3. **Two-layer analysis from the same evidence pool**
    - **Layer A: Claim-evidence matrix** — map each claim to the best available citation(s), add a concise Chinese `主张摘要（中文）`, assign exactly one source layer and one A-E evidence level, record support strength, and mark gap status.
    - **Layer B: Sentence-level citation recommendations** — map each sentence to the citation(s) that should be inserted, carry forward the same source layer and A-E evidence level, and explain why.

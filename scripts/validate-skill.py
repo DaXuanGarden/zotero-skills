@@ -291,6 +291,7 @@ ROUTE_CONTRACT_REQUIREMENTS = [
 
 RECALL_FIRST_REQUIREMENTS = [
     "references/recall-first-retrieval.md",
+    "references/retrieval-rescue-protocol.md",
     "high recall",
     "zotero_semantic",
     "zotero_structured",
@@ -318,6 +319,12 @@ RECALL_FIRST_REQUIREMENTS = [
     "Calibrate the wording",
     "Check sentence coverage",
     "missing scope constraint would materially change the evidence set",
+    "identifier-first ladder",
+    "failure_class",
+    "rescue_ladder_used",
+    "anchors_preserved",
+    "manual_next_query",
+    "no_direct_match",
 ]
 ENDNOTE_COLLECTION_REQUIREMENTS = [
     "references/endnote-section-collections.md",
@@ -795,6 +802,25 @@ def main() -> None:
     recall_reference = REPO_ROOT / "zotero-evidence-review" / "references" / "recall-first-retrieval.md"
     if not recall_reference.exists():
         fail(f"missing recall-first retrieval reference: {recall_reference}")
+    rescue_reference = REPO_ROOT / "zotero-evidence-review" / "references" / "retrieval-rescue-protocol.md"
+    if not rescue_reference.exists():
+        fail(f"missing retrieval rescue reference: {rescue_reference}")
+    rescue_text = rescue_reference.read_text(encoding="utf-8")
+    require_all(
+        rescue_text,
+        (
+            "identifier-first ladder",
+            "tool_unavailable",
+            "query_error",
+            "zero_hits",
+            "metadata_unusable",
+            "support_gap",
+            "anchors_preserved",
+            "manual_next_query",
+            "no_direct_match",
+        ),
+        "retrieval rescue reference",
+    )
     recall_text = recall_reference.read_text(encoding="utf-8")
     require_all(
         recall_text,

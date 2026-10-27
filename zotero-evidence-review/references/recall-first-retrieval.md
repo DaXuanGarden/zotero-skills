@@ -20,6 +20,10 @@ The final RIS is a selected citation set. The Markdown report retains the broade
 
 ## 2. Claim blocks and retrieval lanes
 
+When an expected citation is missing, apply the identifier-first and progressive-relaxation ladder in
+[retrieval-rescue-protocol.md](retrieval-rescue-protocol.md) before broadening the topic. A failed
+exact query is a retrieval event to classify, not evidence that the paper does not exist.
+
 For every manuscript claim, record these blocks before searching:
 
 ```yaml

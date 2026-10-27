@@ -6,9 +6,9 @@ compatibility: codex,opencode,zcode
 metadata:
   parent_skill: zotero-evidence-review
   workflow: manuscript-level-diagnosis
-  version: 0.6.0
+  version: 0.7.0
   optional: zotero-mcp, pubmed-mcp
-  reference: references/domain-style-calibration.md,references/writing-options-card.md
+  reference: references/domain-style-calibration.md,references/polish-quality-gate.md,references/writing-options-card.md
 ---
 
 # Zotero Manuscript Thinking
@@ -20,6 +20,13 @@ metadata:
 它可以独立调用，也可以作为 `zotero-evidence-review` 在段落证据分析或引用修复后的 manuscript-level checkpoint。默认只输出诊断和优先级计划，不自动改写整篇论文，不自动承诺新实验。 如果用户尚未收集可核验的 peer corpus，先交给 `zotero-literature-learning` 建立素材包；本 Skill 消费其 `style_profile`、`evidence_profile` 和 `argument_profile`，不重复做无目标的批量检索。用户出现“知道意思但不会写、句子太啰嗦、方法名拿不准、Results 不知道如何推进”等卡点时，先触发 `WRITING_BLOCK_LEARNING`，再决定是否进入全文诊断。用户要求“给几个版本”“从不同角度写”时，读取 [WRITING_OPTIONS_CARD](references/writing-options-card.md)，输出可比较的候选和选择交接，不把某一版静默标为最终答案。
 
 ## 0.1 修订顺序：先保意义，再校准领域语言
+
+本 Skill 的最终措辞必须通过 [polish-quality-gate.md](references/polish-quality-gate.md)。它把
+“写得更顺”拆成 meaning、section logic、field-native、language precision 和 evidence-boundary
+五道门，并把最具体的叶子 Skill 作为最终编辑器：`academic-introduction-polisher`、
+`academic-discussion-polisher`、`medical-english-precision-editor`、`writing-core`、
+`academic-reference-matcher` 和 `academic-ref-check`。本 Skill 负责诊断、交接和回查，不用
+通用的“顶刊腔”替代章节专用编辑。
 
 每次运行都把“整体观”和“地道表达”放进同一条可回查的修订链，避免先把句子改漂亮、再发现主张已经变强：
 
@@ -55,6 +62,12 @@ meaning gate → section logic → peer-style calibration (if requested) → lan
 | `results_logic` | 结果块、定量锚点、图表引用和证据边界是否形成清楚的发现叙事 | Results Logic Map + result-to-claim audit |
 | `discussion_logic` | 结果、解释、文献比较、替代解释、限制和意义是否形成证据支持的链条 | Discussion logic map + 风险表 |
 | `whole_paper` | Introduction 的承诺是否由 Results/Discussion 回收，全文是否围绕同一个问题收束 | argument spine + P0–P3 计划 |
+
+最终编辑器选择规则：Introduction 优先 `academic-introduction-polisher`；Discussion 优先
+`academic-discussion-polisher`；英文医学句法和术语优先 `medical-english-precision-editor`；
+中文学术表达和去 AI 化优先 `writing-core`；补引文或核实引用使用
+`academic-reference-matcher`；参考文献身份、DOI、去重和格式使用 `academic-ref-check`。
+交接时必须携带段落任务、claim IDs、must-preserve ledger、证据等级和 `author_check`。
 
 如果用户只给一个句子，使用 `language`；给出完整 Methods、Results、Introduction 或 Discussion 时，先做对应的 section logic，再做语言；给出全文或“整体改进”时，运行各章节适用的逻辑层和全文层，但语言层仍是主要输出之一。
 
@@ -158,6 +171,16 @@ meaning gate → section logic → peer-style calibration (if requested) → lan
 - 段落顺序、中心句或过渡不清 → 先在本 Skill 的 section logic 层修复，再交给语言编辑。
 - 语言变得更漂亮但证据强度变高 → 立即回退，按 Source layer 和 A–E level 重写。
 - 用户要求“像顶刊”时，解释为更紧的逻辑、更少的重复、更精确的措辞和可控的外推，不使用华丽词汇或夸大创新替代证据。
+
+### 语言质量验收门
+
+完成一轮局部或章节润色后，必须输出 `POST_WRITE_AUDIT`，并使用
+[polish-quality-gate.md](references/polish-quality-gate.md) 的五道门。`accepted: pass` 需要
+`claim_unchanged: yes`、`numbers_units_direction_unchanged: yes`、
+`citation_ownership_preserved: yes`、`new_unsupported_claim: no`，且不存在高风险的
+`unknown`。任何 evidence-boundary `fail` 都要回退措辞或交给证据模块；不能用“更地道”覆盖
+未解决的科学含义问题。连续两轮只替换同义词而没有改变已诊断问题时停止，报告剩余的
+`author_check`，避免无效的反复润色。
 
 ### 2.1A 领域地道语言与目标语料校准
 
