@@ -57,12 +57,20 @@ python3 zotero-endnote-bridge/scripts/endnote_metadata.py \
   --library "$HOME/Documents/My EndNote Library.enl" \
   --apply --refresh-report endnote-handoff/metadata-refresh.json
 
+# Close EndNote after the AppleScript returns, then synchronize its cache.
+python3 zotero-endnote-bridge/scripts/endnote_sync.py \
+  --library "$HOME/Documents/My EndNote Library.enl" \
+  --apply --output endnote-handoff/cache-sync.json
+
 python3 zotero-endnote-bridge/scripts/endnote_audit.py \
   --library "$HOME/Documents/My EndNote Library.enl" \
+  --manifest endnote-handoff/manifest.json \
   --output endnote-handoff/endnote-audit.json
 ```
 
-Metadata refresh uses PubMed for PMID records and Crossref for DOI-only records. It does not overwrite populated fields unless `--overwrite` is supplied. The audit checks schema, active record count, required fields, duplicate DOI/PMID identifiers, group membership, and optional metadata comparison against a source RIS.
+Metadata refresh uses PubMed for PMID records and Crossref for DOI-only records. It does not overwrite populated fields unless `--overwrite` is supplied. After AppleScript writes, close EndNote and run `endnote_sync.py --apply` before auditing; EndNote 2025 can leave the `.enl` copy stale while the `sdb.eni` cache is current. The audit checks schema, active record count, main/cache agreement, required fields, duplicate DOI/PMID identifiers, section/paragraph group membership, `My Groups` leakage, and optional metadata comparison against a source RIS.
+
+The group policy is deliberate: `Introduction`, `Discussion`, and `Methods` are the visible top-level sets; paragraph or method-module groups live beneath them. New imports do not add another layer under `My Groups`. Introduction uses numbered paragraph IDs; Discussion and Methods use their own named paragraph/module IDs. A normal `--apply` stops if any record lacks a resolvable assignment.
 
 ## What this tool does not promise
 

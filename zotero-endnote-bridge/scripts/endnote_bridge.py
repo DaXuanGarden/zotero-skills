@@ -181,7 +181,22 @@ def canonical_records(paths: Iterable[Path]) -> tuple[list[dict[str, Any]], list
     return records, duplicates
 
 
-def load_assignments(path: Path | None) -> list[dict[str, Any]]:
+def normalise_paragraph_id(section: str, paragraph_id: str, strict: bool) -> str:
+    section_slug = re.sub(r"[^A-Za-z0-9]+", "-", section).strip("-") or "Section"
+    value = text(paragraph_id)
+    if re.match(rf"^{re.escape(section_slug)}-", value, flags=re.I):
+        return value
+    match = re.fullmatch(r"(?:paragraph|para)\s*[-_ ]?\s*(\d+)", value, flags=re.I)
+    if match:
+        if strict and section_slug.casefold() != "introduction":
+            raise ValueError(f"{section} requires a named paragraph/module ID such as {section_slug}-Observational-evidence")
+        return f"{section_slug}-{int(match.group(1)):02d}"
+    if strict:
+        raise ValueError(f"paragraph_id {paragraph_id!r} must start with {section_slug}-; use e.g. {section_slug}-01")
+    return f"{section_slug}-{re.sub(r'[^A-Za-z0-9]+', '-', value).strip('-')}" if value else f"{section_slug}-Unassigned"
+
+
+def load_assignments(path: Path | None, strict: bool = True) -> list[dict[str, Any]]:
     if path is None:
         return []
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -193,7 +208,7 @@ def load_assignments(path: Path | None) -> list[dict[str, Any]]:
         if not isinstance(row, dict):
             raise ValueError("each assignment must be an object")
         section = text(row.get("section")) or "Unassigned"
-        paragraph_id = text(row.get("paragraph_id")) or "Unassigned"
+        paragraph_id = normalise_paragraph_id(section, text(row.get("paragraph_id")) or "Unassigned", strict)
         refs = row.get("references", [])
         if not isinstance(refs, list):
             raise ValueError(f"references must be a list for {paragraph_id}")
@@ -213,6 +228,24 @@ def reference_matches(record: dict[str, Any], ref: dict[str, Any]) -> bool:
     return False
 
 
+def infer_record_assignments(record: dict[str, Any]) -> list[dict[str, Any]]:
+    """Recover explicit section annotations already present in evidence RIS."""
+    inferred: list[dict[str, Any]] = []
+    keywords = [text(value) for value in (record.get("KW") or [])]
+    section = next((value.split(":", 1)[1].strip() for value in keywords if value.lower().startswith("manuscript section:")), "")
+    paragraph = next((value.split(":", 1)[1].strip() for value in keywords if value.lower().startswith("manuscript paragraph:")), "")
+    priority = next((value.split(":", 1)[1].strip() for value in keywords if value.lower().startswith("priority:")), "P2")
+    role = next((value.split(":", 1)[1].strip() for value in keywords if value.lower().startswith("evidence role:")), "evidence")
+    if not section or not paragraph:
+        note = text(record.get("N1"))
+        match = re.search(r"(Introduction|Discussion|Methods)\s+paragraph:\s*Paragraph\s+(\d+)[^;]*;\s*priority:\s*(P[123]);\s*role:\s*([^.;]+)", note, flags=re.I)
+        if match:
+            section, paragraph, priority, role = match.group(1), f"{match.group(1)}-{int(match.group(2)):02d}", match.group(3), match.group(4).strip()
+    if section and paragraph:
+        inferred.append({"section": section, "paragraph_id": normalise_paragraph_id(section, paragraph, strict=False), "paragraph_title": "", "priority": priority or "P2", "role": role or "evidence", "claim_ids": [], "note": "inferred from RIS annotations"})
+    return inferred
+
+
 def enrich_assignments(records: list[dict[str, Any]], assignments: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     by_idx: dict[int, list[dict[str, Any]]] = {i: [] for i in range(len(records))}
     warnings: list[dict[str, Any]] = []
@@ -229,8 +262,12 @@ def enrich_assignments(records: list[dict[str, Any]], assignments: list[dict[str
     for idx, record in enumerate(records):
         memberships = by_idx[idx]
         if not memberships:
-            memberships = [{"section": "Unassigned", "paragraph_id": "Unassigned", "paragraph_title": "", "priority": "P3", "role": "unassigned", "claim_ids": [], "note": ""}]
-            warnings.append({"type": "unassigned_record", "title": title_of(record), "index": idx})
+            memberships = infer_record_assignments(record)
+            if memberships:
+                warnings.append({"type": "inferred_assignment", "title": title_of(record), "assignments": memberships})
+            else:
+                memberships = [{"section": "Unassigned", "paragraph_id": "Unassigned", "paragraph_title": "", "priority": "P3", "role": "unassigned", "claim_ids": [], "note": ""}]
+                warnings.append({"type": "unassigned_record", "title": title_of(record), "index": idx})
         record["_assignments"] = memberships
         keywords = list(record.get("KW") or [])
         notes = [text(record.get("N1"))] if record.get("N1") else []
@@ -316,6 +353,29 @@ def xml_name(blob: bytes | str) -> str:
     return match.group(1).decode("utf-8", "replace") if match else ""
 
 
+def xml_id(blob: bytes | str) -> str:
+    raw = blob.encode("utf-8", "replace") if isinstance(blob, str) else (blob or b"")
+    match = re.search(br"<id>([^<]+)</id>", raw)
+    return match.group(1).decode("utf-8", "replace") if match else ""
+
+
+def xml_member_ids(blob: bytes | str) -> list[str]:
+    raw = blob.encode("utf-8", "replace") if isinstance(blob, str) else (blob or b"")
+    return [match.decode("utf-8", "replace") for match in re.findall(br"<member>([^<]+)</member>", raw)]
+
+
+def as_xml_bytes(value: Any) -> bytes:
+    return value.encode("utf-8", "replace") if isinstance(value, str) else (value or b"")
+
+
+def replace_group_members(blob: bytes | str, member_ids: list[str]) -> bytes:
+    raw = as_xml_bytes(blob)
+    members = b"".join(f"<member>{member}</member>".encode("utf-8") for member in member_ids)
+    if re.search(br"<members[^>]*>.*?</members>", raw, flags=re.S):
+        return re.sub(br"<members[^>]*>.*?</members>", b'<members complex="true">' + members + b"</members>", raw, flags=re.S)
+    return raw
+
+
 def group_spec(name: str, now: int) -> tuple[bytes, str]:
     gid = str(uuid.uuid4()).upper()
     xml = f'<?xml version="1.0" encoding="UTF-8"?><group version="1"><ids><id>{gid}</id><name>{escape(name)}</name></ids><times><created format="UTC">{now}</created><modified format="UTC">{now}</modified></times><rules><rule>TYPE;3</rule></rules></group>'
@@ -327,6 +387,58 @@ def groupset_xml(name: str, child_ids: list[str], now: int) -> tuple[bytes, str]
     members = "".join(f"<member>{x}</member>" for x in child_ids)
     xml = f'<?xml version="1.0" encoding="UTF-8"?><groupset version="1"><ids><id>{gid}</id><name>{escape(name)}</name></ids><times><created format="UTC">{now}</created><modified format="UTC">{now}</modified></times><members complex="true">{members}</members></groupset>'
     return xml.encode(), gid
+
+
+def upsert_section_group_set(connection: sqlite3.Connection, section: str, child_ids: list[str], now: int) -> tuple[str, int, bool]:
+    """Create or update a section set without touching EndNote's My Groups."""
+    rows = connection.execute("select subcode,value from misc where code=17").fetchall()
+    for row in rows:
+        blob = as_xml_bytes(row[1])
+        if b"<groupset" in blob and xml_name(blob) == section:
+            gid = xml_id(blob) or str(uuid.uuid4()).upper()
+            updated, _ = groupset_xml(section, child_ids, now)
+            # Preserve the existing set UUID so the EndNote UI does not
+            # accumulate duplicate Introduction/Methods/Discussion sets.
+            updated = re.sub(br"<id>[^<]+</id>", f"<id>{gid}</id>".encode(), updated, count=1)
+            connection.execute("update misc set value=? where code=17 and subcode=?", (updated, int(row[0])))
+            return gid, int(row[0]), False
+    used = [int(row[0]) for row in rows if row[0] is not None]
+    subcode = max([99, *used]) + 1
+    spec, gid = groupset_xml(section, child_ids, now)
+    connection.execute("insert or replace into misc(code,subcode,value) values(17,?,?,?)".replace("?,?,?", "?,?"), (subcode, spec))
+    return gid, subcode, True
+
+
+def remove_from_my_groups(connection: sqlite3.Connection, group_ids: set[str]) -> bool:
+    """Remove bridge-created paragraph groups from the My Groups set only."""
+    row = connection.execute("select value from misc where code=17 and subcode=1").fetchone()
+    if not row:
+        return False
+    blob = as_xml_bytes(row[0])
+    old = xml_member_ids(blob)
+    kept = [member for member in old if member not in group_ids]
+    if kept == old:
+        return False
+    connection.execute("update misc set value=? where code=17 and subcode=1", (replace_group_members(blob, kept),))
+    return True
+
+
+def add_to_group_set_list(connection: sqlite3.Connection, set_ids: list[str]) -> bool:
+    """Expose section sets in EndNote's set list while preserving old sets."""
+    row = connection.execute("select value from misc where code=18 and subcode=0").fetchone()
+    blob = as_xml_bytes(row[0]) if row else b'<?xml version="1.0" encoding="UTF-8"?><setlist version="1"><sets></sets></setlist>'
+    existing = re.findall(br"<set[^>]*>([^<]+)</set>", blob)
+    ordered = [value.decode("utf-8", "replace") for value in existing]
+    changed = False
+    for set_id in set_ids:
+        if set_id not in ordered:
+            ordered.append(set_id); changed = True
+    if not row or changed:
+        sets = b"".join(f'<set collapsed="false">{value}</set>'.encode("utf-8") for value in ordered)
+        updated = re.sub(br"<sets>.*?</sets>", b"<sets>" + sets + b"</sets>", blob, flags=re.S)
+        connection.execute("insert or replace into misc(code,subcode,value) values(18,0,?)", (updated,))
+        return True
+    return False
 
 
 def schema_check(connection: sqlite3.Connection) -> None:
@@ -449,26 +561,28 @@ def apply_sqlite(library: Path, records: list[dict[str, Any]], output: Path) -> 
                 if name in existing_groups:
                     gid_row = connection.execute("select spec from groups where group_id=?", (existing_groups[name],)).fetchone()
                     raw_spec = gid_row[0] if gid_row else b""
-                    raw_spec = raw_spec.encode("utf-8", "replace") if isinstance(raw_spec, str) else raw_spec
-                    match = re.search(br"<id>([^<]+)</id>", raw_spec)
-                    gid = match.group(1).decode() if match else str(uuid.uuid4()).upper()
+                    gid = xml_id(raw_spec) or str(uuid.uuid4()).upper()
                     connection.execute("update groups set members=? where group_id=?", (member_blob(member_ids), existing_groups[name]))
                 else:
                     spec, gid = group_spec(name, now); next_id = int(connection.execute("select coalesce(max(group_id),0)+1 from groups").fetchone()[0]); connection.execute("insert into groups(group_id,recs_stamp,spec,members) values(?,?,?,?)", (next_id, 0, spec, member_blob(member_ids)))
                 group_ids[key] = gid
-            # Store section sets in EndNote's misc group-set records when the
-            # current schema exposes them. The paragraph groups remain usable
-            # even if a future EndNote release omits this private table shape.
+            # Store exactly one section set per section and expose those sets
+            # in EndNote's set list.  Paragraph groups are explicitly removed
+            # from My Groups, so a future import cannot recreate the redundant
+            # My Groups -> paragraph tree that this bridge is designed to avoid.
+            section_set_ids: list[str] = []
             for section in sorted({key[0] for key in group_members}):
                 children = [group_ids[key] for key in sorted(group_ids) if key[0] == section]
-                xml, _ = groupset_xml(section, children, now)
-                connection.execute("insert or replace into misc(code,subcode,value) values(17,?,?)", (100 + sorted({key[0] for key in group_members}).index(section), xml))
+                set_id, _, _ = upsert_section_group_set(connection, section, children, now)
+                section_set_ids.append(set_id)
+            my_groups_cleaned = remove_from_my_groups(connection, set(group_ids.values()))
+            set_list_updated = add_to_group_set_list(connection, section_set_ids)
         connection.close()
         cache = sync_cache(library)
     except Exception:
         connection.close()
         raise
-    report = {"library": str(library), "backup": str(backup), "new_records": new_records, "matched_records": matched_records, "updated_records": updated_records, "cache_synchronized": str(cache) if cache else None, "groups": len(group_members)}
+    report = {"library": str(library), "backup": str(backup), "new_records": new_records, "matched_records": matched_records, "updated_records": updated_records, "cache_synchronized": str(cache) if cache else None, "groups": len(group_members), "group_policy": {"my_groups_created": False, "my_groups_cleaned": my_groups_cleaned, "set_list_updated": set_list_updated, "section_sets": section_set_ids}}
     (output / "apply-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     return report
 
@@ -491,6 +605,8 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, default=Path("endnote-handoff"))
     parser.add_argument("--library", type=Path)
     parser.add_argument("--dry-run", action="store_true", help="Build package without library mutation (default)")
+    parser.add_argument("--allow-loose-assignments", action="store_true", help="Allow paragraph IDs without a section prefix; use only for legacy manifests")
+    parser.add_argument("--allow-incomplete-assignments", action="store_true", help="Permit unresolved or unassigned records during an explicit legacy apply")
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--apply-sqlite", action="store_true", help="Explicitly enable the macOS private-schema adapter")
     parser.add_argument("--self-test", action="store_true")
@@ -502,9 +618,13 @@ def main() -> None:
     paths = [p.expanduser().resolve() for p in args.ris]
     for path in paths:
         if not path.exists(): parser.error(f"RIS not found: {path}")
-    records, duplicates = canonical_records(paths); records, warnings = enrich_assignments(records, load_assignments(args.assignments.expanduser().resolve() if args.assignments else None))
-    manifest = write_package(records, duplicates, warnings, args.output_dir.expanduser().resolve(), paths, args.assignments.expanduser().resolve() if args.assignments else None)
+    assignment_path = args.assignments.expanduser().resolve() if args.assignments else None
+    records, duplicates = canonical_records(paths); records, warnings = enrich_assignments(records, load_assignments(assignment_path, strict=not args.allow_loose_assignments))
+    manifest = write_package(records, duplicates, warnings, args.output_dir.expanduser().resolve(), paths, assignment_path)
     if args.apply:
+        blocking = [warning for warning in warnings if warning.get("type") in {"unresolved_assignment", "ambiguous_assignment", "unassigned_record"}]
+        if blocking and not args.allow_incomplete_assignments:
+            raise SystemExit(f"refusing library apply with {len(blocking)} incomplete assignment warning(s); inspect manifest.json or pass --allow-incomplete-assignments for a legacy import")
         if not args.apply_sqlite:
             print("Package created; library unchanged. Add --apply-sqlite explicitly to enable the macOS adapter.")
         elif not args.library:

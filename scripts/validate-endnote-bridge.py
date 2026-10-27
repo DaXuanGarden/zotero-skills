@@ -29,7 +29,7 @@ def main() -> None:
         raise SystemExit("missing bridge contract: " + ", ".join(missing))
     if re.search(r"/Users/[^\s`]+", text):
         raise SystemExit("skill contains a private absolute path")
-    for path in ("scripts/endnote_bridge.py", "scripts/endnote_metadata.py", "scripts/endnote_audit.py", "tests/fixtures/sample.ris", "tests/fixtures/assignments.json"):
+    for path in ("scripts/endnote_bridge.py", "scripts/endnote_metadata.py", "scripts/endnote_audit.py", "scripts/endnote_sync.py", "tests/fixtures/sample.ris", "tests/fixtures/assignments.json"):
         if not (SKILL.parent / path).exists():
             raise SystemExit(f"missing bridge file: {path}")
     print("✅ Zotero-EndNote bridge skill contract passed")

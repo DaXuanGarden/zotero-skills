@@ -9,3 +9,5 @@
 5. commits the main database and synchronises the cache only after the transaction succeeds.
 
 The adapter never removes references. To recover, close EndNote, restore both backup components, and reopen the library. Keep the JSON report with the backup path and source package hash.
+
+Metadata writes have a second backup boundary: after the AppleScript completes, close EndNote and run `scripts/endnote_sync.py --apply`. That command backs up the current `.enl` + `.Data` pair and atomically replaces the stale `.enl` copy with the saved `sdb.eni` cache before the final audit.

@@ -112,7 +112,7 @@ def main() -> None:
                 updates.append(update)
             else: failures.append({"pmid": identifier, "doi": doi(row["electronic_resource_number"]), "reason": "no canonical identifier or source record"})
         except Exception as exc: failures.append({"pmid": identifier, "doi": doi(row["electronic_resource_number"]), "reason": str(exc)})
-    report: dict[str, Any] = {"library": str(library), "app": args.app, "records_seen": len(rows), "updates_prepared": len(updates), "failures": failures, "applied": False}
+    report: dict[str, Any] = {"library": str(library), "app": args.app, "records_seen": len(rows), "updates_prepared": len(updates), "failures": failures, "applied": False, "next_step": "close EndNote and run endnote_sync.py --apply, then run endnote_audit.py"}
     script_path = library.parent / f".zotero_endnote_metadata_{os.getpid()}.applescript"
     compiled_path = library.parent / f".zotero_endnote_metadata_{os.getpid()}.scpt"
     script_path.write_text(script_for(library, args.app, updates, args.overwrite), encoding="utf-8")

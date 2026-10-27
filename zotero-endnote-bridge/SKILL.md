@@ -20,9 +20,9 @@ The bridge deliberately keeps evidence decisions in `zotero-evidence-review`. It
 
 1. Run a preflight/dry run. Input RIS files are never changed.
 2. Inspect `manifest.json`, `group-map.csv`, and the per-group RIS files.
-3. For an actual library write, close EndNote, create a full `.enl` + `.Data` backup, and use `--apply --apply-sqlite`. The SQLite adapter is explicitly opt-in because EndNote's private schema can change between releases.
+3. For an actual library write, close EndNote, create a full `.enl` + `.Data` backup, and use `--apply --apply-sqlite`. The command refuses unresolved or unassigned records unless the legacy escape hatch `--allow-incomplete-assignments` is explicit. The SQLite adapter is explicitly opt-in because EndNote's private schema can change between releases.
 4. Refresh metadata only after the import has been audited. Metadata refresh defaults to filling empty fields; `--overwrite` is required to replace non-empty values.
-5. Run the post-import audit and keep its JSON report with the manuscript evidence package.
+5. Close EndNote after the metadata script finishes, synchronize the saved `sdb.eni` cache back to `.enl`, reopen EndNote, and run the post-import audit with the bridge manifest. A refresh without this cache synchronization is incomplete.
 
 ```bash
 python3 zotero-endnote-bridge/scripts/endnote_bridge.py \
@@ -38,8 +38,14 @@ python3 zotero-endnote-bridge/scripts/endnote_bridge.py \
   --output-dir handoff \
   --apply --apply-sqlite
 
+# Close EndNote after metadata refresh, then make the cache-to-main copy explicit.
+python3 zotero-endnote-bridge/scripts/endnote_sync.py \
+  --library "$HOME/Documents/My Library.enl" \
+  --apply --output handoff/cache-sync.json
+
 python3 zotero-endnote-bridge/scripts/endnote_audit.py \
   --library "$HOME/Documents/My Library.enl" \
+  --manifest handoff/manifest.json \
   --output handoff/endnote-audit.json
 ```
 
@@ -60,11 +66,12 @@ python3 zotero-endnote-bridge/scripts/endnote_audit.py \
 }
 ```
 
-References may be identified by DOI, PMID, Zotero key, or exact title. DOI and PMID are preferred. A record can occur in several paragraphs; the master RIS is still written once, while the manifest records every membership. Unassigned records are retained in `Unassigned/Unassigned` and reported as warnings.
+References may be identified by DOI, PMID, Zotero key, or exact title. DOI and PMID are preferred. A record can occur in several paragraphs; the master RIS is still written once, while the manifest records every membership. Paragraph IDs are normalized to a section prefix (`Introduction-01`, `Introduction-02`, `Introduction-03`; `Discussion-Observational-evidence`; `Methods-Overview`; `Methods-Meta-analysis-of-observational-studies`). Introduction paragraph numbering is not reused for Discussion or Methods. Loose legacy IDs are rejected by default; use `--allow-loose-assignments` only when deliberately importing an old manifest. When a reviewed RIS already contains explicit paragraph annotations, the bridge may infer them and records that inference in the manifest warnings. Unassigned records are retained in `Unassigned/Unassigned` and reported as warnings, but block a normal library apply.
 
 ## EndNote-specific boundaries
 
 - RIS is the portable interchange format. Nested EndNote group sets are represented in the manifest and, on macOS, can be materialised by the opt-in SQLite adapter.
+- The adapter creates one top-level set for each section and paragraph groups underneath it. It never creates a new `My Groups` set and removes only bridge-created paragraph IDs from the existing `My Groups` membership list. The audit fails if an expected bridge group leaks back into `My Groups`.
 - EndNote must be closed before any SQLite write. The adapter checks the schema, refuses ambiguous identifiers, and makes a timestamped backup before mutation.
 - EndNote's AppleScript metadata path is separate from the SQLite importer. The script compiles an ASCII-safe AppleScript before execution, because direct Unicode `.applescript` execution is unreliable on some macOS versions.
 - The bridge never deletes references. Existing groups with the same names are updated; unrelated groups are left intact.

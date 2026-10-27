@@ -98,6 +98,7 @@ def main() -> None:
         ("Self-test Zotero-EndNote bridge", [PYTHON, "zotero-endnote-bridge/scripts/endnote_bridge.py", "--self-test"]),
         ("Self-test Zotero-EndNote audit", [PYTHON, "zotero-endnote-bridge/scripts/endnote_audit.py", "--self-test"]),
         ("Self-test Zotero-EndNote metadata script", [PYTHON, "zotero-endnote-bridge/scripts/endnote_metadata.py", "--self-test"]),
+        ("Self-test Zotero-EndNote cache sync", [PYTHON, "zotero-endnote-bridge/scripts/endnote_sync.py", "--self-test"]),
         ("Test Zotero-EndNote bridge package", [PYTHON, "zotero-endnote-bridge/tests/test_bridge.py"]),
     ]
 

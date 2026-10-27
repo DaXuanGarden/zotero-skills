@@ -60,3 +60,46 @@ python3 scripts/check-all.py --output-warnings warn
 ## 出师证书
 
 本次改动已在 feature branch `feat/zotero-endnote-bridge` 完成。它把证据检索、EndNote 交接、元数据刷新和最终审计分成可验证的阶段，默认不会修改用户库；真正写入需要用户明确选择 macOS 私有库 adapter。下一步只需检查 branch diff 并合并到默认分支。
+
+## 第二轮回炉：用户反馈驱动的修正
+
+### 新验料结论
+
+用户实际使用后给出的两个问题都成立：`My Groups` 下面重复出现段落组，说明 group-set 写入没有把“章节总组”作为唯一可见入口；Introduction 的编号段落规则被错误地泛化到 Discussion 和 Methods，说明 assignment schema 缺少章节专属的命名约束。另一个容易静默失败的事实是 EndNote AppleScript 可能只更新 `.Data/sdb/sdb.eni`，而 `.enl` 仍是旧副本；只看 EndNote 界面或只看一次导入报告都不够。
+
+### 本轮只刨三面
+
+1. **分组面**：adapter 只 upsert `Introduction`、`Discussion`、`Methods` 等章节 set，并把段落/方法模块作为子组；不创建新的 `My Groups`，并在写入后从既有 My Groups 成员表移除本次 bridge 生成的子组 ID。审计新增 `my_groups_leaks` 检查。
+2. **命名面**：Introduction 允许 `Paragraph 1` 自动规范化为 `Introduction-01`；Discussion 和 Methods 必须使用带章节前缀的命名 ID（例如 `Discussion-Observational-evidence`、`Methods-Overview`），通用 `Paragraph-01` 会在严格模式下拒绝。正常 `--apply` 遇到未解析或未分配记录会停下。
+3. **交付面**：新增 `endnote_sync.py`，明确执行“AppleScript 写 cache → 关闭 EndNote → 备份 → cache-to-main → 重新打开 → audit”的完整闭环；审计同时检查主库和 cache 记录数、期望的 section/paragraph 组以及 My Groups 泄漏。
+
+### 第二轮验证
+
+通过：
+
+```text
+python3 zotero-endnote-bridge/tests/test_bridge.py
+python3 zotero-endnote-bridge/scripts/endnote_bridge.py --self-test
+python3 zotero-endnote-bridge/scripts/endnote_audit.py --self-test
+python3 zotero-endnote-bridge/scripts/endnote_metadata.py --self-test
+python3 zotero-endnote-bridge/scripts/endnote_sync.py --self-test
+python3 scripts/validate-endnote-bridge.py
+```
+
+真实项目 dry-run 仍为 88 条输入 → 77 条 canonical records、3 个显式 section/paragraph groups、11 条重复折叠、0 条 assignment 警告。只用引言的已标注 RIS 运行推断回放时，18 条记录被分到 `Introduction-01/02/03`，并把“推断而非 assignment”写入 warnings；这证明不会把缺少 Discussion/Methods 专属 assignment 的输入伪装成完整层级。真实 `.enl` 库本轮仍未修改。
+
+### 质量评分更新（实测）
+
+| 维度 | 上轮 | 本轮 | 证据 |
+|---|---:|---:|---|
+| 分组表达 | 4/5 | 5/5 | section set upsert、My Groups 泄漏检查、真实 manifest dry-run |
+| 失败模式编码 | 4/5 | 5/5 | strict taxonomy、未分配 apply 阻断、cache 不一致报错 |
+| 检查点设计 | 4/5 | 5/5 | metadata → sync → reopen → audit 固定顺序 |
+| 实测表现 | 4/5 | 4/5 | fixture + 真实 RIS dry-run；未对真实库重复写入 |
+| 总分 | 约 82/100 | 约 90/100 | 本轮改动均有回归测试；私有 EndNote schema 仍限制满分 |
+
+### 回炉观察清单
+
+- 继续观察 EndNote 2025/2026 是否改变 `misc(17,*)`、`misc(18,0)` 或 `groups` 的私有结构；schema 不匹配时必须回退到 RIS package。
+- 每次 metadata refresh 后保留 `metadata-refresh.json`、`cache-sync.json` 和 `endnote-audit.json` 三份报告；缺任何一份都不标记为完成。
+- 下一轮可以补充一个真实副本上的 macOS smoke test，但不把用户主库纳入 CI，也不在公共仓库保存真实文献或私人路径。
