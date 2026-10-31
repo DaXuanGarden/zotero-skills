@@ -88,6 +88,7 @@ def main() -> None:
     steps: list[tuple[str, list[str]]] = [
         ("Validate zotero-evidence-review skill", [PYTHON, "scripts/validate-skill.py"]),
         ("Validate zotero-literature-learning skill", [PYTHON, "scripts/validate-literature-learning.py"]),
+        ("Validate writing-first fidelity contract", [PYTHON, "scripts/validate-writing-first.py"]),
         ("Validate zotero-manuscript-thinking skill", [PYTHON, "scripts/validate-manuscript-thinking.py"]),
         ("Validate polish quality gate", [PYTHON, "scripts/validate-polish-quality-gate.py"]),
         ("Validate pubmed-literature-search skill", [PYTHON, "scripts/validate-pubmed-skill.py"]),

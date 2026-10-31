@@ -1,0 +1,49 @@
+{
+  "mode": "both",
+  "target_section": "Discussion",
+  "corpus_status": "Ready",
+  "calibration_confidence": "medium",
+  "revision_cards": [
+    {
+      "revision_id": "R01",
+      "draft_segment_id": "D03",
+      "rhetorical_job": "separate the observed result from its interpretation",
+      "target_reader_question": "What did the study directly observe, and what is only a possible explanation?",
+      "current_reader_problem": "The paragraph moves from an observed association to a causal explanation without an explicit boundary.",
+      "recommended_writing_action": "narrow_claim",
+      "before": "The exposure caused the outcome through the proposed pathway.",
+      "after_options": [
+        {"option_id": "conservative", "text": "The exposure was associated with the outcome."},
+        {"option_id": "bounded", "text": "The observed association is consistent with, but does not establish, the proposed pathway."}
+      ],
+      "reasoning_gain": "The reader can separate the observed result from the proposed interpretation.",
+      "source_pattern_ids": ["P02"],
+      "transfer_scope": "adapt",
+      "claim_delta": "weaker",
+      "priority": "P0",
+      "evidence_level": "D",
+      "risk": "The author must verify that no causal design supports stronger wording.",
+      "author_check": "Confirm that the study design supports association language only.",
+      "selection_status": "pending"
+    },
+    {
+      "revision_id": "R02",
+      "draft_segment_id": "D04",
+      "rhetorical_job": "state the current study's contribution without importing a mechanism",
+      "target_reader_question": "What can this study claim within its own evidence boundary?",
+      "current_reader_problem": "A target-venue paper uses a mechanistic claim that the current study cannot support.",
+      "recommended_writing_action": "retain",
+      "before": "The mechanism explains the observed association.",
+      "after_options": [],
+      "reasoning_gain": "Preserves the current study's evidence boundary instead of importing the peer paper's claim.",
+      "source_pattern_ids": [],
+      "transfer_scope": "reject_transfer",
+      "claim_delta": "none",
+      "priority": "P1",
+      "evidence_level": "D",
+      "risk": "Rejecting the transfer may leave the mechanism sentence unchanged until evidence is available.",
+      "author_check": "No author action unless the underlying evidence changes.",
+      "selection_status": "pending"
+    }
+  ]
+}

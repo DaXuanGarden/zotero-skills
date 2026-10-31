@@ -68,14 +68,14 @@ python3 zotero-endnote-bridge/scripts/endnote_bridge.py \
 → 先做全文意义与章节逻辑 → 再做领域语言校准和局部改写 → 回查主张、数字、引用与 Methods–Results 对齐
 ```
 
-`zotero-literature-learning` 负责前半段，`zotero-manuscript-thinking` 负责整体诊断与修订顺序，`zotero-evidence-review` 负责具体 claim 的支持、核实和 RIS；`zotero-endnote-bridge` 接收已经核实的 RIS 和 assignments，把它们交接到 macOS EndNote。前四个检索/写作流程共享 handoff，EndNote bridge 位于最终交接层，不重新判断证据。
+`zotero-literature-learning` 负责 writing-first 的语料学习：从目标期刊论文中学习 reader path、论证推进、段落功能、claim calibration 和领域表达，再对照当前手稿生成只读 Markdown 改进报告；它不做格式审查、不强行模仿目标期刊，也不修改 Word。`zotero-manuscript-thinking` 负责整体诊断与修订顺序，`zotero-evidence-review` 负责具体 claim 的支持、核实和 RIS；`zotero-endnote-bridge` 接收已经核实的 RIS 和 assignments，把它们交接到 macOS EndNote。前四个检索/写作流程共享 handoff，EndNote bridge 位于最终交接层，不重新判断证据。
 
 ### Skill map：五个入口分别负责什么
 
 | Skill | 主要职责 | 典型输入 | 主要产物 |
 |---|---|---|---|
 | `zotero-evidence-review` | 在 Zotero 中检索、拆解 claim、核实证据、安排引文并导出 RIS | 段落、主张、已有引用、检索主题 | Evidence Review、Citation Support Ledger、canonical RIS |
-| `zotero-literature-learning` | 收集和分层阅读同领域文献，学习论证、方法和专业表达 | 研究主题、写作卡点、目标文章类型 | `MATERIALS_LEARNING_REPORT`、corpus/evidence/style/argument profiles |
+| `zotero-literature-learning` | 以当前研究为中心，学习目标期刊论文的 reader path、论证、段落功能、claim calibration 和领域表达 | Zotero Collection/条目范围、目标期刊、当前手稿或写作卡点 | `writing_improvement_report.md`、Writing Reasoning Profile、Revision Cards、author checks、handoff |
 | `zotero-manuscript-thinking` | 检查全文主线、章节逻辑、Methods–Results 对齐和修订优先级 | 全文或章节草稿、研究设计、审稿意见 | `MANUSCRIPT_STRATEGIC_REVIEW`、Logic Map、P0/P1 修订队列 |
 | `pubmed-literature-search` | 直接使用 PubMed MCP 检索、检查 PMID、扩展 related/review 并导出 PubMed RIS | PubMed 主题、时间范围、PMID | PubMed report、PMID inspection ledger、PubMed RIS |
 | `zotero-endnote-bridge` | 对已核实 RIS 去重、按章节/段落分组、写入 EndNote、刷新元数据并审计 | canonical RIS + assignments JSON + EndNote `.enl` | master/per-group RIS、manifest、group map、metadata refresh、audit |
@@ -86,14 +86,14 @@ python3 zotero-endnote-bridge/scripts/endnote_bridge.py \
 |---|---:|---|
 | `zotero-evidence-review` | 4.0.0 | 预期引文缺失时的 DOI/PMID/题名/作者年份救援阶梯、失败分类和锚点保留 |
 | `zotero-manuscript-thinking` | 0.7.0 | 五道润色质量门、专用叶子 Skill 路由和 `POST_WRITE_AUDIT` 接受条件 |
-| `zotero-literature-learning` | 0.4.0 | 同领域素材学习与可追溯 style/evidence/argument profile |
+| `zotero-literature-learning` | 0.5.0 | writing-first、fidelity-first 的目标期刊语料学习与手稿改进报告；不做格式审查、不修改 Word |
 | `pubmed-literature-search` | 1.0.0 | PubMed 题录检查、related/review 扩展和 RIS |
 | `zotero-endnote-bridge` | 1.0.0 | RIS 交接、章节/段落分组、元数据刷新与库审计 |
 
 推荐的交接顺序是：
 
 ```text
-zotero-literature-learning（学习素材）
+zotero-literature-learning（目标期刊写作语料与手稿报告）
         ↓
 zotero-manuscript-thinking（全文结构与修订顺序）
         ↓
@@ -142,8 +142,8 @@ claim、数字/方向漂移或 citation ownership 改变，就退回修改，不
 |---|---|---|---|
 | 写论文时给一段草稿找证据、补引用 | `/zotero-evidence-review` | `帮我找到这个段落每句话合适的引文：...`（只粘贴段落即可） | `*_evidence_review.md`（含 Copy-ready、Citation Insertion Sheet、Diff）+ `*_references.ris` |
 | 从全文角度检查语言、Methods/Results、Introduction/Discussion 和主线 | `/zotero-manuscript-thinking` | `请检查语言精确度、Methods/Results/Introduction/Discussion 逻辑和全文主线，找出 P0/P1 问题，并给出下一轮修改顺序，不要直接重写全文。` | `MANUSCRIPT_STRATEGIC_REVIEW`（结构与语言诊断；不自动生成 RIS） |
-| 先从 Zotero 收集并学习同领域素材，再开始改稿 | `/zotero-literature-learning` | `先从 Zotero 找 3–5 篇同领域、同文章类型的论文，读取摘要/全文，学习 Introduction/Methods/Results 的写法，形成素材包，再交给下游 Skill。` | `MATERIALS_LEARNING_REPORT` + corpus/evidence/style/argument profiles + handoff |
-| 写作卡住时学习专业表达或方法术语 | `/zotero-literature-learning` | `这句话太啰嗦；请从 Zotero 找同领域、同章节的高匹配片段，比较表达后给出 2–3 个保守版本，并核对 annotation 是否准确。` | `WRITING_BLOCK_LEARNING` + writing block card + author checks |
+| 先从 Zotero 学习目标期刊论文，再改进当前手稿写作 | `/zotero-literature-learning` | `请从我指定的 Zotero Collection 选 3–5 篇目标期刊、同文章类型和同章节的论文，读取可用全文，学习它们如何组织 reader path、论证和 claim strength；然后对照我的手稿，先给写作诊断和 writing actions，再给可选改写。忠于当前研究内容，不做格式审查、不强行模仿期刊、不修改 Word，只生成 Markdown 报告。` | `writing_improvement_report.md` + Writing Reasoning Profile + Revision Cards + author checks |
+| 写作卡住时学习专业表达或方法术语 | `/zotero-literature-learning` | `这句话太啰嗦；请从 Zotero 找同领域、同章节的高匹配片段，先判断句子承担的写作功能，再比较 reader path、术语和 claim verbs，给出 2–3 个保守候选；保持我的研究事实和 claim strength，不复制原文。` | `writing_improvement_report.md` 中的 Revision Card + author check |
 | 同一句话需要多个角度 | `/zotero-manuscript-thinking` 或 `/zotero-evidence-review` | `请给这句话提供 Conservative、Field-native 和 Logic-forward 三个版本，绑定各自证据、风险和适用场景，先不要替我选择。` | `WRITING_OPTIONS_CARD` + 候选比较表 + selection_status |
 | 参考同领域代表性论文校准地道表达 | `/zotero-manuscript-thinking` | `请从 Zotero 选 3–5 篇同领域、同文章类型的代表性论文，比较这段 Introduction 的段落推进、术语和 claim verbs，再给保守改写；不要复制原文。` | `Domain Style Calibration` + peer-pattern 对照表 + copy-ready 文本 |
 | 校准 Methods/Results 的地道写法与证据边界 | `/zotero-manuscript-thinking` | `请从 Zotero 选同领域、同研究设计的论文，检查我的 Methods 是否可复现、Results 是否按主要发现推进，并核对 Methods–Results–图表一致性；先给 Logic Map，再润色。` | `Methods Logic Map` + `Results Logic Map` + reproducibility/alignment audit |
@@ -207,20 +207,20 @@ python3 scripts/write_endnote_collection_package.py \
 
 ## 1. 项目概览
 
-本仓库提供五个互补 skill：`zotero-evidence-review` 是核心 Zotero 本地证据审查工作流；`zotero-literature-learning` 负责从 Zotero 检索、筛选、阅读和抽取可迁移素材；`zotero-manuscript-thinking` 是在局部修改后抬头检查整篇论文的论证与修订策略；`pubmed-literature-search` 是独立 PubMed MCP 文献检索工作流；`zotero-endnote-bridge` 是把已核实 RIS 和段落 assignments 交接到 macOS EndNote 的 companion skill。证据审查 Skill 通过 Zotero MCP 连接本地 Zotero 文献库，支持从“找文献”到完整的 **Paragraph Citation Package Workflow**（段落 → 主张拆解 → Zotero 本地检索 → PubMed 可见时自动扩展 → 引文放置 → Markdown 证据报告 + EndNote RIS）再到“逐条核实引用是否真的支持主张”的证据审查工作流；manuscript-thinking 在需要时重建 paper contract、argument spine、claim–evidence–section map，并把 P0/P1 问题交给证据、审计、修订或语言模块；PubMed skill 可直接调用 PubMed MCP 进行主题检索、PMID 元数据检查、related/review discovery、OA 全文可用性检查，并默认导出 Markdown + RIS，除非显式 chat-only；EndNote bridge 只负责交接、分组、元数据刷新和最终库审计，不判断文献是否支持 claim。
+本仓库提供五个互补 skill：`zotero-evidence-review` 是核心 Zotero 本地证据审查工作流；`zotero-literature-learning` 负责从 Zotero 检索、筛选和阅读目标期刊语料，抽取 reader path、论证、段落功能、claim calibration 和领域表达，并以当前研究为中心生成 writing-first、fidelity-first 的 Markdown 改进报告；它不做格式审查、不强行模仿目标期刊、不修改 Word；`zotero-manuscript-thinking` 是在局部修改后抬头检查整篇论文的论证与修订策略；`pubmed-literature-search` 是独立 PubMed MCP 文献检索工作流；`zotero-endnote-bridge` 是把已核实 RIS 和段落 assignments 交接到 macOS EndNote 的 companion skill。证据审查 Skill 通过 Zotero MCP 连接本地 Zotero 文献库，支持从“找文献”到完整的 **Paragraph Citation Package Workflow**（段落 → 主张拆解 → Zotero 本地检索 → PubMed 可见时自动扩展 → 引文放置 → Markdown 证据报告 + EndNote RIS）再到“逐条核实引用是否真的支持主张”的证据审查工作流；manuscript-thinking 在需要时重建 paper contract、argument spine、claim–evidence–section map，并把 P0/P1 问题交给证据、审计、修订或语言模块；PubMed skill 可直接调用 PubMed MCP 进行主题检索、PMID 元数据检查、related/review discovery、OA 全文可用性检查，并默认导出 Markdown + RIS，除非显式 chat-only；EndNote bridge 只负责交接、分组、元数据刷新和最终库审计，不判断文献是否支持 claim。
 
 推荐使用路径：
 
 - 需要基于本地 Zotero 库找证据、补引用、核实引文时，用 `zotero-evidence-review`。
-- 需要先收集、筛选、阅读和学习 Zotero 中的同领域论文，再进入写作时，用 `zotero-literature-learning`。
+- 需要先收集、筛选、阅读和学习 Zotero 中的目标期刊论文，再以当前研究为中心改进写作时，用 `zotero-literature-learning`；它输出 writing-first、fidelity-first 的 Markdown 报告，不修改 Word。
 - 需要直接检索 PubMed、检查 PMID、找 related/review 文献或导出 PubMed-only RIS 时，用 `pubmed-literature-search`。
 - 需要把已核实 RIS 交接到 macOS EndNote 时，用 `zotero-endnote-bridge`；它要求先 dry-run，再在关闭 EndNote、完成备份后显式 `--apply --apply-sqlite`，最后执行 metadata refresh、cache sync 和 audit。
-- 如果只想聊天查看结果，可明确说 `只在聊天输出` 或 `不要生成文件`；否则检索、补引用和润色都会默认生成相应报告与 RIS。
+- 如果只想聊天查看结果，可明确说 `只在聊天输出` 或 `不要生成文件`；否则证据检索和 PubMed 检索会按各自契约生成报告与 RIS，`zotero-literature-learning` 只生成 Markdown 写作报告及其可选附录，不生成 RIS。
 
 | 项目 | 当前状态 |
 |---|---|
 | Skill | `zotero-evidence-review` / `zotero-literature-learning` / `zotero-manuscript-thinking` / `pubmed-literature-search` / `zotero-endnote-bridge` |
-| 当前版本 | Zotero evidence `4.0.0`；literature learning `0.4.0`；manuscript-thinking `0.7.0`；PubMed `1.0.0`；EndNote bridge `1.0.0` |
+| 当前版本 | Zotero evidence `4.0.0`；literature learning `0.5.0`（writing-first/fidelity-first）；manuscript-thinking `0.7.0`；PubMed `1.0.0`；EndNote bridge `1.0.0` |
 | 推荐运行环境 | Codex Desktop / Codex CLI |
 | 主要依赖 | Zotero 7+、zotero-mcp、Python 3.10+；PubMed 检索 skill 需要 PubMed MCP（推荐 PancrePal） |
 | 默认安装目标 | Codex 全局 `~/.codex/skills` |
@@ -310,7 +310,7 @@ python3 scripts/validate-endnote-bridge.py
 python3 scripts/check-all.py
 ```
 
-`scripts/validate-*.py` 是静态校验工具：`validate-skill.py`、`validate-literature-learning.py`、`validate-manuscript-thinking.py`、`validate-pubmed-skill.py` 和 `validate-endnote-bridge.py` 分别检查五个 skill 的 frontmatter、依赖声明、章节、输出模板、RIS/EndNote 约束和外部工具安全防护说明；它们不会连接 Zotero、不会执行 PubMed 检索，也不会验证真实引文是否支持稿件主张。
+`scripts/validate-*.py` 是静态校验工具：`validate-skill.py`、`validate-literature-learning.py`、`validate-writing-first.py`、`validate-manuscript-thinking.py`、`validate-pubmed-skill.py` 和 `validate-endnote-bridge.py` 分别检查 skill 的 frontmatter、写作优先/忠实度契约、依赖声明、章节、输出模板、RIS/EndNote 约束和外部工具安全防护说明；它们不会连接 Zotero、不会执行 PubMed 检索，也不会验证真实引文是否支持稿件主张。
 
 `python3 scripts/check-all.py` 是只读本地质量门禁，会串行运行五个 skill validator、EndNote bridge 的脚本自测和 Phase 3 literature search writer self-test，并在输出目录存在时运行 output audit 和 RIS lint。默认模式等价于严格提交前检查：`python3 scripts/evidence_output_audit.py --fail-on-warnings` 与 `python3 scripts/ris_lint.py --fail-on-warnings` 都会把 warning 作为失败；如果历史 evidence package 触发 warning，应按报告逐项判断是旧产物问题还是需要更新模板。处理旧包噪音时可显式使用 `python3 scripts/check-all.py --output-warnings warn`（打印但不因 output warnings 失败）、`python3 scripts/check-all.py --output-warnings skip`（只跑 skill validators 和 writer self-test），或 `python3 scripts/check-all.py --ignore-output-warnings-before YYYY-MM-DD`（仍严格检查新包，但抑制 cutoff 之前旧包的 warnings；RIS errors 仍会失败）。
 
@@ -831,7 +831,7 @@ RIS 导出会过滤 Zotero 个人/流程标签（例如 emoji、纯符号、`/re
 
 在段落补引用或已有编号引文修复中，如果段落属于完整稿件、局部修改已重复两轮，或出现证据等级 E/强因果/主张无结果位置等高风险信号，`zotero-evidence-review` 会先运行紧凑 checkpoint，再给出 Copy-ready text。只有单个段落时会明确标记为 scope-limited checkpoint。
 
-如果你要求“语言要地道”或“像这个领域的代表性论文”，checkpoint 会额外建立一个小型 `Domain Style Calibration`：优先从 Zotero 选取 3–5 篇同领域、同文章类型、同目标 section 的可检查论文，依次执行 `zotero_get_recent → zotero_semantic_search → zotero_get_item_metadata → zotero_get_item_children → zotero_get_pdf_outline → zotero_read_pdf_pages`，提取段落功能、句子功能、术语、claim verbs、引用归属和信息节奏。Methods 还会比较可复现细节的组织顺序和报告规范；Results 还会比较主要/支持结果的排序、定量锚点、图表连接和解释边界，再把你的草稿与这些模式做对照。它只学习写作决策，不复制原文，也不会用 peer paper 替你的研究补结果或贡献。语料不足时报告 `calibration_confidence: low/none`，继续做 genre-neutral 的语言诊断。
+如果你要求“语言要地道”或“像这个领域的代表性论文”，checkpoint 会额外建立一个小型 `Domain Style Calibration`：优先从 Zotero 选取 3–5 篇同领域、同文章类型、同目标 section 的可检查论文，依次执行 `zotero_get_recent → zotero_semantic_search → zotero_get_item_metadata → zotero_get_item_children → zotero_get_pdf_outline → zotero_read_pdf_pages`，提取段落功能、句子功能、术语、claim verbs、引用归属和信息节奏。Methods 还会比较可复现细节的组织顺序和报告规范；Results 还会比较主要/支持结果的排序、定量锚点、图表连接和解释边界，再把你的草稿与这些模式做对照。它只学习写作决策，不复制原文，也不会用 peer paper 替你的研究补结果或贡献；目标期刊只是 reader path 和论证习惯的参照，当前研究的设计、数据、贡献、限制和 claim strength 始终优先。语料不足时报告 `calibration_confidence: low/none`，继续做 genre-neutral 的语言诊断。
 
 ### 7.9 场景 I：Zotero 证据不足时的外部兜底
 
@@ -1043,7 +1043,12 @@ zotero-skills/
 │   └── SKILL.md
 ├── zotero-literature-learning/
 │   ├── SKILL.md
-│   └── references/materials-package-schema.md
+│   └── references/
+│       ├── materials-package-schema.md
+│       ├── writing-first-contract.md
+│       ├── argument-first-reading.md
+│       ├── fidelity-first-gate.md
+│       └── writing-improvement-report.md
 ├── zotero-manuscript-thinking/
 │   └── SKILL.md
 ├── pubmed-literature-search/
@@ -1059,6 +1064,7 @@ zotero-skills/
 │   ├── cleanup-installed-skills.py
 │   ├── validate-skill.py
 │   ├── validate-manuscript-thinking.py
+│   ├── validate-writing-first.py
 │   ├── validate-pubmed-skill.py
 │   ├── validate-endnote-bridge.py
 │   ├── check-all.py
@@ -1077,7 +1083,8 @@ zotero-skills/
 | 路径 | 说明 |
 |---|---|
 | `zotero-evidence-review/SKILL.md` | 核心 skill 定义文件；当前工作流的权威规范。 |
-| `zotero-literature-learning/SKILL.md` | Zotero MCP 素材收集、全文/摘要分层阅读、写作卡点学习、peer corpus 与 profile 交接。 |
+| `zotero-literature-learning/SKILL.md` | Writing-first Zotero MCP 素材学习、argument-first 全文阅读、fidelity-first 模式迁移、手稿写作改进报告与 peer corpus 交接。 |
+| `zotero-literature-learning/references/` | Writing Contract、Argument-first Reading、Fidelity-first Gate、Writing Improvement Report 和素材包 schema。 |
 | `zotero-manuscript-thinking/SKILL.md` | 全文论证、证据边界和修订优先级 checkpoint；由核心 Zotero skill 按条件调用。 |
 | `pubmed-literature-search/SKILL.md` | 独立 PubMed MCP 文献检索 skill 定义文件。 |
 | `zotero-endnote-bridge/SKILL.md` + `README.md` | canonical RIS/assignments 到 macOS EndNote 的去重、章节/段落分组、元数据刷新、cache 同步和审计规范；不负责 claim 证据判断。 |

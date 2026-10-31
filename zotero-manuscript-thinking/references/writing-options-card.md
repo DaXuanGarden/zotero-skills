@@ -103,3 +103,17 @@ author_check
 ## Safety boundary
 
 Peer papers provide abstracted writing patterns and evidence locations, not sentences to copy. “More native” never means stronger. If the corpus is unavailable, use `style_basis: genre-neutral` and lower `calibration_confidence`; do not claim field calibration was completed.
+
+## Fidelity-first transfer fields
+
+The shared option contract also records how a peer pattern is being used. Target-venue papers are rhetorical evidence, not a manuscript template.
+
+Each option must additionally provide:
+
+```text
+transfer_scope    # preserve, adapt, author_decide, or reject_transfer
+reasoning_gain    # which reader problem becomes clearer
+fidelity_check    # facts, design, numbers, direction, claim strength, and evidence boundary
+```
+
+Use `preserve` for current-study facts and author intent, `adapt` for reader path, paragraph function, information order, terminology, transitions, or claim calibration, `author_decide` when more than one scientifically valid structure remains, and `reject_transfer` when the peer pattern would import peer facts or strengthen the current claim. A target-venue pattern that does not improve the current manuscript's reader path must be rejected.

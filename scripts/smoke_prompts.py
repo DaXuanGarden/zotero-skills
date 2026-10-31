@@ -44,6 +44,21 @@ PROMPTS = [
         f"""/zotero-manuscript-thinking 只读路由验证，不要生成文件：如果用户要求“参考 Zotero 中同领域、同研究设计的论文，检查 Methods 是否可复现、Results 是否地道且叙事清楚，并核对 Methods–Results–图表一致性”，请说明应先建立按 section 分层的 style_corpus_ledger，再对 Methods 和 Results 分别抽取 reproducibility detail order、报告规范、结果块顺序、quantitative anchor、figure/table linking 和 interpretation boundary；然后输出 Methods Logic Map、Results Logic Map、Zotero Style Evidence Ledger、Methods–Results alignment audit 和 calibration_confidence。不得补写未提供的参数、改变数字/方向/单位或把 Results 解释成 Discussion。\n{COMMON_GUARDRAIL}\n如果 Zotero/PubMed MCP 不可见，请写 corpus_status: unavailable，并说明只能做 genre-neutral、evidence-bound 的章节诊断。不要实际检索或写文件。""",
     ),
     SmokePrompt(
+        "zotero-fidelity-first-conflict-dry-run",
+        "Zotero fidelity-first conflict rejection dry run",
+        f"""/zotero-literature-learning 只读路由验证，不要生成文件：如果目标期刊论文反复使用某种写作模式，但该模式会改变当前研究的含义（例如把观察性关联写成因果、把有限样本的探索性结果写成普遍结论、或把同行论文的机制解释迁移到当前研究），请明确拒绝迁移该模式。先建立 Fidelity-First Contract：当前研究的设计、数据、结果、贡献、限制和 claim strength 是事实来源；目标期刊语料只能用于观察 reader path、paragraph function、information order、claim calibration、terminology 和 transition。逐条输出 peer pattern、current reader problem、transfer_scope（preserve/adapt/author_decide/reject_transfer）、拒绝理由、safe alternative 和 author_check；不得用“更像目标期刊”作为保留理由，也不得复制同行原句或结果。\n{COMMON_GUARDRAIL}\n请只输出预期阶段、fidelity gate、revision card 字段和停止条件，不要实际检索或写文件。""",
+    ),
+    SmokePrompt(
+        "zotero-manuscript-mapping-revision-cards-dry-run",
+        "Zotero complete manuscript mapping and revision cards dry run",
+        f"""/zotero-literature-learning 只读路由验证，不要生成文件：如果用户提供一篇完整手稿和指定 Zotero 目标期刊语料，要求先学习论文的论证与读者路径，再给出写作改进建议，请说明应按 section/paragraph/sentence 建立稳定的 draft_segment_id，并逐段记录 rhetorical_job、target_reader_question、main_claim、evidence_anchor、information_order、claim_strength 和 reader_blocker。先输出 Manuscript Reader-path Map，再输出按 P0/P1/P2 排序的 Revision Cards；每张卡必须含 before、最多三个候选 after、recommended_writing_action、reasoning_gain、source_pattern_ids、transfer_scope、claim_delta、evidence_level、risk、author_check 和 selection_status: pending。先修论证架构、段落功能和信息顺序，再修术语和句子；不得自动选择最终版本、不得修改 Word/PDF/TeX/Zotero，也不得补写未提供的研究事实。\n{COMMON_GUARDRAIL}\n请只输出预期工作流、字段契约、fidelity checks 和 handoff，不要实际检索或写文件。""",
+    ),
+    SmokePrompt(
+        "zotero-insufficient-corpus-genre-neutral-dry-run",
+        "Zotero insufficient corpus genre-neutral fallback dry run",
+        f"""/zotero-literature-learning 只读路由验证，不要生成文件：如果用户指定的 Zotero Collection 中目标期刊全文少于最低匹配数量，或只能读取摘要/元数据，必须降级为 genre-neutral 写作诊断，不能把一两篇论文的个人习惯描述成目标期刊规范。请记录 corpus_status、calibration_confidence、exact-match count、full-text coverage、inspected sections、unresolved gaps 和 recommendation_scope；只允许输出有证据支持的 reader-path、paragraph-function、claim-calibration 或 wording-if-reasoning 建议，并明确哪些判断不能做。若语料不足但当前手稿可读，仍可基于当前研究内容给出保守写作建议，但不得声称已完成目标期刊校准；若真正问题是证据缺口，应停止语言替换并转为 author_check/evidence_gap。\n{COMMON_GUARDRAIL}\n请只输出降级规则、状态字段、允许/禁止的建议范围和 handoff，不要实际检索或写文件。""",
+    ),
+    SmokePrompt(
         "zotero-health",
         "Zotero read-only health check",
         f"""/zotero-evidence-review 做一次 Zotero MCP 只读健康检查。\n{COMMON_GUARDRAIL}\n请只报告：当前会话是否能看到 Zotero MCP tools、语义索引/全文能力是否可检查、最近文献/collection/tag 检索是否能安全执行。""",

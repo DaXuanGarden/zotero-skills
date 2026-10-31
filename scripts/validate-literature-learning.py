@@ -15,7 +15,7 @@ SCHEMA = ROOT / "zotero-literature-learning" / "references" / "materials-package
 REQUIRED_PHRASES = (
     "name: zotero-literature-learning",
     "requires: zotero-mcp",
-    "version: 0.4.0",
+    "version: 0.5.0",
     "Stage 0 — 定义学习任务",
     "Stage 1 — Zotero 候选检索",
     "Stage 2 — 元数据与可访问性筛选",
@@ -23,8 +23,8 @@ REQUIRED_PHRASES = (
     "Stage 4 — 分层阅读",
     "Stage 4A — 写作卡点学习回路",
     "Stage 5 — 抽取可迁移模式",
-    "Stage 6 — 形成三个 profile",
-    "Stage 7 — 交接",
+    "Stage 6 — 形成四类 profile（按需）",
+    "Stage 7 — 交接主报告与可追溯附录",
     "Stage 8 — 修改后回查",
     "zotero_get_recent",
     "zotero_semantic_search",
@@ -55,6 +55,15 @@ REQUIRED_PHRASES = (
     "learning_decision",
     "learning_decisions.md",
     "POST_WRITE_MATERIALS_AUDIT",
+    "写作优先边界",
+    "Argument-first 全文阅读",
+    "当前手稿映射",
+    "目标期刊模式迁移门禁",
+    "Writing Reasoning Profile",
+    "writing_improvement_report.md",
+    "transfer_scope",
+    "reject_transfer",
+    "不做格式审查",
     "WRITING_OPTIONS_CARD",
     "option_id",
     "rhetorical_angle",
@@ -96,6 +105,19 @@ def main() -> None:
     for phrase in ("annotation", "functionally annotated", "pathway-enrichment", "prioritize candidate", "gene-, tissue-, and pathway-level analyses"):
         if phrase not in methods_text:
             fail(f"methods language reference missing: {phrase}")
+    for reference_name, phrases in {
+        "writing-first-contract.md": ("Writing-first contract", "formatting_scope: excluded", "argument architecture"),
+        "argument-first-reading.md": ("Argument-first full-text reading", "reader_question", "recurring_genre_pattern"),
+        "fidelity-first-gate.md": ("Fidelity-first transfer gate", "reject_transfer", "reasoning_gain"),
+        "writing-improvement-report.md": ("Writing improvement report", "Manuscript Writing Diagnosis", "Revision Cards"),
+    }.items():
+        reference_path = SKILL.parent / "references" / reference_name
+        if not reference_path.exists():
+            fail(f"missing writing-first reference: {reference_path}")
+        reference_text = reference_path.read_text(encoding="utf-8")
+        for phrase in phrases:
+            if phrase not in reference_text:
+                fail(f"writing-first reference {reference_name} missing: {phrase}")
     options_reference = SKILL.parent / "references" / "writing-options-card.md"
     if not options_reference.exists():
         fail(f"missing writing-options reference: {options_reference}")

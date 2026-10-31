@@ -11,6 +11,8 @@
 | `access_status` | `metadata-only`, `abstract-only`, `full-text-partial`, `full-text-inspected`, `pdf-page-inspected`, `inaccessible` | 实际读取层级 |
 | `calibration_confidence` | `high`, `medium`, `low`, `none` | peer corpus 对目标 section 的匹配信心 |
 | `support_level` | `direct`, `partial`, `context-only`, `not-inspected`, `contradictory` | source 对 claim 的支持关系 |
+| `transfer_scope` | `preserve`, `adapt`, `author_decide`, `reject_transfer` | peer pattern 是否以及如何迁移到当前手稿 |
+| `pattern_confidence` | `single_paper_observation`, `tentative_pattern`, `recurring_genre_pattern` | 写作模式在匹配语料中的重复程度 |
 
 ## Candidate record
 
@@ -68,6 +70,61 @@ abstracted_pattern: ""
 safe_action: adopt_move | reorder | clarify_subject | calibrate_verb | replace_nonstandard_term | compress_repetition | add_bridge | retain | do_not_adopt
 do_not_adopt: ""
 author_check: ""
+transfer_scope: adapt
+pattern_confidence: recurring_genre_pattern
+```
+
+## Writing reasoning profile row
+
+```yaml
+pattern_id: P03
+source_ids: [S01, S02]
+source_locations: ["Introduction, PDF p. 2", "Introduction, PDF p. 3"]
+reader_question: ""
+paragraph_function: gap | objective | design | result | interpretation | limitation | implication | transition
+information_order: ""
+claim_calibration: ""
+abstracted_pattern: ""
+safe_action: reorder | split | merge | add_bridge | narrow_claim | finding_first | clarify_term | calibrate_verb | retain
+transfer_scope: adapt
+pattern_confidence: tentative_pattern
+do_not_adopt: ""
+author_check: ""
+```
+
+## Draft segment
+
+```yaml
+draft_segment_id: D03
+section: Introduction
+paragraph: 2
+current_rhetorical_job: ""
+intended_reader_question: ""
+main_claim: ""
+evidence_anchor: ""
+information_order: ""
+claim_strength: ""
+reader_blocker: ""
+```
+
+## Revision card
+
+```yaml
+revision_id: R01
+draft_segment_id: D03
+rhetorical_job: ""
+target_reader_question: ""
+current_reader_problem: ""
+recommended_writing_action: reorder | split | merge | add_bridge | narrow_claim | finding_first | clarify_term | calibrate_verb | retain
+before: ""
+after_options: []
+reasoning_gain: ""
+source_pattern_ids: [P03]
+transfer_scope: preserve | adapt | author_decide | reject_transfer
+claim_delta: none | weaker | stronger | changed
+priority: P0 | P1 | P2
+author_check: ""
+selection_status: pending | selected | rejected
 ```
 
 ## Handoff record

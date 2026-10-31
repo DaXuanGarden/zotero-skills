@@ -21,7 +21,10 @@
       "why_this_works": "Preserves the original claim and avoids causal wording.",
       "when_to_choose": "Use when the result and evidence boundary are already settled.",
       "risks": "May be less specific than the full result.",
-      "author_check": "Confirm the exact effect estimate and direction before insertion."
+      "author_check": "Confirm the exact effect estimate and direction before insertion.",
+      "transfer_scope": "preserve",
+      "reasoning_gain": "Keeps the observed association explicit without adding causal meaning.",
+      "fidelity_check": "Facts, direction, and claim strength must remain unchanged."
     },
     {
       "option_id": "B",
@@ -37,7 +40,10 @@
       "why_this_works": "Puts the quantitative anchor where readers expect it.",
       "when_to_choose": "Use when the section is organized around estimates.",
       "risks": "Requires the author to verify the exact estimate and interval.",
-      "author_check": "Confirm the estimate, interval, and table/figure link."
+      "author_check": "Confirm the estimate, interval, and table/figure link.",
+      "transfer_scope": "adapt",
+      "reasoning_gain": "Places the quantitative anchor before interpretation so the reader can assess the result.",
+      "fidelity_check": "Use only the current study estimate and preserve the evidence boundary."
     }
   ]
 }

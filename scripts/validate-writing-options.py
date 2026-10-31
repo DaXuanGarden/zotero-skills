@@ -34,6 +34,10 @@ REQUIRED_PHRASES = (
     "RIS action = Optional",
     "POST_WRITE_AUDIT",
     "Peer papers provide abstracted writing patterns",
+    "Fidelity-first transfer fields",
+    "transfer_scope",
+    "reasoning_gain",
+    "fidelity_check",
 )
 OPTION_FIELDS = {
     "option_id",
@@ -50,6 +54,9 @@ OPTION_FIELDS = {
     "when_to_choose",
     "risks",
     "author_check",
+    "transfer_scope",
+    "reasoning_gain",
+    "fidelity_check",
 }
 
 
@@ -77,6 +84,10 @@ def main() -> None:
             fail(f"fixture missing top-level key: {key}")
     if not 2 <= len(data["options"]) <= 3:
         fail("fixture must contain two or three options")
+    if data["selection_status"] not in {"pending", "selected", "author-rejected"}:
+        fail(f"invalid card selection_status: {data['selection_status']}")
+    if data["selection_status"] == "selected" and not data.get("selected_option_id"):
+        fail("selected card must declare selected_option_id")
     ids = set()
     for option in data["options"]:
         missing = OPTION_FIELDS - set(option)
@@ -87,6 +98,8 @@ def main() -> None:
         ids.add(option["option_id"])
         if option["evidence_level"] not in {"A", "B", "C", "D", "E"}:
             fail(f"invalid evidence level: {option['evidence_level']}")
+        if option["transfer_scope"] not in {"preserve", "adapt", "author_decide", "reject_transfer"}:
+            fail(f"invalid transfer scope: {option['transfer_scope']}")
     print("✅ shared writing-options contract and fixture passed")
 
 

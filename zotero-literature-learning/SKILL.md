@@ -1,15 +1,17 @@
 ---
 name: zotero-literature-learning
-description: "基于 Zotero MCP 的论文素材学习工作流：按研究问题检索候选文献，核验摘要/全文/PDF 可用性，建立 3–5 篇可学习的 peer corpus；当写作卡住时，抽取可迁移的句式、术语、论证和证据模式，生成可比较的多方案写作卡片，并把结构化素材包交接给证据审查、证据驱动写作或全文思考 Skill。"
+description: "基于 Zotero MCP 的写作优先论文学习工作流：从指定 Collection 或研究问题中筛选 3–5 篇可核验的 peer corpus，按全文论证链学习 reader path、段落功能、信息顺序、claim calibration 和术语表达，再将这些写作决策迁移到当前手稿，生成只读的 Markdown 写作改进报告；不做格式审查、不强行模仿目标期刊、不写回 Word 或 Zotero。"
 license: MIT
 compatibility: codex,opencode,zcode
 metadata:
   workflow: zotero-grounded-literature-learning
   requires: zotero-mcp
   optional: pubmed-mcp
-  version: 0.4.0
+  version: 0.5.0
   handoff: zotero-evidence-review,zotero-manuscript-thinking,evidence-driven-writing
-  references: references/materials-package-schema.md,references/methods-language-calibration.md,references/writing-options-card.md
+  modes: corpus_learning,manuscript_review,both
+  output: writing_improvement_report.md
+  references: references/materials-package-schema.md,references/methods-language-calibration.md,references/writing-options-card.md,references/writing-first-contract.md,references/argument-first-reading.md,references/fidelity-first-gate.md,references/writing-improvement-report.md
 ---
 
 # Zotero Literature Learning
@@ -30,6 +32,20 @@ metadata:
 ```
 
 它不替用户发明数据、结果、引用或贡献，也不复制同行原句。默认不生成 RIS；需要引文支持或参考文献导出时交给 `zotero-evidence-review`，这样不会产生两个互相冲突的参考文献出口。
+
+## 0.2 写作优先边界
+
+本 Skill 的主要交付是写作判断，不是格式检查。它学习目标期刊论文如何组织问题、证据和读者路径，再把写作决策迁移到作者自己的手稿中。当前研究的设计、数据、结果、贡献、限制和 claim strength 是事实来源；目标期刊只作为语料和读者预期的参照，不作为改写模板或格式规范。
+
+默认校准顺序是：
+
+```text
+论证架构 → 段落功能 → reader path → 信息顺序 → claim/evidence 匹配 → 术语与过渡 → 表层语言
+```
+
+默认不检查字体、版式、标题层级、Word 样式、参考文献排版或图表格式，也不写回 Word、PDF、TeX 或 Zotero。只有当某种格式直接影响读者理解时，才标记为 `reasoning_relevant_format`。Markdown 是报告载体，不是审阅目标。
+
+目标期刊模式必须经过 `preserve`、`adapt`、`author_decide` 或 `reject_transfer` 判断。任何模式如果不能改善当前研究的 reader path，或会改变当前研究的含义，就拒绝迁移。
 
 ## 0.1 素材包契约：收集、学习、写作三层分开
 
@@ -71,6 +87,7 @@ task_contract → candidate ledger → inspected fragments → profile → learn
 在第一次检索前建立 `task_contract`。缺失字段写 `unspecified`，不要用模型猜测补齐：
 
 ```yaml
+mode: corpus_learning | manuscript_review | both
 domain: ""
 subfield: ""
 research_question: ""
@@ -82,13 +99,26 @@ language: Chinese | English | bilingual | unspecified
 material_goal: evidence | style | argument | methods_reproducibility | results_narration | mixed
 writing_block_type: none | wording | paragraph_role | method_naming | result_narration | evidence_gap | structure
 target_text: ""
+writing_goal: [argument, paragraph_function, reader_path, information_order, claim_calibration, terminology, wording_if_reasoning]
+rhetorical_job: ""
+reader_question: ""
 must_preserve: [study_design, numbers, units, direction, claim_strength, citations]
 author_constraints: []
 zotero_scope: collection/tag/item_keys/whole_library
+zotero_scope_name: ""
 fulltext_requirement: abstract_ok | fulltext_preferred | fulltext_required
+manuscript_path: ""
+manuscript_format: docx | md | tex | txt | pdf | unspecified
+manuscript_sections: []
+manuscript_version: ""
+formatting_scope: excluded
+output_mode: markdown_report_only
+report_language: zh | en | bilingual
 ```
 
 如果 `research_question`、`target_section` 和 `material_goal` 都不清楚，先询问一个最小澄清问题；没有清楚目标时不批量检索。若用户给了待改句子，还要先标出 `target_text` 和 `must_preserve`，不能直接用同领域论文的句子替换。
+
+当用户提供当前手稿时，还要先记录 `rhetorical_job`、`reader_question` 和 `writing_goal`。如果用户只说“帮我润色”，先判断阻塞来自论证、段落功能、信息顺序、证据边界、术语还是表层语言；不能把所有请求默认处理成逐句语法纠错。
 
 ## 3. 阶段状态机
 
@@ -172,7 +202,7 @@ exclusion_or_uncertainty
 3. 同一目标期刊或相近 venue；
 4. 最近代表性研究与必要的基础论文各占合理位置。
 
-每篇写明“为什么选它”。至少三篇与目标 section 相匹配且实际读到摘要或全文时，`calibration_confidence` 才能为 `high`；只有摘要或语料混杂时为 `medium/low`；没有可检查语料时为 `none`。
+每篇写明“为什么选它”。至少三篇与目标 section 相匹配、且实际检查了该 section 的全文或 PDF 页面时，`calibration_confidence` 才能为 `high`；只有摘要、元数据或语料混杂时为 `medium/low`；没有可检查语料时为 `none`。
 
 停止规则：已有 3–5 篇论文覆盖目标 section、文章类型和主要研究设计，新增论文不会改变行动建议时停止扩展。用户要求“高分论文”时，先把“高分”改成可核验选择条件，不把影响因子或个别作者习惯直接写成规范。
 
@@ -244,6 +274,17 @@ evidence map
 
 没有这三个计划性产物时，只能返回素材学习结果和下一步，不能直接生成引用驱动的正文。
 
+### Stage 4B — Argument-first 全文阅读
+
+当 `mode=manuscript_review` 或 `mode=both` 时，全文阅读以论证和读者路径为中心，而不是以格式模仿为中心。每篇 peer paper 至少建立一份：
+
+```text
+context → known problem → concrete gap → question/objective
+→ method fit → finding → interpretation → limitation/boundary → implication
+```
+
+每个相关段落记录 `reader_question`、`paragraph_function`、`main_claim`、`evidence_anchor`、`claim_strength`、`information_order`、`transition_to_next` 和 `source_location`。目标期刊论文只提供观察和可迁移动作，不能替代当前研究的事实、结果、贡献或证据边界。一个模式至少在两篇 peer paper 中出现，才可标记为 `tentative_pattern`；三篇或更多匹配论文重复出现时，才可标记为 `recurring_genre_pattern`。单篇论文中的个人选择必须标记为 `single_paper_observation`。
+
 ### Stage 5 — 抽取可迁移模式
 
 只抽取“写作决策”，不把同行文本当作模板原文。允许的模式字段：
@@ -261,7 +302,38 @@ evidence map
 
 每条模式必须包含：`pattern_id`、`source_id`、`source_location`、`short_source_fragment`、`abstracted_pattern`、`safe_action`、`do_not_adopt`、`author_check`。`short_source_fragment` 只保留核验所需的最短片段。
 
-### Stage 6 — 形成三个 profile
+### Stage 5A — 当前手稿映射
+
+当用户提供手稿时，按段落建立稳定的 `draft_segment_id`，不评价字体、版式、标题层级或参考文献排版。每个段落至少记录：
+
+```yaml
+draft_segment_id: D03
+section: Introduction
+paragraph: 2
+current_rhetorical_job: ""
+intended_reader_question: ""
+main_claim: ""
+evidence_anchor: ""
+information_order: ""
+claim_strength: ""
+reader_blocker: ""
+```
+
+诊断类别限制为 `reader_path_gap`、`paragraph_role_gap`、`information_order_gap`、`claim_calibration_gap`、`evidence_anchor_gap`、`transition_gap`、`terminology_gap` 和 `wording_if_reasoning`。每条建议必须先给出一个写作动作（例如重排、拆分、补过渡、收窄 claim、先报告发现再解释或明确术语），再给出可选措辞。不要把通篇同义词替换当作主要交付。
+
+### Stage 5B — 目标期刊模式迁移门禁
+
+每个 peer pattern 必须标记：
+
+```text
+transfer_scope: preserve | adapt | author_decide | reject_transfer
+```
+
+`preserve` 记录当前研究必须保持的事实和作者意图；`adapt` 只迁移 reader path、段落功能、信息顺序、claim calibration、术语或过渡；`author_decide` 表示存在多个合理的结构或强调方式；`reject_transfer` 表示该模式会引入同行论文的结果、因果强度、贡献或独特叙事。
+
+如果一个目标期刊模式不能改善当前研究的读者理解，或者会改变研究设计、数据、结果、贡献、限制或 claim strength，必须拒绝迁移。目标期刊是语料参照，不是改写模板。
+
+### Stage 6 — 形成四类 profile（按需）
 
 #### Evidence Profile
 
@@ -275,21 +347,34 @@ evidence map
 
 记录研究问题、具体 gap、方法适配、贡献、主要发现、章节承担的任务、读者路径和 unresolved questions。它描述当前稿件与素材的关系，不替作者补写不存在的结果。
 
-### Stage 7 — 交接
+#### Writing Reasoning Profile
 
-输出 `MATERIALS_PACKAGE`，默认包含：
+当目标是改进当前手稿时，额外形成 `writing_reasoning_profile`，记录 `argument_spine`、`reader_path`、`paragraph_function_patterns`、`information_order_patterns`、`claim_calibration_patterns`、`terminology_decisions`、`transition_patterns` 和 `evidence_boundaries`。它描述“同行如何帮助读者理解”，不描述字体、排版或需要模仿的表面风格。
+
+### Stage 6A — 写作改进报告
+
+当 `mode=manuscript_review` 或 `mode=both` 且手稿可读时，默认生成一个主报告 `writing_improvement_report.md`。每张 revision card 必须包含 `revision_id`、`draft_segment_id`、`rhetorical_job`、`target_reader_question`、`current_reader_problem`、`recommended_writing_action`、`before`、`after_options`、`reasoning_gain`、`source_pattern_ids`、`transfer_scope`、`claim_delta`、`priority`、`author_check` 和 `selection_status`。
+
+候选改写在作者选择前保持 `selection_status: pending`。候选必须只使用当前研究自己的事实、数字、单位、方向、研究设计和证据边界；任何从关联到因果、从提示到证明、从当前研究观察到普遍结论的变化，都必须记录为高风险 `claim_delta` 并停在 `author_check`。
+
+### Stage 7 — 交接主报告与可追溯附录
+
+默认交付一个面向作者的 `writing_improvement_report.md`；它与按需附加的 Markdown ledger/profile 共同构成 `MATERIALS_PACKAGE`。这些附录服务于追溯，不要求作者逐个阅读。完整交付仍只包含 Markdown 和结构化文本，不生成 Word、PDF、TeX 或 RIS：
 
 ```text
-corpus_ledger.md       # 候选、筛选、访问和选择理由
-reading_queue.md       # 已读、待读、停止规则和下一步
-learning_decisions.md  # 观察→安全动作→意义回查→下一个 owner
-evidence_profile.md    # claim–source–location–support ledger
-style_profile.md       # peer pattern、draft mismatch、safe action
-argument_profile.md    # question–gap–contribution–boundary
-writing_block_card.md  # 卡点功能、候选表达、术语决策和回查结果
-source_fragments.md    # 最短核验片段和页码/章节
-unresolved_gaps.md     # 缺证据、缺全文、需作者确认的问题
-handoff.md             # 下一个 Skill、输入、完成条件
+corpus_ledger.md              # 候选、筛选、访问和选择理由
+reading_queue.md              # 已读、待读、停止规则和下一步
+learning_decisions.md         # 观察→安全动作→意义回查→下一个 owner
+evidence_profile.md           # claim–source–location–support ledger
+style_profile.md              # peer pattern、draft mismatch、safe action
+argument_profile.md           # question–gap–contribution–boundary
+writing_reasoning_profile.md  # reader path、段落功能、信息顺序和 claim calibration
+writing_block_card.md         # 卡点功能、候选表达、术语决策和回查结果
+source_fragments.md           # 最短核验片段和页码/章节
+unresolved_gaps.md            # 缺证据、缺全文、需作者确认的问题
+handoff.md                    # 下一个 Skill、输入、完成条件
+writing_improvement_report.md # 当前手稿的高影响写作诊断与候选改写（主报告）
+revision_cards.md             # draft segment → writing action → option → author check
 ```
 
 当目标是引用驱动的 Introduction、Related Work 或 background 时，额外生成并交给 `evidence-driven-writing`：
@@ -357,7 +442,25 @@ Methods–Results alignment preserved?
 10. Unresolved Gaps；
 11. Handoff；
 12. 如果有稿件，`draft_to_profile_comparison`；
-13. 如果下游已改写，`POST_WRITE_MATERIALS_AUDIT`。
+13. 如果有稿件，`writing_reasoning_profile`、`writing_improvement_report.md` 和 `revision_cards.md`；
+14. 如果下游已改写，`POST_WRITE_MATERIALS_AUDIT`。
+
+`writing_improvement_report.md` 默认包含：
+
+```text
+Writing Contract
+Reading Basis
+Peer Argument Patterns
+Transfer Decisions
+Manuscript Writing Diagnosis
+Revision Cards
+Transferable Writing Principles
+Author Checks
+Unresolved Questions
+Handoff
+```
+
+它必须说明每条建议改善了哪一个 reader problem，以及建议是否保持当前研究的事实、贡献和 claim strength。格式、排版和 Word 样式不进入报告，除非用户明确提出且它们影响读者理解。
 
 报告状态使用：
 
@@ -392,9 +495,11 @@ zotero-literature-learning
 一次运行在满足以下条件之一时停止：
 
 - 已形成 3–5 篇可核验 peer corpus，profile 和 handoff 足以推进下一步；
+- 如果有手稿，已建立 `draft_segment_id`、Writing Reasoning Profile 和至少一张可追溯 revision card；
 - 用户要求的证据/全文不可用，已明确报告限制并给出下一步检索式；
 - 新增候选不再改变筛选、阅读或写作行动；
-- 发现需要作者决定的研究问题、结果、术语或证据边界，已列入 `author_check`。
+- 发现需要作者决定的研究问题、结果、术语或证据边界，已列入 `author_check`；
+- 目标期刊模式与当前研究事实冲突时，已拒绝迁移并记录 `transfer_scope: reject_transfer`。
 
 停止时不要继续堆积文献，也不要把“读得更多”当作完成度。下一轮应由 `handoff.done_when` 驱动。
 
